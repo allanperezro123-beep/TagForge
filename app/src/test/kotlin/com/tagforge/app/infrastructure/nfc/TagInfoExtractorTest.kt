@@ -1,0 +1,111 @@
+package com.tagforge.app.infrastructure.nfc
+
+import android.nfc.FormatException
+import android.nfc.TagLostException
+import com.tagforge.domain.common.Bytes
+import com.tagforge.domain.ntag.NtagModel
+import com.tagforge.domain.tag.TagError
+import com.tagforge.domain.tag.TagFamily
+import com.tagforge.domain.tag.TagTech
+import java.io.IOException
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNull
+
+/** Pure helpers behind the Android adapters (TS-03, rules G3/G4). Anything touching `Tag` itself is device-verified. */
+class TagInfoExtractorTest {
+
+    // ---- manufacturer ---------------------------------------------------------------------------
+
+    @Test
+    fun uidPrefixZeroFourIsNxp() {
+        assertEquals("NXP", TagInfoExtractor.manufacturerFor(Bytes.of(0x04, 0xA2, 0x3B, 0x1C, 0x5D, 0x6E, 0x80)))
+    }
+
+    @Test
+    fun otherKnownPrefixesAreNamedAndUnknownOnesAreNull() {
+        assertEquals("STMicroelectronics", TagInfoExtractor.manufacturerFor(Bytes.of(0x02, 1, 2, 3, 4, 5, 6)))
+        assertNull(TagInfoExtractor.manufacturerFor(Bytes.of(0x99, 1, 2, 3, 4, 5, 6)))
+    }
+
+    @Test
+    fun randomUidsAndEmptyUidsHaveNoManufacturer() {
+        assertNull(TagInfoExtractor.manufacturerFor(Bytes.of(0x08, 0x11, 0x22, 0x33)))   // 08 = random UID marker
+        assertNull(TagInfoExtractor.manufacturerFor(Bytes.EMPTY))
+    }
+
+    @Test
+    fun prefixZeroFourIsNxpForAnyUidLength() {
+        assertEquals("NXP", TagInfoExtractor.manufacturerFor(Bytes.of(0x04, 0x11, 0x22, 0x33)))
+    }
+
+    // ---- ATQA / SAK -----------------------------------------------------------------------------
+
+    @Test
+    fun atqaAndSakAreFormattedAsHex() {
+        assertEquals("0x0044", TagInfoExtractor.formatAtqa(Bytes.of(0x00, 0x44)))
+        assertEquals("0x0004", TagInfoExtractor.formatAtqa(Bytes.of(0x00, 0x04)))
+        assertEquals("0x00", TagInfoExtractor.formatSak(0x00))
+        assertEquals("0x20", TagInfoExtractor.formatSak(0x20))
+    }
+
+    // ---- technologies and family ----------------------------------------------------------------
+
+    @Test
+    fun androidTechClassNamesMapToDomainTechs() {
+        val expected = mapOf(
+            "android.nfc.tech.NfcA" to TagTech.NFC_A,
+            "android.nfc.tech.NfcB" to TagTech.NFC_B,
+            "android.nfc.tech.NfcF" to TagTech.NFC_F,
+            "android.nfc.tech.NfcV" to TagTech.NFC_V,
+            "android.nfc.tech.IsoDep" to TagTech.ISO_DEP,
+            "android.nfc.tech.Ndef" to TagTech.NDEF,
+            "android.nfc.tech.NdefFormatable" to TagTech.NDEF_FORMATABLE,
+            "android.nfc.tech.MifareClassic" to TagTech.MIFARE_CLASSIC,
+            "android.nfc.tech.MifareUltralight" to TagTech.MIFARE_ULTRALIGHT,
+        )
+        for ((className, tech) in expected) assertEquals(tech, TagInfoExtractor.techFor(className), className)
+        assertNull(TagInfoExtractor.techFor("android.nfc.tech.NfcBarcode"))
+    }
+
+    @Test
+    fun familyFollowsTheMostSpecificTechnology() {
+        assertEquals(TagFamily.NTAG21X, TagInfoExtractor.familyFor(setOf(TagTech.NFC_A), NtagModel.NTAG215))
+        assertEquals(TagFamily.MIFARE_CLASSIC, TagInfoExtractor.familyFor(setOf(TagTech.NFC_A, TagTech.MIFARE_CLASSIC), null))
+        assertEquals(TagFamily.ULTRALIGHT, TagInfoExtractor.familyFor(setOf(TagTech.NFC_A, TagTech.MIFARE_ULTRALIGHT), null))
+        assertEquals(TagFamily.ISO14443_4, TagInfoExtractor.familyFor(setOf(TagTech.NFC_A, TagTech.ISO_DEP), null))
+        assertEquals(TagFamily.ISO15693, TagInfoExtractor.familyFor(setOf(TagTech.NFC_V), null))
+        assertEquals(TagFamily.FELICA, TagInfoExtractor.familyFor(setOf(TagTech.NFC_F), null))
+        assertEquals(TagFamily.UNKNOWN, TagInfoExtractor.familyFor(setOf(TagTech.NFC_A), null))
+    }
+
+    // ---- exception mapping (G3 / G4) --------------------------------------------------------------
+
+    @Test
+    fun tagLostExceptionMapsToTagLostEvenThoughItIsAnIoException() {
+        assertEquals(TagError.TagLost, TagErrorMapper.map(TagLostException("gone")))
+    }
+
+    @Test
+    fun otherIoExceptionsMapToIoWithTheirMessage() {
+        assertEquals(TagError.Io("Transceive failed"), TagErrorMapper.map(IOException("Transceive failed")))
+        assertEquals(TagError.Io(null), TagErrorMapper.map(IOException()))
+    }
+
+    @Test
+    fun formatExceptionMapsToMalformed() {
+        // android.jar stubs drop the constructor message, so only the mapped type is asserted here
+        assertIs<TagError.Malformed>(TagErrorMapper.map(FormatException("bad NDEF")))
+    }
+
+    @Test
+    fun outdatedTagSecurityExceptionIsTagLost() {
+        assertEquals(TagError.TagLost, TagErrorMapper.map(SecurityException("Tag is out of date")))
+    }
+
+    @Test
+    fun unexpectedExceptionsBecomeIoNeverACrash() {
+        assertEquals(TagError.Io("boom"), TagErrorMapper.map(IllegalStateException("boom")))
+    }
+}

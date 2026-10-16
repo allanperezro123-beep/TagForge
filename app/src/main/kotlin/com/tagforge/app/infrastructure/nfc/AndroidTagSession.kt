@@ -1,0 +1,123 @@
+package com.tagforge.app.infrastructure.nfc
+
+import android.nfc.Tag
+import android.nfc.tech.Ndef
+import android.nfc.tech.NfcA
+import com.tagforge.domain.common.Bytes
+import com.tagforge.domain.common.Outcome
+import com.tagforge.domain.common.TagResult
+import com.tagforge.domain.ndef.NdefCodec
+import com.tagforge.domain.ndef.NdefMessage
+import com.tagforge.domain.ndef.Tnf
+import com.tagforge.domain.ntag.NtagCommands
+import com.tagforge.domain.ntag.NtagIdentifier
+import com.tagforge.domain.ntag.NtagResponses
+import com.tagforge.domain.ports.TagSession
+import com.tagforge.domain.ports.TagTransceiver
+import com.tagforge.domain.tag.TagError
+import com.tagforge.domain.tag.TagInfo
+import com.tagforge.domain.tag.TagTech
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.withContext
+
+/**
+ * [TagSession] over a real `android.nfc.Tag`. Every blocking call runs on [io] (G3) and every platform exception is
+ * mapped to a typed [TagError] (G4). Writing, formatting and locking arrive with the write/tools phases.
+ */
+class AndroidTagSession(
+    private val tag: Tag,
+    private val codec: NdefCodec,
+    private val io: CoroutineDispatcher,
+) : TagSession {
+
+    override var info: TagInfo = TagInfoExtractor.basicInfo(tag)
+        private set
+
+    private val nfcATransceiver: AndroidTransceiver? by lazy {
+        NfcA.get(tag)?.let { AndroidTransceiver(it, io, beforeConnect = ::closeNdefQuietly) }
+    }
+
+    private fun closeNdefQuietly() {
+        try {
+            Ndef.get(tag)?.takeIf { it.isConnected }?.close()
+        } catch (_: Throwable) {
+            // already gone
+        }
+    }
+
+    override suspend fun identify(): TagResult<TagInfo> {
+        val transceiver = nfcATransceiver
+        val maybeNtag = TagTech.NFC_A in info.techs && info.ntag == null &&
+            (TagTech.MIFARE_ULTRALIGHT in info.techs || info.sak == 0)
+        if (transceiver != null && maybeNtag) {
+            when (val identified = NtagIdentifier.identify(transceiver)) {
+                is Outcome.Err -> return identified
+                is Outcome.Ok -> identified.value?.let { model ->
+                    info = info.copy(ntag = model, family = TagInfoExtractor.familyFor(info.techs, model))
+                }
+            }
+        }
+        return Outcome.Ok(info)
+    }
+
+    override fun transceiver(tech: TagTech): TagTransceiver? = if (tech == TagTech.NFC_A) nfcATransceiver else null
+
+    override suspend fun readNdef(): TagResult<NdefMessage?> = withContext(io) {
+        val ndef = Ndef.get(tag) ?: return@withContext readWithoutNdefTech()
+        try {
+            if (!ndef.isConnected) {
+                nfcATransceiver?.close()
+                ndef.connect()
+            }
+            val platformMessage = ndef.ndefMessage ?: return@withContext Outcome.Ok(null)
+            decode(platformMessage.toByteArray())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            Outcome.Err(TagErrorMapper.map(e))
+        }
+    }
+
+    private fun decode(bytes: ByteArray): TagResult<NdefMessage?> =
+        when (val decoded = codec.decode(Bytes.copyOf(bytes))) {
+            is Outcome.Err -> Outcome.Err(TagError.Malformed(decoded.error.toString()))
+            is Outcome.Ok -> {
+                val records = decoded.value.records
+                val onlyEmptyRecord = records.size == 1 && records[0].tnf == Tnf.EMPTY && records[0].payload.isEmpty()
+                Outcome.Ok(if (records.isEmpty() || onlyEmptyRecord) null else decoded.value)
+            }
+        }
+
+    /**
+     * Android exposes the `Ndef` tech only when it could parse the capability container and TLVs. For an NTAG whose
+     * user memory is password-protected that fails, so we probe the first user page: a refusal means "protected".
+     */
+    private suspend fun readWithoutNdefTech(): TagResult<NdefMessage?> {
+        val ntag = info.ntag
+        val transceiver = nfcATransceiver
+        if (ntag == null || transceiver == null) return Outcome.Err(TagError.NotNdef)
+
+        val probe = transceiver.transceive(NtagCommands.read(ntag.userStart))
+        return when (probe) {
+            is Outcome.Err -> Outcome.Err(TagError.AuthRequired)   // NAK often surfaces as a dropped connection
+            is Outcome.Ok -> when (NtagResponses.checkData(probe.value, NtagCommands.READ_RESPONSE_SIZE)) {
+                is Outcome.Err -> Outcome.Err(TagError.AuthRequired)
+                is Outcome.Ok -> Outcome.Err(TagError.NotNdef)
+            }
+        }
+    }
+
+    override suspend fun writeNdef(message: NdefMessage): TagResult<Unit> = Outcome.Err(TagError.Unsupported("write"))
+
+    override suspend fun formatNdef(initial: NdefMessage?): TagResult<Unit> = Outcome.Err(TagError.Unsupported("format"))
+
+    override suspend fun makeReadOnly(): TagResult<Unit> = Outcome.Err(TagError.Unsupported("makeReadOnly"))
+
+    override suspend fun close() {
+        withContext(io) {
+            nfcATransceiver?.close()
+            closeNdefQuietly()
+        }
+    }
+}
