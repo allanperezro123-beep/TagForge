@@ -1,0 +1,23 @@
+# Secrets / signing
+keystore.properties
+*.jks
+*.keystore
+
+# Local machine config
+local.properties
+
+# Build output
+build/
+.gradle/
+.kotlin/
+.idea/
+*.iml
+.cxx/
+captures/
+
+# Distribution artifacts (APKs copied per phase)
+dist/
+
+# OS
+.DS_Store
+Thumbs.db
