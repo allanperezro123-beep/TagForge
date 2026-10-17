@@ -552,4 +552,7 @@
     <string name="tech_sectors">Sectors</string>
     <string name="tech_blocks">Blocks</string>
     <string name="tech_size">Size</string>
+
+    <!-- Tasks -->
+    <string name="tasks_notification_channel">Task notifications</string>
 </resources>

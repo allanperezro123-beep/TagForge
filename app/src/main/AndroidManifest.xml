@@ -5,11 +5,42 @@
     <uses-permission android:name="android.permission.NFC" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- Tasks (Phase 4). Only what the spec allows: never QUERY_ALL_PACKAGES, SEND_SMS or CALL_PHONE. -->
+    <!-- HttpRequest action: plain GET/POST, https by default, only while the runner is on screen. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Notify action. Runtime permission on Android 13+; the Permission Center explains and requests it. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Alarm and Timer actions through the clock app. Normal permission, granted at install. -->
+    <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
+    <!-- "Silent" ringer mode. Granted by the user on the Do Not Disturb access screen. -->
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <!-- Brightness action. A special permission the user grants on the "Modify system settings" screen. -->
+    <uses-permission
+        android:name="android.permission.WRITE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
+    <!-- Wi-Fi toggle/join: legacy configuration up to Android 9, network suggestions on Android 10. -->
+    <uses-permission
+        android:name="android.permission.CHANGE_WIFI_STATE"
+        android:maxSdkVersion="29" />
+
     <!-- NFC is optional: devices without it get the Unsupported state instead of being filtered out. -->
     <uses-feature
         android:name="android.hardware.nfc"
         android:required="false" />
 
+    <!-- Package visibility without QUERY_ALL_PACKAGES: launchable apps (LaunchApp action) and text to speech (Speak action). -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
+    <!-- usesCleartextTraffic: the only network use is the HttpRequest task action. https is the default; a plain http URL
+         is allowed solely after an extra warning and a second tap on the confirmation sheet (TK-08). -->
     <application
         android:name=".TagForgeApplication"
         android:allowBackup="false"
@@ -19,6 +50,7 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.TagForge.Splash"
+        android:usesCleartextTraffic="true"
         tools:targetApi="35">
 
         <activity

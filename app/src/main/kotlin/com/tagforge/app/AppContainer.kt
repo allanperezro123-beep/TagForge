@@ -1,19 +1,46 @@
 package com.tagforge.app
 
 import android.content.Context
+import android.os.Build
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import com.tagforge.app.infrastructure.android.IntentLauncher
 import com.tagforge.app.infrastructure.nfc.NfcAvailabilityMonitor
 import com.tagforge.app.infrastructure.persistence.DataStoreSettingsStore
 import com.tagforge.app.infrastructure.persistence.RoomHistoryRepository
+import com.tagforge.app.infrastructure.persistence.RoomTaskRepository
 import com.tagforge.app.infrastructure.persistence.RoomTemplateRepository
 import com.tagforge.app.infrastructure.persistence.TagForgeDatabase
+import com.tagforge.app.infrastructure.tasks.AndroidDeviceFacts
+import com.tagforge.app.infrastructure.tasks.AndroidTaskActionExecutor
+import com.tagforge.app.infrastructure.tasks.TaskHandlers
+import com.tagforge.app.infrastructure.tasks.handlers.AlarmHandler
+import com.tagforge.app.infrastructure.tasks.handlers.BluetoothToggleHandler
+import com.tagforge.app.infrastructure.tasks.handlers.CalendarEventHandler
+import com.tagforge.app.infrastructure.tasks.handlers.DialHandler
+import com.tagforge.app.infrastructure.tasks.handlers.FlashlightHandler
+import com.tagforge.app.infrastructure.tasks.handlers.HttpRequestHandler
+import com.tagforge.app.infrastructure.tasks.handlers.LaunchAppHandler
+import com.tagforge.app.infrastructure.tasks.handlers.MediaKeyHandler
+import com.tagforge.app.infrastructure.tasks.handlers.NotifyHandler
+import com.tagforge.app.infrastructure.tasks.handlers.OpenSettingsHandler
+import com.tagforge.app.infrastructure.tasks.handlers.OpenUrlHandler
+import com.tagforge.app.infrastructure.tasks.handlers.SetBrightnessHandler
+import com.tagforge.app.infrastructure.tasks.handlers.SetRingerHandler
+import com.tagforge.app.infrastructure.tasks.handlers.SetVolumeHandler
+import com.tagforge.app.infrastructure.tasks.handlers.SmsComposeHandler
+import com.tagforge.app.infrastructure.tasks.handlers.SpeakHandler
+import com.tagforge.app.infrastructure.tasks.handlers.TimerHandler
+import com.tagforge.app.infrastructure.tasks.handlers.WifiJoinHandler
+import com.tagforge.app.infrastructure.tasks.handlers.WifiToggleHandler
 import com.tagforge.domain.history.RecordHistoryUseCase
 import com.tagforge.domain.ndef.DefaultNdefCodec
 import com.tagforge.domain.ndef.NdefCodec
 import com.tagforge.domain.ports.HistoryRepository
 import com.tagforge.domain.ports.SettingsStore
+import com.tagforge.domain.ports.TaskActionExecutor
+import com.tagforge.domain.ports.TaskRepository
 import com.tagforge.domain.ports.TemplateRepository
 import com.tagforge.domain.read.ReadMemoryUseCase
 import com.tagforge.domain.read.ReadTagUseCase
@@ -57,7 +84,42 @@ class AppContainer(context: Context) {
     val historyRepository: HistoryRepository by lazy { RoomHistoryRepository(database.historyDao()) }
     val templateRepository: TemplateRepository by lazy { RoomTemplateRepository(database.templateDao()) }
 
+    val taskRepository: TaskRepository by lazy { RoomTaskRepository(database.taskDao()) }
+
     val clock: Clock = Clock.System
+
+    /** Live grants and hardware: feeds the feasibility matrix and the Permission Center. */
+    val deviceFacts = AndroidDeviceFacts(appContext)
+
+    /** Runs confirmed task actions on the device. One handler per action type; the executor refuses to compile without them. */
+    val taskExecutor: TaskActionExecutor by lazy {
+        val launcher = IntentLauncher(appContext)
+        val api = Build.VERSION.SDK_INT
+        AndroidTaskActionExecutor(
+            handlers = TaskHandlers(
+                openUrl = OpenUrlHandler(launcher),
+                launchApp = LaunchAppHandler(appContext, launcher),
+                setRinger = SetRingerHandler(appContext, launcher),
+                setVolume = SetVolumeHandler(appContext, launcher),
+                setBrightness = SetBrightnessHandler(appContext, launcher),
+                wifiToggle = WifiToggleHandler(appContext, launcher, api),
+                wifiJoin = WifiJoinHandler(appContext, launcher, api),
+                bluetoothToggle = BluetoothToggleHandler(launcher),
+                openSettings = OpenSettingsHandler(launcher, api),
+                alarm = AlarmHandler(launcher),
+                timer = TimerHandler(launcher),
+                calendarEvent = CalendarEventHandler(launcher, clock),
+                smsCompose = SmsComposeHandler(launcher),
+                dial = DialHandler(launcher),
+                speak = SpeakHandler(appContext),
+                flashlight = FlashlightHandler(appContext),
+                notify = NotifyHandler(appContext),
+                httpRequest = HttpRequestHandler(dispatchers.io),
+                mediaKey = MediaKeyHandler(appContext),
+            ),
+            facts = deviceFacts::snapshot,
+        )
+    }
 
     val recordHistory: RecordHistoryUseCase by lazy { RecordHistoryUseCase(historyRepository, settingsStore, clock) }
 

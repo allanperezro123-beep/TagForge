@@ -542,4 +542,7 @@
     <string name="tech_sectors">Sectores</string>
     <string name="tech_blocks">Bloques</string>
     <string name="tech_size">Tamaño</string>
+
+    <!-- Tasks -->
+    <string name="tasks_notification_channel">Notificaciones de tareas</string>
 </resources>
