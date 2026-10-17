@@ -148,12 +148,78 @@ class FakeNtag21x(
         val limit = writeLimit()
         if (limit != null && target >= limit) return NAK_INVALID_ARGUMENT
 
-        pages[target] = command.slice(2).toByteArray()
+        val data = command.slice(2).toByteArray()
+        when {
+            target == STATIC_LOCK_PAGE -> orStaticLockBytes(data)
+            target == CC_PAGE -> {
+                if (isPageLocked(CC_PAGE)) return NAK_INVALID_ARGUMENT
+                for (i in 0 until NtagCommands.PAGE_SIZE) pages[CC_PAGE][i] = (pages[CC_PAGE][i].toInt() or data[i].toInt()).toByte()
+            }
+            target == model.dynLock -> orDynamicLockBytes(data)
+            isPageLocked(target) -> return NAK_INVALID_ARGUMENT
+            else -> pages[target] = data
+        }
         writeCount++
         written += target
         if (loseAfterWrites?.let { writeCount >= it } == true) lost = true
         return ACK
     }
+
+    // ---- lock state (datasheet 8.5.2 to 8.5.4) ----------------------------------------------------------------
+
+    /** True when the Capability Container says "read-only" (byte 3 != 0): what Android's `Ndef.isWritable` reflects. */
+    val isNdefWriteLocked: Boolean get() = pages[CC_PAGE][3].toInt() != 0
+
+    /** Whether a WRITE to [page] is refused by the static (pages 3-15) or dynamic (16 and up) lock bits. */
+    fun isPageLocked(page: Int): Boolean = when {
+        page == CC_PAGE -> staticLockBits() and L_CC != 0
+        page in FIRST_STATIC_LOCKED_PAGE..LAST_STATIC_LOCKED_PAGE -> staticLockBits() and staticBitOf(page) != 0
+        page in FIRST_DYNAMIC_LOCKED_PAGE..model.userEnd -> dynamicLockBits() and (1 shl dynamicGroupOf(page)) != 0
+        else -> false
+    }
+
+    /** Lock bytes 0 and 1 of page 02 as one 16-bit vector (byte 0 in the low half). */
+    private fun staticLockBits(): Int = (pages[STATIC_LOCK_PAGE][2].toInt() and 0xFF) or ((pages[STATIC_LOCK_PAGE][3].toInt() and 0xFF) shl 8)
+
+    private fun dynamicLockBits(): Int = (pages[model.dynLock][0].toInt() and 0xFF) or ((pages[model.dynLock][1].toInt() and 0xFF) shl 8)
+
+    /** L4..L7 are bits 4-7 of lock byte 0 and L8..L15 bits 0-7 of lock byte 1: in the 16-bit vector, bit n locks page n. */
+    private fun staticBitOf(page: Int): Int = 1 shl page
+
+    private fun dynamicGroupOf(page: Int): Int = (page - FIRST_DYNAMIC_LOCKED_PAGE) / model.dynamicLockGranularityPages
+
+    /** Lock bytes and block-locking bits are OR-ed; a set block-locking bit freezes its group of lock bits. */
+    private fun orStaticLockBytes(data: ByteArray) {
+        val old = staticLockBits()
+        var frozen = 0
+        if (old and BL_CC != 0) frozen = frozen or L_CC
+        if (old and BL_9_4 != 0) frozen = frozen or L_4_TO_9
+        if (old and BL_15_10 != 0) frozen = frozen or L_10_TO_15
+        val incoming = ((data[2].toInt() and 0xFF) or ((data[3].toInt() and 0xFF) shl 8)) and frozen.inv()
+        val merged = old or incoming
+        pages[STATIC_LOCK_PAGE][2] = merged.toByte()
+        pages[STATIC_LOCK_PAGE][3] = (merged ushr 8).toByte()
+    }
+
+    /** RFUI bits stay 0 (per chip), byte 3 always reads BDh, block-locking bit k freezes lock groups 2k and 2k+1. */
+    private fun orDynamicLockBytes(data: ByteArray) {
+        val mask = DYNAMIC_LOCK_MASKS.getValue(model)
+        val old = dynamicLockBits()
+        val oldBlock = pages[model.dynLock][2].toInt() and 0xFF
+        var frozen = 0
+        for (k in 0 until BLOCK_LOCK_BITS) if (oldBlock and (1 shl k) != 0) frozen = frozen or (0b11 shl (2 * k))
+
+        val incoming = (((data[0].toInt() and 0xFF) or ((data[1].toInt() and 0xFF) shl 8)) and mask.vector) and frozen.inv()
+        val merged = old or incoming
+        pages[model.dynLock] = byteArrayOf(
+            merged.toByte(),
+            (merged ushr 8).toByte(),
+            (oldBlock or (data[2].toInt() and mask.blockLock)).toByte(),
+            DYNAMIC_LOCK_BYTE_3.toByte(),
+        )
+    }
+
+    private class DynamicLockMask(val vector: Int, val blockLock: Int)
 
     companion object {
         val DEFAULT_UID: Bytes = Bytes.of(0x04, 0xA2, 0x3B, 0x1C, 0x5D, 0x6E, 0x80)
@@ -161,6 +227,26 @@ class FakeNtag21x(
         private val ACK = Bytes.of(0x0A)
         private val NAK_INVALID_ARGUMENT = Bytes.of(0x00)
         private const val FIRST_WRITABLE_PAGE = 2
+        private const val STATIC_LOCK_PAGE = 2
+        private const val CC_PAGE = 3
+        private const val FIRST_STATIC_LOCKED_PAGE = 4
+        private const val LAST_STATIC_LOCKED_PAGE = 15
+        private const val FIRST_DYNAMIC_LOCKED_PAGE = 16
+        private const val L_CC = 0x0008
+        private const val BL_CC = 0x0001
+        private const val BL_9_4 = 0x0002
+        private const val BL_15_10 = 0x0004
+        private const val L_4_TO_9 = 0x03F0
+        private const val L_10_TO_15 = 0xFC00
+        private const val BLOCK_LOCK_BITS = 7
+        private const val DYNAMIC_LOCK_BYTE_3 = 0xBD
+
+        /** Bits the chip actually implements in dynamic lock bytes 0-1 (lock vector) and byte 2 (block locking); the rest is RFUI. */
+        private val DYNAMIC_LOCK_MASKS = mapOf(
+            NtagModel.NTAG213 to DynamicLockMask(vector = 0x0FFF, blockLock = 0x3F),
+            NtagModel.NTAG215 to DynamicLockMask(vector = 0x00FF, blockLock = 0x0F),
+            NtagModel.NTAG216 to DynamicLockMask(vector = 0x3FFF, blockLock = 0x7F),
+        )
         private const val PROT_BIT = 0x80
         private const val CASCADE_TAG = 0x88
         private const val INTERNAL_BYTE = 0x48

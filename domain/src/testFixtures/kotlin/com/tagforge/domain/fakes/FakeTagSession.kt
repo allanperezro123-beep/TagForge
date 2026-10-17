@@ -30,19 +30,26 @@ class FakeTagSession(
     private val codec: NdefCodec = DefaultNdefCodec,
 ) : TagSession {
 
-    override var info: TagInfo = initialInfo
-        private set
+    private var identified: TagInfo = initialInfo
+
+    /** `ndef.isWritable` also follows the tag's Capability Container live, like a fresh Android `Ndef` connection would. */
+    override val info: TagInfo
+        get() {
+            val tag = ntag ?: return identified
+            val ndef = identified.ndef ?: return identified
+            return identified.copy(ndef = ndef.copy(isWritable = ndef.isWritable && !tag.isNdefWriteLocked))
+        }
 
     var closed: Boolean = false
         private set
 
     override suspend fun identify(): TagResult<TagInfo> {
         val transceiver = ntag
-        if (info.ntag == null && transceiver != null && TagTech.NFC_A in info.techs) {
+        if (identified.ntag == null && transceiver != null && TagTech.NFC_A in identified.techs) {
             when (val result = NtagIdentifier.identify(transceiver)) {
                 is Outcome.Err -> return result
                 is Outcome.Ok -> result.value?.let { model ->
-                    info = info.copy(ntag = model, family = TagFamily.NTAG21X, ndef = info.ndef ?: ndefInfoFor(model))
+                    identified = identified.copy(ntag = model, family = TagFamily.NTAG21X, ndef = identified.ndef ?: ndefInfoFor(model))
                 }
             }
         }

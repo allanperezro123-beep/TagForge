@@ -8,9 +8,7 @@ import com.tagforge.domain.ndef.NdefBudget
 import com.tagforge.domain.ndef.NdefCodec
 import com.tagforge.domain.ndef.NdefMessage
 import com.tagforge.domain.ndef.Type2Tlv
-import com.tagforge.domain.ntag.NtagCommands
 import com.tagforge.domain.ntag.NtagModel
-import com.tagforge.domain.ntag.NtagResponses
 import com.tagforge.domain.ports.TagSession
 import com.tagforge.domain.ports.TagTransceiver
 import com.tagforge.domain.scan.OperationKind
@@ -103,52 +101,19 @@ class WriteNdefUseCase(
      * Null means "this chip is not set up for raw NDEF writing, use the generic path". Otherwise the final result.
      */
     private suspend fun writeType2(transceiver: TagTransceiver, model: NtagModel, encoded: Bytes): TagResult<Unit>? {
-        val area = when (val read = readCcAndUserArea(transceiver, model)) {
+        val area = when (val read = Type2Io.readCcAndUserArea(transceiver, model)) {
             is Outcome.Err -> return read
             is Outcome.Ok -> read.value
         }
-        if (area.slice(0, 1)[0] != CC_MAGIC) return null   // capability container missing: let the platform format it
-        val current = area.slice(NtagCommands.PAGE_SIZE)
+        if (!area.hasCapabilityContainer) return null   // capability container missing: let the platform format it
+        val current = area.user
 
         val leading = (Type2Tlv.unwrap(current) as? Outcome.Ok)?.value?.leadingBytes?.let { current.slice(0, it) }
             ?: model.factoryLockControlTlv ?: Bytes.EMPTY
         val steps = Type2WritePlanner.plan(model, current, encoded, leading)
             ?: return Outcome.Err(TagError.CapacityExceeded(encoded.size, NdefBudget.presetCapacity(model)))
 
-        for ((index, step) in steps.withIndex()) {
-            val response = when (val sent = transceiver.transceive(NtagCommands.write(step.page, step.data))) {
-                is Outcome.Err -> return sent
-                is Outcome.Ok -> sent.value
-            }
-            // Some NFC controllers swallow the 4-bit ACK and return nothing; the mandatory read-back is the real proof.
-            val acknowledged = if (response.isEmpty()) Outcome.Ok(Unit) else NtagResponses.checkAck(response)
-            when (val ack = acknowledged) {
-                is Outcome.Ok -> Unit
-                is Outcome.Err ->
-                    // a refusal before anything changed means the tag is write-protected
-                    return if (index == 0 && ack.error is TagError.Nak) Outcome.Err(TagError.ReadOnly) else ack
-            }
-        }
-        return Outcome.Ok(Unit)
-    }
-
-    /** Page 3 (capability container) followed by the user pages, read in small FAST_READ chunks. */
-    private suspend fun readCcAndUserArea(transceiver: TagTransceiver, model: NtagModel): TagResult<Bytes> {
-        val chunks = ArrayList<Bytes>()
-        var page = CC_PAGE
-        while (page <= model.userEnd) {
-            val end = minOf(page + READ_CHUNK_PAGES - 1, model.userEnd)
-            val response = when (val sent = transceiver.transceive(NtagCommands.fastRead(page, end))) {
-                is Outcome.Err -> return sent
-                is Outcome.Ok -> sent.value
-            }
-            when (val checked = NtagResponses.checkData(response, (end - page + 1) * NtagCommands.PAGE_SIZE)) {
-                is Outcome.Err -> return Outcome.Err(if (checked.error is TagError.Nak) TagError.AuthRequired else checked.error)
-                is Outcome.Ok -> chunks += checked.value
-            }
-            page = end + 1
-        }
-        return Outcome.Ok(Bytes.concat(chunks))
+        return Type2Io.execute(transceiver, steps)
     }
 
     private suspend fun verify(session: TagSession, expected: Bytes): TagResult<WriteReport> {
@@ -166,8 +131,5 @@ class WriteNdefUseCase(
 
     private companion object {
         const val CONFIRMATION_TIMEOUT_MS = 60_000L
-        const val CC_PAGE = 3
-        const val CC_MAGIC = 0xE1
-        const val READ_CHUNK_PAGES = 4
     }
 }

@@ -10,7 +10,12 @@ sealed interface TagError {
     data object NotNdef : TagError
     data object ReadOnly : TagError
     data object AuthRequired : TagError
-    data class Unsupported(val what: String) : TagError
+    data class Unsupported(val what: String) : TagError {
+        companion object {
+            /** A MIFARE Classic card on a phone without the NXP controller (or an operation Classic does not support). */
+            const val MIFARE_CLASSIC = "mifare-classic"
+        }
+    }
     data class CapacityExceeded(val required: Int, val available: Int) : TagError
     data class AuthFailed(val attemptsLeft: Int?) : TagError
     data class VerifyMismatch(val expected: Bytes, val actual: Bytes?) : TagError
