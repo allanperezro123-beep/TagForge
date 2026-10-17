@@ -44,6 +44,9 @@
     <string name="error_auth_required">This tag is password protected.</string>
     <string name="error_auth_failed">Wrong password.</string>
     <string name="error_unsupported">Not supported: %1$s</string>
+    <string name="error_unsupported_classic">This looks like a MIFARE Classic card. Most phones cannot work with it because they lack the NXP controller, so Tag Forge will not try.</string>
+    <string name="error_unsupported_pages_model">Copying raw pages needs two tags of the same chip type. Copy the message only, or use a tag of the same model.</string>
+    <string name="error_same_tag">This is the source tag. Tap a different tag to receive the copy.</string>
     <string name="error_capacity">The message needs %1$d bytes but the tag holds %2$d.</string>
     <string name="error_verify_mismatch">The tag content does not match what was written.</string>
     <string name="error_nak">The tag refused the command (code %1$d).</string>

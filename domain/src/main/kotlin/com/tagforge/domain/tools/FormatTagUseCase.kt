@@ -112,10 +112,12 @@ class FormatTagUseCase : TagOperation<FormatReport> {
             } else {
                 Outcome.Err(TagError.VerifyMismatch(Bytes.EMPTY, null))
             }
-            is Outcome.Err -> if (after.error == TagError.NotNdef || after.error is TagError.Malformed) {
-                Outcome.Err(TagError.VerifyMismatch(Bytes.EMPTY, null))
-            } else {
-                after
+            is Outcome.Err -> when (after.error) {
+                // Android cannot re-read a Tag handle that was formatted through it (its tech list predates the format);
+                // `NdefFormatable.format` itself throws on failure, so "no NDEF visible on this handle" is not a failure.
+                TagError.NotNdef -> Outcome.Ok(FormatReport(session.info, changed = true))
+                is TagError.Malformed -> Outcome.Err(TagError.VerifyMismatch(Bytes.EMPTY, null))
+                else -> after
             }
         }
     }

@@ -151,7 +151,29 @@ class AndroidTagSession(
         }
     }
 
-    override suspend fun formatNdef(initial: NdefMessage?): TagResult<Unit> = Outcome.Err(TagError.Unsupported("format"))
+    /**
+     * Formats an unformatted tag through `NdefFormatable`. Android only formats here; a tag that already has NDEF is
+     * handled by the raw NTAG path in the domain. After a successful format this `Tag` handle cannot be re-read.
+     */
+    override suspend fun formatNdef(initial: NdefMessage?): TagResult<Unit> = withContext(io) {
+        try {
+            val formatable = NdefFormatable.get(tag) ?: return@withContext Outcome.Err(TagError.Unsupported("format"))
+            nfcATransceiver?.close()
+            closeNdefQuietly()
+            if (!formatable.isConnected) formatable.connect()
+            val first = if (initial == null || initial.isEmpty) {
+                android.nfc.NdefMessage(android.nfc.NdefRecord(android.nfc.NdefRecord.TNF_EMPTY, null, null, null))
+            } else {
+                android.nfc.NdefMessage(codec.encode(initial).toByteArray())
+            }
+            formatable.format(first)
+            Outcome.Ok(Unit)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            Outcome.Err(TagErrorMapper.map(e))
+        }
+    }
 
     override suspend fun makeReadOnly(): TagResult<Unit> = Outcome.Err(TagError.Unsupported("makeReadOnly"))
 

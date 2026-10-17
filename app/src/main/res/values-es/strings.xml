@@ -44,6 +44,9 @@
     <string name="error_auth_required">Esta etiqueta está protegida con contraseña.</string>
     <string name="error_auth_failed">Contraseña incorrecta.</string>
     <string name="error_unsupported">No compatible: %1$s</string>
+    <string name="error_unsupported_classic">Parece una tarjeta MIFARE Classic. La mayoría de los teléfonos no pueden trabajar con ella porque no tienen el controlador NXP, así que Tag Forge no lo intentará.</string>
+    <string name="error_unsupported_pages_model">Copiar páginas en bruto requiere dos etiquetas del mismo tipo de chip. Copia solo el mensaje o usa una etiqueta del mismo modelo.</string>
+    <string name="error_same_tag">Esta es la etiqueta de origen. Acerca otra etiqueta distinta para recibir la copia.</string>
     <string name="error_capacity">El mensaje necesita %1$d bytes pero la etiqueta admite %2$d.</string>
     <string name="error_verify_mismatch">El contenido de la etiqueta no coincide con lo escrito.</string>
     <string name="error_nak">La etiqueta rechazó el comando (código %1$d).</string>

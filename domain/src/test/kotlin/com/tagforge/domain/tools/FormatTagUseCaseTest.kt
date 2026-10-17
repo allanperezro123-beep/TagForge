@@ -250,6 +250,32 @@ class FormatTagUseCaseTest {
     }
 
     @Test
+    fun aFreshlyFormattedHandleThatAndroidCannotReReadIsStillASuccess() {
+        val inner = FakeGenericNdefSession(formatable = true, techs = setOf(TagTech.NFC_A, TagTech.NDEF_FORMATABLE), family = TagFamily.ULTRALIGHT)
+        val androidLike = object : TagSession by inner {
+            override suspend fun readNdef(): TagResult<NdefMessage?> = Outcome.Err(TagError.NotNdef)
+        }
+
+        val result = format(androidLike)
+
+        assertIs<Outcome.Ok<FormatReport>>(result)
+        assertEquals(1, inner.formatCalls)
+    }
+
+    @Test
+    fun aPlatformFormatThatLeavesContentBehindIsAVerifyMismatch() {
+        val inner = FakeGenericNdefSession(formatable = true, techs = setOf(TagTech.NFC_A, TagTech.NDEF_FORMATABLE), family = TagFamily.ULTRALIGHT)
+        val lying = object : TagSession by inner {
+            override suspend fun readNdef(): TagResult<NdefMessage?> = Outcome.Ok(uriMessage)
+        }
+
+        val result = format(lying)
+
+        assertIs<Outcome.Err<TagError>>(result)
+        assertIs<TagError.VerifyMismatch>(result.error)
+    }
+
+    @Test
     fun anNtagWithoutACapabilityContainerFallsBackToThePlatformFormat() {
         val tag = FakeNtag21x(NtagModel.NTAG215)
         seed(tag)

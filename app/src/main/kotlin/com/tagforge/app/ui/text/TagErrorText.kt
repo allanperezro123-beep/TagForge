@@ -22,7 +22,12 @@ object TagErrorText {
         TagError.NotNdef -> ErrorText(R.string.error_not_ndef)
         TagError.ReadOnly -> ErrorText(R.string.error_read_only)
         TagError.AuthRequired -> ErrorText(R.string.error_auth_required)
-        is TagError.Unsupported -> ErrorText(R.string.error_unsupported, listOf(error.what))
+        is TagError.Unsupported -> when (error.what) {
+            TagError.Unsupported.MIFARE_CLASSIC -> ErrorText(R.string.error_unsupported_classic)
+            TagError.Unsupported.USER_PAGES_MODEL -> ErrorText(R.string.error_unsupported_pages_model)
+            else -> ErrorText(R.string.error_unsupported, listOf(error.what))
+        }
+        TagError.SameTag -> ErrorText(R.string.error_same_tag)
         is TagError.CapacityExceeded -> ErrorText(R.string.error_capacity, listOf(error.required, error.available))
         is TagError.AuthFailed -> ErrorText(R.string.error_auth_failed)
         is TagError.VerifyMismatch -> ErrorText(R.string.error_verify_mismatch)

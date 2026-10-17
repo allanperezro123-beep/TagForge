@@ -21,6 +21,9 @@ class TagErrorTextTest {
         TagError.ReadOnly,
         TagError.AuthRequired,
         TagError.Unsupported("MIFARE Classic"),
+        TagError.Unsupported(TagError.Unsupported.MIFARE_CLASSIC),
+        TagError.Unsupported(TagError.Unsupported.USER_PAGES_MODEL),
+        TagError.SameTag,
         TagError.CapacityExceeded(required = 147, available = 137),
         TagError.AuthFailed(attemptsLeft = 2),
         TagError.VerifyMismatch(Bytes.of(1), Bytes.of(2)),
@@ -50,6 +53,19 @@ class TagErrorTextTest {
         // Fails when someone adds a TagError subtype without extending this test (and the mapping).
         val variants = assertNotNull(TagError::class.java.permittedSubclasses, "TagError must be a sealed type").size
         assertEquals(variants, everyError.map { it::class.java }.distinct().size)
+    }
+
+    @Test
+    fun unsupportedClassicAndUserPagesGetTheirOwnExplanationWithoutArguments() {
+        val classic = TagErrorText.of(TagError.Unsupported(TagError.Unsupported.MIFARE_CLASSIC))
+        assertEquals(R.string.error_unsupported_classic, classic.message)
+        assertEquals(emptyList<Any>(), classic.args)
+
+        val pages = TagErrorText.of(TagError.Unsupported(TagError.Unsupported.USER_PAGES_MODEL))
+        assertEquals(R.string.error_unsupported_pages_model, pages.message)
+        assertEquals(emptyList<Any>(), pages.args)
+
+        assertEquals(R.string.error_same_tag, TagErrorText.of(TagError.SameTag).message)
     }
 
     @Test

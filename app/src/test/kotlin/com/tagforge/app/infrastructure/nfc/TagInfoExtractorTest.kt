@@ -10,8 +10,10 @@ import com.tagforge.domain.tag.TagTech
 import java.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /** Pure helpers behind the Android adapters (TS-03, rules G3/G4). Anything touching `Tag` itself is device-verified. */
 class TagInfoExtractorTest {
@@ -78,6 +80,28 @@ class TagInfoExtractorTest {
         assertEquals(TagFamily.ISO15693, TagInfoExtractor.familyFor(setOf(TagTech.NFC_V), null))
         assertEquals(TagFamily.FELICA, TagInfoExtractor.familyFor(setOf(TagTech.NFC_F), null))
         assertEquals(TagFamily.UNKNOWN, TagInfoExtractor.familyFor(setOf(TagTech.NFC_A), null))
+    }
+
+    // ---- MIFARE Classic on phones without the NXP controller ---------------------------------------
+
+    @Test
+    fun classicSaksAreRecognisedAndOtherNfcASaksAreNot() {
+        for (sak in listOf(0x08, 0x09, 0x18, 0x88, 0x98)) assertTrue(TagInfoExtractor.isMifareClassicSak(sak), "SAK ${TagInfoExtractor.formatSak(sak)}")
+        for (sak in listOf(0x00, 0x04, 0x20, 0x60)) assertFalse(TagInfoExtractor.isMifareClassicSak(sak), "SAK ${TagInfoExtractor.formatSak(sak)}")
+    }
+
+    @Test
+    fun anNfcAOnlyTagWithAClassicSakIsStillFlaggedAsClassicSoItCanBeExplained() {
+        assertEquals(TagFamily.MIFARE_CLASSIC, TagInfoExtractor.familyFor(setOf(TagTech.NFC_A), null, sak = 0x08))
+        assertEquals(TagFamily.UNKNOWN, TagInfoExtractor.familyFor(setOf(TagTech.NFC_A), null, sak = 0x00))
+        assertEquals(TagFamily.UNKNOWN, TagInfoExtractor.familyFor(setOf(TagTech.NFC_A), null, sak = null))
+    }
+
+    @Test
+    fun moreSpecificTechnologiesBeatTheSakGuess() {
+        assertEquals(TagFamily.ULTRALIGHT, TagInfoExtractor.familyFor(setOf(TagTech.NFC_A, TagTech.MIFARE_ULTRALIGHT), null, sak = 0x08))
+        assertEquals(TagFamily.ISO14443_4, TagInfoExtractor.familyFor(setOf(TagTech.NFC_A, TagTech.ISO_DEP), null, sak = 0x08))
+        assertEquals(TagFamily.NTAG21X, TagInfoExtractor.familyFor(setOf(TagTech.NFC_A), NtagModel.NTAG213, sak = 0x08))
     }
 
     // ---- exception mapping (G3 / G4) --------------------------------------------------------------

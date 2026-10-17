@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only the app's private cache sub-folder is shareable; nothing else can ever be reached through the provider. -->
+<paths>
+    <cache-path
+        name="exports"
+        path="exports/" />
+</paths>
