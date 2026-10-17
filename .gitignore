@@ -16,8 +16,9 @@ build/
 captures/
 
 # Distribution artifacts (APKs copied per phase)
-dist/
+dist/*.apk
 
 # OS
 .DS_Store
 Thumbs.db
+.atl/
