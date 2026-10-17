@@ -1,5 +1,6 @@
 package com.tagforge.domain.task
 
+import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.common.Outcome
 import com.tagforge.domain.ndef.BudgetReport
 import com.tagforge.domain.ndef.NdefBudget
@@ -48,8 +49,22 @@ object TaskMessageBuilder {
         }
 
     /** The first record that carries a task, or null. The type is matched ignoring case, as MIME types are. */
-    fun find(message: NdefMessage): NdefRecord? = message.records.firstOrNull {
-        it.tnf == Tnf.MIME && String(it.type.toByteArray(), Charsets.US_ASCII).equals(MIME_TYPE, ignoreCase = true)
+    fun find(message: NdefMessage): NdefRecord? = message.records.firstOrNull(::isTaskRecord)
+
+    fun isTaskRecord(record: NdefRecord): Boolean =
+        record.tnf == Tnf.MIME && String(record.type.toByteArray(), Charsets.US_ASCII).equals(MIME_TYPE, ignoreCase = true)
+
+    /**
+     * The same task record with every Wi-Fi join key blanked, for history (passwords never stored, HT-01). A payload
+     * that does not decode is dropped entirely: it must never be stored as-is, a key could be hiding in it.
+     */
+    fun redactKeys(record: NdefRecord): NdefRecord {
+        val payload = (TaskCodec.decode(record.payload) as? Outcome.Ok)?.value
+            ?: return record.copy(payload = Bytes.EMPTY)
+        if (payload.actions.none { it is TaskAction.WifiJoin && it.key.isNotEmpty() }) return record
+        val cleaned = payload.copy(actions = payload.actions.map { if (it is TaskAction.WifiJoin) it.copy(key = "") else it })
+        val encoded = (TaskCodec.encode(cleaned) as? Outcome.Ok)?.value ?: Bytes.EMPTY
+        return record.copy(payload = encoded)
     }
 
     /** Task from a scanned message: [TaskError.NotATask] when there is no task record, the codec's error when it is hostile. */

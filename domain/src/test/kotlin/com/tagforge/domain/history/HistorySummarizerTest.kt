@@ -7,6 +7,12 @@ import com.tagforge.domain.ndef.NdefRecord
 import com.tagforge.domain.ndef.spec.RawWsc
 import com.tagforge.domain.ndef.spec.RecordSpec
 import com.tagforge.domain.ndef.spec.RecordSpecEncoder
+import com.tagforge.domain.task.JoinAuth
+import com.tagforge.domain.task.RingerMode
+import com.tagforge.domain.task.TaskAction
+import com.tagforge.domain.task.TaskMessageBuilder
+import com.tagforge.domain.task.TaskPayload
+import com.tagforge.domain.common.Outcome
 import com.tagforge.domain.tag.TagError
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -170,5 +176,82 @@ class HistorySummarizerTest {
         assertEquals("failed_taglost", HistoryOutcome.FAILED_TAGLOST.code)
         assertEquals("read", HistoryKind.READ.code)
         assertEquals(HistoryOutcome.FAILED_OTHER, HistoryOutcome.fromCode("from-the-future"))
+    }
+
+    // ---- task tags: a WiFi join key inside a task is a credential too ---------------------------------------------
+
+    private fun taskMessage(name: String?, vararg actions: TaskAction): NdefMessage =
+        (TaskMessageBuilder.build(TaskPayload(name, actions.toList()), "com.tagforge.app") as Outcome.Ok).value
+
+    private fun payloadOf(message: NdefMessage): TaskPayload = (TaskMessageBuilder.extract(message) as Outcome.Ok).value
+
+    @Test
+    fun aTaskSummaryIsItsNameOrElseTheTaskType() {
+        assertEquals(
+            "Night mode · com.tagforge.app",
+            HistorySummarizer.summarize(taskMessage("Night mode", TaskAction.SetRinger(RingerMode.VIBRATE))),
+        )
+        assertEquals(
+            "application/x-tf · com.tagforge.app",
+            HistorySummarizer.summarize(taskMessage(null, TaskAction.SetRinger(RingerMode.VIBRATE))),
+        )
+    }
+
+    @Test
+    fun aWifiJoinKeyInsideATaskNeverReachesHistory() {
+        val message = taskMessage(
+            "Guest",
+            TaskAction.SetRinger(RingerMode.VIBRATE),
+            TaskAction.WifiJoin("Home", "pass1234", JoinAuth.WPA2),
+            TaskAction.OpenUrl("https://example.com"),
+        )
+
+        val redacted = HistorySummarizer.redact(message)
+
+        val bytes = DefaultNdefCodec.encode(redacted).toByteArray().toString(Charsets.ISO_8859_1)
+        assertFalse("pass1234" in bytes, "the join key survived redaction")
+        assertEquals(
+            TaskPayload(
+                "Guest",
+                listOf(
+                    TaskAction.SetRinger(RingerMode.VIBRATE),
+                    TaskAction.WifiJoin("Home", "", JoinAuth.WPA2),
+                    TaskAction.OpenUrl("https://example.com"),
+                ),
+            ),
+            payloadOf(redacted),
+            "everything except the key is kept",
+        )
+    }
+
+    @Test
+    fun everyJoinKeyInATaskIsRemovedNotJustTheFirst() {
+        val message = taskMessage(
+            null,
+            TaskAction.WifiJoin("A", "firstsecret", JoinAuth.WPA2),
+            TaskAction.WifiJoin("B", "secondsecret", JoinAuth.WPA3),
+        )
+
+        val text = DefaultNdefCodec.encode(HistorySummarizer.redact(message)).toByteArray().toString(Charsets.ISO_8859_1)
+
+        assertFalse("firstsecret" in text)
+        assertFalse("secondsecret" in text)
+    }
+
+    @Test
+    fun anUnreadableTaskPayloadIsDroppedRatherThanStoredAsIs() {
+        val hostile = NdefMessage(listOf(NdefRecord.mime("application/x-tf", Bytes.of(0x10, 0x01, 0x10, 0x03, 0x41, 0x42, 0x43, 0x0A) + Bytes.copyOf("secretkey!".toByteArray()))))
+
+        val redacted = HistorySummarizer.redact(hostile)
+
+        assertFalse("secretkey" in DefaultNdefCodec.encode(redacted).toByteArray().toString(Charsets.ISO_8859_1))
+        assertEquals(Bytes.EMPTY, redacted.records.single().payload)
+    }
+
+    @Test
+    fun tasksWithoutAKeyAreStoredUntouched() {
+        val message = taskMessage("Plain", TaskAction.SetRinger(RingerMode.SILENT), TaskAction.WifiJoin("Cafe", "", JoinAuth.OPEN))
+
+        assertEquals(message, HistorySummarizer.redact(message))
     }
 }
