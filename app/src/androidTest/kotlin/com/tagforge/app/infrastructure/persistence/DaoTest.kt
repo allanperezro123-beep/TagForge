@@ -9,6 +9,9 @@ import com.tagforge.domain.history.HistoryEntry
 import com.tagforge.domain.history.HistoryKind
 import com.tagforge.domain.history.HistoryOutcome
 import com.tagforge.domain.ndef.spec.RecordSpec
+import com.tagforge.domain.task.RingerMode
+import com.tagforge.domain.task.Task
+import com.tagforge.domain.task.TaskAction
 import com.tagforge.domain.template.Template
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -27,6 +30,7 @@ class DaoTest {
     private lateinit var db: TagForgeDatabase
     private lateinit var history: RoomHistoryRepository
     private lateinit var templates: RoomTemplateRepository
+    private lateinit var tasks: RoomTaskRepository
 
     @Before
     fun open() {
@@ -34,6 +38,7 @@ class DaoTest {
         db = Room.inMemoryDatabaseBuilder(context, TagForgeDatabase::class.java).build()
         history = RoomHistoryRepository(db.historyDao())
         templates = RoomTemplateRepository(db.templateDao())
+        tasks = RoomTaskRepository(db.taskDao())
     }
 
     @After
@@ -99,5 +104,21 @@ class DaoTest {
         val id = templates.upsert(Template(name = "x", records = emptyList(), createdAt = Instant.fromEpochMilliseconds(1), updatedAt = Instant.fromEpochMilliseconds(1)))
         templates.delete(id)
         assertNull(templates.get(id))
+    }
+
+    @Test
+    fun aSavedTaskIsListedWithIdenticalActionsAfterTheDatabaseIsReopened() = runBlocking {
+        val actions = listOf(TaskAction.SetRinger(RingerMode.VIBRATE), TaskAction.OpenUrl("https://example.com"))
+        val id = tasks.upsert(Task(name = "Night", actions = actions, createdAt = Instant.fromEpochMilliseconds(1), updatedAt = Instant.fromEpochMilliseconds(1)))
+
+        val loaded = tasks.get(id)!!
+        assertEquals(actions, loaded.actions)
+        assertEquals(listOf("Night"), tasks.observeAll().first().map { it.name })
+
+        tasks.markRun(id, Instant.fromEpochMilliseconds(99))
+        assertEquals(99L, tasks.get(id)!!.lastRunAt!!.toEpochMilliseconds())
+
+        tasks.delete(id)
+        assertNull(tasks.get(id))
     }
 }

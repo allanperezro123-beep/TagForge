@@ -1,6 +1,7 @@
 package com.tagforge.app.infrastructure.persistence
 
 import com.tagforge.app.infrastructure.persistence.entity.HistoryEntity
+import com.tagforge.app.infrastructure.persistence.entity.TaskEntity
 import com.tagforge.app.infrastructure.persistence.entity.TemplateEntity
 import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.common.Hex
@@ -8,6 +9,8 @@ import com.tagforge.domain.history.HistoryEntry
 import com.tagforge.domain.history.HistoryKind
 import com.tagforge.domain.history.HistoryOutcome
 import com.tagforge.domain.ndef.spec.RecordSpecJson
+import com.tagforge.domain.task.Task
+import com.tagforge.domain.task.TaskJson
 import com.tagforge.domain.template.Template
 import kotlin.time.Instant
 
@@ -51,4 +54,23 @@ internal fun TemplateEntity.toDomain() = Template(
     records = RecordSpecJson.decode(recordsJson).orEmpty(),
     createdAt = Instant.fromEpochMilliseconds(createdAt),
     updatedAt = Instant.fromEpochMilliseconds(updatedAt),
+)
+
+internal fun Task.toEntity() = TaskEntity(
+    id = id,
+    name = name,
+    actionsJson = TaskJson.encode(actions),
+    createdAt = createdAt.toEpochMilliseconds(),
+    updatedAt = updatedAt.toEpochMilliseconds(),
+    lastRunAt = lastRunAt?.toEpochMilliseconds(),
+)
+
+/** Unreadable JSON loads as a task with no actions, like templates: the name stays visible so it can be deleted. */
+internal fun TaskEntity.toDomain() = Task(
+    id = id,
+    name = name,
+    actions = TaskJson.decode(actionsJson).orEmpty(),
+    createdAt = Instant.fromEpochMilliseconds(createdAt),
+    updatedAt = Instant.fromEpochMilliseconds(updatedAt),
+    lastRunAt = lastRunAt?.let(Instant::fromEpochMilliseconds),
 )

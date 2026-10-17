@@ -6,7 +6,7 @@ import androidx.room.Upsert
 import com.tagforge.app.infrastructure.persistence.entity.TaskEntity
 import kotlinx.coroutines.flow.Flow
 
-/** Wired to a repository in Phase 4; declared now so the v1 schema is complete. */
+/** Backs [com.tagforge.app.infrastructure.persistence.RoomTaskRepository]. */
 @Dao
 interface TaskDao {
     @Query("SELECT * FROM tasks ORDER BY name COLLATE NOCASE ASC")

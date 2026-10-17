@@ -5,7 +5,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 /**
- * Created now (schema v1) so Phase 4 needs no migration. [actionsJson] is a JSON list of task actions, not a binary
+ * Created in schema v1 (Phase 2) so Phase 4 needed no migration. [actionsJson] is a JSON list of task actions, not a binary
  * blob (reconciliation #7), so rows stay inspectable and forward-compatible.
  */
 @Entity(tableName = "tasks")
