@@ -20,6 +20,10 @@ import com.tagforge.app.feature.more.AboutScreen
 import com.tagforge.app.feature.more.MoreScreen
 import com.tagforge.app.feature.read.ReadRoute
 import com.tagforge.app.feature.settings.SettingsRoute
+import com.tagforge.app.feature.tools.CloneRoute
+import com.tagforge.app.feature.tools.DumpRoute
+import com.tagforge.app.feature.tools.TechInfoRoute
+import com.tagforge.app.feature.tools.ToolsRoute
 import com.tagforge.app.feature.templates.TemplatesRoute
 import com.tagforge.app.feature.write.WriteRoute
 
@@ -50,6 +54,16 @@ fun TagForgeNavHost(
     NavHost(navController = navController, startDestination = Route.Read, modifier = modifier) {
         composable<Route.Read> { ReadRoute() }
         composable<Route.Write> { entry -> WriteRoute(templateId = entry.toRoute<Route.Write>().templateId) }
+        composable<Route.Tools> {
+            ToolsRoute(
+                onOpenDump = { navController.navigate(Route.Dump) },
+                onOpenClone = { navController.navigate(Route.Clone) },
+                onOpenTech = { navController.navigate(Route.TechInfo) },
+            )
+        }
+        composable<Route.Dump> { DumpRoute(onBack = { navController.popBackStack() }) }
+        composable<Route.Clone> { CloneRoute(onBack = { navController.popBackStack() }) }
+        composable<Route.TechInfo> { TechInfoRoute(onBack = { navController.popBackStack() }) }
         composable<Route.More> {
             MoreScreen(
                 onOpenHistory = { navController.navigate(Route.History) },

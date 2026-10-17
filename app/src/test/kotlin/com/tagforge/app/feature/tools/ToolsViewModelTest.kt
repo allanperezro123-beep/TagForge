@@ -404,4 +404,21 @@ class ToolsViewModelTest {
         assertNull(vm.uiState.value.sheet)
         assertEquals(writes, another.writeCount)
     }
+
+    // ---- ownership: leaving must not cancel the screen we navigated to ------------------------------------------
+
+    @Test
+    fun hidingDoesNotCancelTheOperationOfTheScreenThatArrivedFirst() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.onRequest(DestructiveTool.ERASE)
+        vm.onConfirm()
+        val next = coordinator.arm(com.tagforge.domain.read.ReadTagUseCase())   // navigation arms the new screen before the old one stops
+
+        vm.onHidden()
+        coordinator.onTagDiscovered(session(tagWithMessage()))
+        advanceUntilIdle()
+
+        assertIs<com.tagforge.domain.scan.ScanState.Success<*>>(next.value, "the arriving screen still got its tag")
+    }
 }

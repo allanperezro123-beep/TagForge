@@ -72,12 +72,12 @@ abstract class ScanToolViewModel<T>(
     fun onHidden() {
         if (readingFlow.value is ToolReading.Reading) return
         armJob?.cancel()
-        coordinator.disarm()
+        coordinator.disarmIfCurrent(operation)
         armed = false
     }
 
     override fun onCleared() {
-        coordinator.disarm()
+        coordinator.disarmIfCurrent(operation)
     }
 
     private fun arm() {

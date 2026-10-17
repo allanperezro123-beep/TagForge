@@ -44,6 +44,7 @@ class ToolsViewModel(
 
     private var armJob: Job? = null
     private var lastTool: DestructiveTool? = null
+    private var armedOperation: TagOperation<*>? = null
 
     init {
         viewModelScope.launch { availability.collect { value -> _state.update { it.copy(availability = value) } } }
@@ -84,7 +85,7 @@ class ToolsViewModel(
     fun onSheetDismissed() {
         if (_state.value.sheet is ToolSheet.Working) return
         armJob?.cancel()
-        coordinator.disarm()
+        disarm()
         _state.update { it.copy(sheet = null) }
     }
 
@@ -92,12 +93,18 @@ class ToolsViewModel(
     fun onHidden() {
         if (_state.value.sheet is ToolSheet.Working) return
         armJob?.cancel()
-        coordinator.disarm()
+        disarm()
         _state.update { it.copy(confirm = null, sheet = null) }
     }
 
     override fun onCleared() {
-        coordinator.disarm()
+        disarm()
+    }
+
+    /** Only our own operation: the screen we navigate to may already have armed its own. */
+    private fun disarm() {
+        armedOperation?.let(coordinator::disarmIfCurrent)
+        armedOperation = null
     }
 
     // ---- arming ------------------------------------------------------------------------------------------------------
@@ -111,6 +118,7 @@ class ToolsViewModel(
 
     private fun <T> start(tool: DestructiveTool, operation: TagOperation<T>, kind: HistoryKind, changed: (T) -> Boolean) {
         armJob?.cancel()
+        armedOperation = operation
         val scan = coordinator.arm(operation)
         _state.update { it.copy(sheet = ToolSheet.Waiting(tool)) }
 

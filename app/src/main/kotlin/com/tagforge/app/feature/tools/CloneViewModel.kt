@@ -11,6 +11,7 @@ import com.tagforge.domain.ndef.DefaultNdefCodec
 import com.tagforge.domain.ndef.NdefMessage
 import com.tagforge.domain.scan.ScanCoordinator
 import com.tagforge.domain.scan.ScanState
+import com.tagforge.domain.scan.TagOperation
 import com.tagforge.domain.tag.TagError
 import com.tagforge.domain.tools.CloneReport
 import com.tagforge.domain.tools.CloneSource
@@ -48,6 +49,7 @@ class CloneViewModel(
 
     private var armJob: Job? = null
     private var captured: CloneSource? = null
+    private var armedOperation: TagOperation<*>? = null
     private var pendingDecision: CompletableDeferred<Boolean>? = null
 
     init {
@@ -98,7 +100,7 @@ class CloneViewModel(
             return
         }
         armJob?.cancel()
-        coordinator.disarm()
+        disarm()
         _state.update { it.copy(sheet = null) }
     }
 
@@ -106,7 +108,7 @@ class CloneViewModel(
     fun onReset() {
         armJob?.cancel()
         pendingDecision?.complete(false)
-        coordinator.disarm()
+        disarm()
         captured = null
         _state.update { it.copy(step = CloneStep.SOURCE, source = null, sheet = null, overwrite = null) }
     }
@@ -125,20 +127,28 @@ class CloneViewModel(
         if (_state.value.sheet is CloneSheet.Working) return
         armJob?.cancel()
         pendingDecision?.complete(false)
-        coordinator.disarm()
+        disarm()
         _state.update { it.copy(sheet = null, overwrite = null) }
     }
 
     override fun onCleared() {
         pendingDecision?.complete(false)
-        coordinator.disarm()
+        disarm()
+    }
+
+    /** Only our own operation: the screen we navigate to may already have armed its own. */
+    private fun disarm() {
+        armedOperation?.let(coordinator::disarmIfCurrent)
+        armedOperation = null
     }
 
     // ---- arming ------------------------------------------------------------------------------------------------------
 
     private fun armSource() {
         armJob?.cancel()
-        val scan = coordinator.arm(clone.readSource(includeUserPages = _state.value.copyUserPages))
+        val operation = clone.readSource(includeUserPages = _state.value.copyUserPages)
+        armedOperation = operation
+        val scan = coordinator.arm(operation)
         _state.update { it.copy(sheet = CloneSheet.Waiting(CloneStep.SOURCE)) }
 
         var detected = false
@@ -175,7 +185,9 @@ class CloneViewModel(
         val source = captured ?: return
         armJob?.cancel()
         pendingDecision?.complete(false)
-        val scan = coordinator.arm(clone.writeTarget(source) { existing -> askToOverwrite(existing) })
+        val operation = clone.writeTarget(source) { existing -> askToOverwrite(existing) }
+        armedOperation = operation
+        val scan = coordinator.arm(operation)
         _state.update { it.copy(sheet = CloneSheet.Waiting(CloneStep.TARGET), overwrite = null) }
 
         var detected = false

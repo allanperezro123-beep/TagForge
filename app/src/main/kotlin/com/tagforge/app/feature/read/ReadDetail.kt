@@ -25,6 +25,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.tagforge.app.R
+import com.tagforge.app.feature.tools.TechSections
 import com.tagforge.app.infrastructure.nfc.TagInfoExtractor
 import com.tagforge.app.ui.components.EmptyState
 import com.tagforge.app.ui.components.HexRowUi
@@ -40,6 +41,7 @@ import com.tagforge.domain.tag.TagTech
 private enum class DetailTab(val labelRes: Int) {
     RECORDS(R.string.read_tab_records),
     INFO(R.string.read_tab_info),
+    TECHS(R.string.read_tab_techs),
     HEX(R.string.read_tab_hex),
 }
 
@@ -47,7 +49,9 @@ private enum class DetailTab(val labelRes: Int) {
 @Composable
 fun ReadDetail(scan: TagScan, modifier: Modifier = Modifier) {
     var selected by rememberSaveable { mutableIntStateOf(0) }
-    val tabs = DetailTab.entries
+    // The Techs tab only exists when the OS reported something per technology (never for stored history entries).
+    val hasTechs = scan.readout.info.details.sections(scan.readout.info).isNotEmpty()
+    val tabs = DetailTab.entries.filter { it != DetailTab.TECHS || hasTechs }
 
     Column(modifier.fillMaxSize()) {
         PrimaryTabRow(selectedTabIndex = selected) {
@@ -58,6 +62,7 @@ fun ReadDetail(scan: TagScan, modifier: Modifier = Modifier) {
         when (tabs[selected]) {
             DetailTab.RECORDS -> RecordsTab(scan)
             DetailTab.INFO -> InfoTab(scan)
+            DetailTab.TECHS -> TechSections(scan.readout.info)
             DetailTab.HEX -> HexTab(scan)
         }
     }
@@ -183,7 +188,7 @@ private fun familyLabel(family: TagFamily): String = stringResource(
 )
 
 /** Technology identifiers are proper names, shown as Android names them. */
-private fun techLabel(tech: TagTech): String = when (tech) {
+internal fun techLabel(tech: TagTech): String = when (tech) {
     TagTech.NFC_A -> "NfcA"
     TagTech.NFC_B -> "NfcB"
     TagTech.NFC_F -> "NfcF"

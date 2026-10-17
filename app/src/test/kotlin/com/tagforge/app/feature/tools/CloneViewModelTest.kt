@@ -425,4 +425,20 @@ class CloneViewModelTest {
         assertNull(vm.uiState.value.source)
         assertEquals(CloneStep.SOURCE, vm.uiState.value.step)
     }
+
+    // ---- ownership: leaving must not cancel the screen we navigated to ------------------------------------------
+
+    @Test
+    fun hidingDoesNotCancelTheOperationOfTheScreenThatArrivedFirst() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.onStart()
+        val next = coordinator.arm(com.tagforge.domain.read.ReadTagUseCase())   // navigation arms the new screen before the old one stops
+
+        vm.onHidden()
+        coordinator.onTagDiscovered(session(tag(NtagModel.NTAG213, sourceUid, message)))
+        advanceUntilIdle()
+
+        assertIs<com.tagforge.domain.scan.ScanState.Success<*>>(next.value, "the arriving screen still got its tag")
+    }
 }

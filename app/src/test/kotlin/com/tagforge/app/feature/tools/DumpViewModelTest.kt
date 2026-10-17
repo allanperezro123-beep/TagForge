@@ -225,6 +225,18 @@ class DumpViewModelTest {
         assertEquals(DumpLayout.SIXTEEN_BYTES, vm.uiState.value.layout)
     }
 
+    @Test
+    fun copyingRaisesACopiedNoticeUntilTheScreenHasShownIt() = runTest {
+        val vm = viewModel(coordinator())
+        assertFalse(vm.uiState.value.copyNotice)
+
+        vm.onCopied()
+        assertTrue(vm.uiState.value.copyNotice)
+
+        vm.onCopyNoticeShown()
+        assertFalse(vm.uiState.value.copyNotice)
+    }
+
     // ---- row building (pure) ---------------------------------------------------------------------------------------------
 
     private fun dumpOf(model: NtagModel): com.tagforge.domain.ntag.MemoryDump =
@@ -274,5 +286,21 @@ class DumpViewModelTest {
         assertEquals(16, rows.size)
         assertNull(rows[3].primaryRegion)
         assertFalse(rows.any { it.hiddenByChip })
+    }
+
+    // ---- ownership: leaving must not cancel the screen we navigated to ------------------------------------------
+
+    @Test
+    fun hidingDoesNotCancelTheOperationOfTheScreenThatArrivedFirst() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.onVisible()
+        val next = coordinator.arm(com.tagforge.domain.read.ReadTagUseCase())   // navigation arms the new screen before the old one stops
+
+        vm.onHidden()
+        coordinator.onTagDiscovered(session(tag()))
+        advanceUntilIdle()
+
+        assertIs<com.tagforge.domain.scan.ScanState.Success<*>>(next.value, "the arriving screen still got its tag")
     }
 }

@@ -52,6 +52,8 @@ data class DumpUiState(
     val layout: DumpLayout = DumpLayout.PAGE_PER_ROW,
     /** The page whose explanation sheet is open. */
     val selectedPage: Int? = null,
+    /** True for one frame after "copy": the screen shows a confirmation on Android versions that show none themselves. */
+    val copyNotice: Boolean = false,
 ) {
     val report: DumpReport? get() = (reading as? ToolReading.Result<DumpReport>)?.value
 }
@@ -64,8 +66,9 @@ class DumpViewModel(
 
     private val layout = MutableStateFlow(DumpLayout.PAGE_PER_ROW)
     private val selectedPage = MutableStateFlow<Int?>(null)
+    private val copyNotice = MutableStateFlow(false)
 
-    val uiState: StateFlow<DumpUiState> = combine(availabilityFlow, readingFlow, layout, selectedPage, ::DumpUiState)
+    val uiState: StateFlow<DumpUiState> = combine(availabilityFlow, readingFlow, layout, selectedPage, copyNotice, ::DumpUiState)
         .stateIn(viewModelScope, SharingStarted.Eagerly, DumpUiState())
 
     fun onLayoutChanged(value: DumpLayout) {
@@ -74,5 +77,13 @@ class DumpViewModel(
 
     fun onPageSelected(page: Int?) {
         selectedPage.value = page
+    }
+
+    fun onCopied() {
+        copyNotice.value = true
+    }
+
+    fun onCopyNoticeShown() {
+        copyNotice.value = false
     }
 }
