@@ -94,4 +94,22 @@ class NdefBudgetTest {
         assertEquals(496 - 4 - 1, NdefBudget.presetCapacity(NtagModel.NTAG215))
         assertEquals(872 - 4 - 1, NdefBudget.presetCapacity(NtagModel.NTAG216))
     }
+
+    @Test
+    fun androidMaxSizeMatchesWhatTheOsReportsForEachChip() {
+        // Ndef.getMaxSize(): CC size - Lock Control TLV (213 only) - NDEF TLV header (2 short, 4 long)
+        assertEquals(137, NdefBudget.androidMaxSize(NtagModel.NTAG213))
+        assertEquals(492, NdefBudget.androidMaxSize(NtagModel.NTAG215))
+        assertEquals(868, NdefBudget.androidMaxSize(NtagModel.NTAG216))
+    }
+
+    @Test
+    fun smallestChipPicksTheCheapestTagThatStillFits() {
+        assertEquals(NtagModel.NTAG213, NdefBudget.smallestChipFor(137))
+        assertEquals(NtagModel.NTAG215, NdefBudget.smallestChipFor(138))
+        assertEquals(NtagModel.NTAG215, NdefBudget.smallestChipFor(492))
+        assertEquals(NtagModel.NTAG216, NdefBudget.smallestChipFor(493))
+        assertEquals(NtagModel.NTAG216, NdefBudget.smallestChipFor(868))
+        assertEquals(null, NdefBudget.smallestChipFor(869))
+    }
 }

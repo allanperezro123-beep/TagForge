@@ -39,6 +39,20 @@ object NdefBudget {
     }
 
     /**
+     * What Android's `Ndef.getMaxSize()` reports for a freshly formatted [model]: CC size minus the factory Lock
+     * Control TLV (213 only) minus the NDEF TLV header (2 bytes, 4 for long messages). NTAG213 = 137, 215 = 492,
+     * 216 = 868. Used as the meter capacity for a chosen target so it matches what a scanned tag will report.
+     */
+    fun androidMaxSize(model: NtagModel): Int {
+        val area = model.ccNdefSize - (model.factoryLockControlTlv?.size ?: 0)
+        return area - if (area - 2 <= MAX_ONE_BYTE_TLV_LENGTH) 2 else 4
+    }
+
+    /** The smallest (cheapest) chip whose [androidMaxSize] holds [messageSize] bytes, or null when none does. */
+    fun smallestChipFor(messageSize: Int): NtagModel? =
+        NtagModel.entries.firstOrNull { androidMaxSize(it) >= messageSize }
+
+    /**
      * Capacity when no tag has been scanned: CC NDEF size, minus the factory Lock Control TLV (NTAG213 only),
      * minus the NDEF TLV header (2 or 4 bytes) and the terminator. NTAG213 = 136.
      */
