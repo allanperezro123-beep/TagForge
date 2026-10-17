@@ -9,6 +9,7 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Bookmarks
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -27,6 +28,7 @@ import com.tagforge.app.R
 fun MoreScreen(
     onOpenHistory: () -> Unit,
     onOpenTemplates: () -> Unit,
+    onOpenPermissions: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAbout: () -> Unit,
     modifier: Modifier = Modifier,
@@ -47,6 +49,12 @@ fun MoreScreen(
                 title = stringResource(R.string.more_templates),
                 summary = stringResource(R.string.more_templates_summary),
                 onClick = onOpenTemplates,
+            )
+            MoreEntry(
+                icon = Icons.Outlined.Security,
+                title = stringResource(R.string.more_permissions),
+                summary = stringResource(R.string.more_permissions_summary),
+                onClick = onOpenPermissions,
             )
             MoreEntry(
                 icon = Icons.Outlined.Settings,

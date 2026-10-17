@@ -3,7 +3,7 @@ package com.tagforge.app.navigation
 import kotlinx.serialization.Serializable
 
 /**
- * Type-safe navigation destinations. Later phases add Tasks and their detail routes here.
+ * Type-safe navigation destinations. Later phases add their routes here.
  * Nested under [Route] so a destination can never clash with the container composable of the same feature.
  */
 sealed interface Route {
@@ -27,6 +27,14 @@ sealed interface Route {
     @Serializable
     data object TechInfo : Route
 
+    /** Saved tasks: list, run with confirmation, write to a tag. */
+    @Serializable
+    data object Tasks : Route
+
+    /** The task builder. [taskId] null starts a new task. */
+    @Serializable
+    data class TaskBuilder(val taskId: Long? = null) : Route
+
     @Serializable
     data object More : Route
 
@@ -42,6 +50,10 @@ sealed interface Route {
 
     @Serializable
     data object Settings : Route
+
+    /** Every special permission tasks may need, with its state and a button to grant it. */
+    @Serializable
+    data object PermissionCenter : Route
 
     @Serializable
     data object About : Route

@@ -545,4 +545,26 @@
 
     <!-- Tasks -->
     <string name="tasks_notification_channel">Notificaciones de tareas</string>
+
+    <!-- Permission Center -->
+    <string name="permissions_title">Centro de permisos</string>
+    <string name="permissions_intro">Algunas tareas necesitan permisos que solo tú puedes conceder en los ajustes de Android. Tag Forge nunca pide leer tus mensajes, hacer llamadas ni ver la lista completa de tus apps.</string>
+    <string name="permissions_grant">Conceder</string>
+    <string name="permissions_state_granted">Concedido</string>
+    <string name="permissions_state_needs_grant">Requiere tu aprobación</string>
+    <string name="permissions_state_unavailable">No es necesario en esta versión de Android</string>
+    <string name="permissions_state_no_nfc">Este dispositivo no tiene NFC</string>
+    <string name="permissions_open_failed">No se pudo abrir esa pantalla de ajustes.</string>
+    <string name="permissions_write_settings">Modificar ajustes del sistema</string>
+    <string name="permissions_write_settings_reason">Permite que las tareas cambien el brillo de la pantalla.</string>
+    <string name="permissions_policy">Acceso a No molestar</string>
+    <string name="permissions_policy_reason">Permite que las tareas pongan el teléfono en silencio. Sin él, las tareas usan vibración.</string>
+    <string name="permissions_notifications">Notificaciones</string>
+    <string name="permissions_notifications_reason">Permite que las tareas muestren una notificación.</string>
+    <string name="permissions_nfc">NFC</string>
+    <string name="permissions_nfc_reason">Necesario para leer y escribir etiquetas.</string>
+    <string name="permissions_alarms">Alarmas y temporizadores</string>
+    <string name="permissions_alarms_reason">Permite que las tareas abran la app de reloj para crear alarmas y temporizadores. Se concede automáticamente.</string>
+    <string name="more_permissions">Centro de permisos</string>
+    <string name="more_permissions_summary">Consulta y concede lo que necesitan las tareas</string>
 </resources>

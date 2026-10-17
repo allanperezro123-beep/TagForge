@@ -555,4 +555,26 @@
 
     <!-- Tasks -->
     <string name="tasks_notification_channel">Task notifications</string>
+
+    <!-- Permission Center -->
+    <string name="permissions_title">Permission Center</string>
+    <string name="permissions_intro">Some tasks need permissions that only you can grant from Android settings. Tag Forge never asks to read your messages, place calls or see your full app list.</string>
+    <string name="permissions_grant">Grant</string>
+    <string name="permissions_state_granted">Granted</string>
+    <string name="permissions_state_needs_grant">Needs your approval</string>
+    <string name="permissions_state_unavailable">Not needed on this Android version</string>
+    <string name="permissions_state_no_nfc">This device has no NFC</string>
+    <string name="permissions_open_failed">Could not open that settings screen.</string>
+    <string name="permissions_write_settings">Modify system settings</string>
+    <string name="permissions_write_settings_reason">Lets tasks change the screen brightness.</string>
+    <string name="permissions_policy">Do Not Disturb access</string>
+    <string name="permissions_policy_reason">Lets tasks set the phone to silent. Without it, tasks use vibrate instead.</string>
+    <string name="permissions_notifications">Notifications</string>
+    <string name="permissions_notifications_reason">Lets tasks show a notification.</string>
+    <string name="permissions_nfc">NFC</string>
+    <string name="permissions_nfc_reason">Needed to read and write tags.</string>
+    <string name="permissions_alarms">Alarms and timers</string>
+    <string name="permissions_alarms_reason">Lets tasks open the clock app to set alarms and timers. Granted automatically.</string>
+    <string name="more_permissions">Permission Center</string>
+    <string name="more_permissions_summary">See and grant what tasks need</string>
 </resources>

@@ -19,6 +19,7 @@ import com.tagforge.app.feature.history.TagDetailRoute
 import com.tagforge.app.feature.more.AboutScreen
 import com.tagforge.app.feature.more.MoreScreen
 import com.tagforge.app.feature.read.ReadRoute
+import com.tagforge.app.feature.settings.PermissionCenterRoute
 import com.tagforge.app.feature.settings.SettingsRoute
 import com.tagforge.app.feature.tools.CloneRoute
 import com.tagforge.app.feature.tools.DumpRoute
@@ -68,6 +69,7 @@ fun TagForgeNavHost(
             MoreScreen(
                 onOpenHistory = { navController.navigate(Route.History) },
                 onOpenTemplates = { navController.navigate(Route.Templates) },
+                onOpenPermissions = { navController.navigate(Route.PermissionCenter) },
                 onOpenSettings = { navController.navigate(Route.Settings) },
                 onOpenAbout = { navController.navigate(Route.About) },
             )
@@ -90,6 +92,7 @@ fun TagForgeNavHost(
             )
         }
         composable<Route.Settings> { SettingsRoute(onBack = { navController.popBackStack() }) }
+        composable<Route.PermissionCenter> { PermissionCenterRoute(onBack = { navController.popBackStack() }) }
         composable<Route.About> {
             AboutScreen(versionName = BuildConfig.VERSION_NAME, onBack = { navController.popBackStack() })
         }
