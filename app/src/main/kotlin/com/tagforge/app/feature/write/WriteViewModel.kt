@@ -60,6 +60,7 @@ class WriteViewModel(
     val events: Flow<WriteEvent> = eventChannel.receiveAsFlow()
 
     private var armJob: Job? = null
+    private var armedOperation: com.tagforge.domain.scan.TagOperation<*>? = null
     private var pendingDecision: CompletableDeferred<Boolean>? = null
     private var lastMessage: NdefMessage? = null
     private var removed: Pair<Int, RecordSpec>? = null
@@ -203,7 +204,7 @@ class WriteViewModel(
         }
         if (state.sheet is WriteSheet.Working) return
         armJob?.cancel()
-        coordinator.disarm()
+        disarm()
         mutate { it.copy(sheet = null, overwrite = null) }
     }
 
@@ -212,19 +213,26 @@ class WriteViewModel(
         if (_state.value.sheet is WriteSheet.Working) return
         armJob?.cancel()
         pendingDecision?.complete(false)
-        coordinator.disarm()
+        disarm()
         mutate { it.copy(sheet = null, overwrite = null) }
     }
 
     override fun onCleared() {
         pendingDecision?.complete(false)
-        coordinator.disarm()
+        disarm()
+    }
+
+    /** Only our own operation: the screen we navigate to may already have armed its own. */
+    private fun disarm() {
+        armedOperation?.let(coordinator::disarmIfCurrent)
+        armedOperation = null
     }
 
     private fun arm(message: NdefMessage) {
         armJob?.cancel()
         pendingDecision?.complete(false)
         val operation = WriteNdefUseCase(message) { existing -> askToOverwrite(existing) }
+        armedOperation = operation
         val scan = coordinator.arm(operation)
         mutate { it.copy(sheet = WriteSheet.Waiting(DefaultNdefCodec.encode(message).size), overwrite = null) }
 

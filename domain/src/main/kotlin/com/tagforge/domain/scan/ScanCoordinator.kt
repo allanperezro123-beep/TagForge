@@ -80,6 +80,23 @@ class ScanCoordinator(
         previous?.setIdle()
     }
 
+    /**
+     * Disarms only when [op] is the operation currently armed. A screen that is leaving uses this instead of
+     * [disarm]: with navigation animations the next screen arms its operation before the old one is stopped, and a
+     * blind disarm would silently cancel it.
+     */
+    fun disarmIfCurrent(op: TagOperation<*>) {
+        val previous: Arm<*>?
+        synchronized(lock) {
+            if (current?.op !== op) return
+            previous = current
+            current = null
+            _state.value = ScanState.Idle
+        }
+        previous?.job?.cancel()
+        previous?.setIdle()
+    }
+
     /** Called from the NFC binder thread: non-blocking, never throws. */
     fun onTagDiscovered(session: TagSession) {
         val arm: Arm<*>

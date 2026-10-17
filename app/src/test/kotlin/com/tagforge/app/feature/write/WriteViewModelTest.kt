@@ -802,4 +802,19 @@ class WriteViewModelTest {
         kotlinx.coroutines.runBlocking { session(tag).writeNdef(message) }
     }
 
+
+    @Test
+    fun hidingDoesNotCancelTheOperationOfTheScreenThatArrivedFirst() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.addRecord(uri)
+        vm.onWrite()
+        val next = coordinator.arm(com.tagforge.domain.read.ReadTagUseCase())   // navigation arms the new screen before the old one stops
+
+        vm.onHidden()
+        coordinator.onTagDiscovered(session(blankTag()))
+        advanceUntilIdle()
+
+        assertIs<com.tagforge.domain.scan.ScanState.Success<*>>(next.value, "the arriving screen still got its tag")
+    }
 }

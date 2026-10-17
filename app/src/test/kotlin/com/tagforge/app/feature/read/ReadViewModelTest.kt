@@ -336,4 +336,20 @@ class ReadViewModelTest {
             expectNoEvents()
         }
     }
+
+    // ---- ownership: leaving must not cancel the screen we navigated to ------------------------------------------
+
+    @Test
+    fun hidingDoesNotCancelTheOperationOfTheScreenThatArrivedFirst() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.onVisible()
+        val next = coordinator.arm(com.tagforge.domain.read.ReadTagUseCase())   // navigation arms the new screen before the old one stops
+
+        vm.onHidden()
+        coordinator.onTagDiscovered(ntagWithText("hi"))
+        advanceUntilIdle()
+
+        assertIs<com.tagforge.domain.scan.ScanState.Success<*>>(next.value, "the arriving screen still got its tag")
+    }
 }

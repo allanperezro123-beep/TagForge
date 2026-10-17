@@ -276,4 +276,37 @@ class ScanCoordinatorTest {
         assertEquals(ScanState.Idle, coordinator.state.value)
         assertEquals(0, op.executions)
     }
+
+    // ---- ownership: a screen that leaves must not cancel the next screen's operation ----------------------------
+
+    @Test
+    fun disarmIfCurrentDisarmsTheOperationItIsGiven() = runTest {
+        val coordinator = coordinator()
+        val op = ProbeOp { _, _ -> Outcome.Ok("x") }
+        coordinator.arm(op)
+
+        coordinator.disarmIfCurrent(op)
+        coordinator.onTagDiscovered(session())
+        advanceUntilIdle()
+
+        assertEquals(0, op.executions)
+        assertEquals(ScanState.Idle, coordinator.state.value)
+    }
+
+    @Test
+    fun disarmIfCurrentLeavesAnotherOperationsArmAlone() = runTest {
+        val coordinator = coordinator()
+        val leaving = ProbeOp { _, _ -> Outcome.Ok("old") }
+        val arriving = ProbeOp { _, _ -> Outcome.Ok("new") }
+        coordinator.arm(leaving)
+        coordinator.arm(arriving)   // navigation: the new screen arms BEFORE the old one reaches ON_STOP
+
+        coordinator.disarmIfCurrent(leaving)
+        coordinator.onTagDiscovered(session())
+        advanceUntilIdle()
+
+        assertEquals(1, arriving.executions, "the arriving screen still gets its tag")
+        assertEquals(0, leaving.executions)
+        assertIs<ScanState.Success<*>>(coordinator.state.value)
+    }
 }

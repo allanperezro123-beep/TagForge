@@ -68,7 +68,7 @@ class ReadViewModel(
 
     /** The tab is no longer visible: stop listening so a hidden screen never reads tags. */
     fun onHidden() {
-        coordinator.disarm()
+        coordinator.disarmIfCurrent(operation)
         armed.value = null
     }
 
@@ -80,7 +80,7 @@ class ReadViewModel(
     }
 
     override fun onCleared() {
-        coordinator.disarm()
+        coordinator.disarmIfCurrent(operation)
     }
 
     private fun arm() {
