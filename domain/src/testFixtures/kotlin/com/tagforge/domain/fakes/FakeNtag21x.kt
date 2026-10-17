@@ -41,6 +41,7 @@ class FakeNtag21x(
     private var loseAfterWrites: Int? = null
     private var lost = false
     private var pendingFailure: TagError? = null
+    private var delayedFailure: Pair<Int, TagError>? = null
 
     val pageCount: Int get() = model.totalPages
 
@@ -65,9 +66,21 @@ class FakeNtag21x(
         pendingFailure = error
     }
 
+    /** Lets [transceives] more commands through, then fails exactly one with [error]. */
+    fun failNextAfter(transceives: Int, error: TagError) {
+        require(transceives >= 0)
+        delayedFailure = transceiveCount + transceives + 1 to error
+    }
+
     override suspend fun transceive(command: Bytes): TagResult<Bytes> {
         transceiveCount++
         if (lost) return Outcome.Err(TagError.TagLost)
+        delayedFailure?.let { (at, error) ->
+            if (transceiveCount == at) {
+                delayedFailure = null
+                return Outcome.Err(error)
+            }
+        }
         pendingFailure?.let {
             pendingFailure = null
             return Outcome.Err(it)
