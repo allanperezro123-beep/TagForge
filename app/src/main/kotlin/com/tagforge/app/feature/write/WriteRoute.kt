@@ -21,6 +21,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -57,6 +58,7 @@ fun WriteRoute(templateId: Long? = null, onBack: (() -> Unit)? = null) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val resources = LocalResources.current
     var showTemplateDialog by rememberSaveable { mutableStateOf(false) }
 
     val removedMessage = stringResource(R.string.write_record_removed)
@@ -78,7 +80,7 @@ fun WriteRoute(templateId: Long? = null, onBack: (() -> Unit)? = null) {
                 WriteEvent.Failed -> haptics.reject()
                 is WriteEvent.TemplateSaved -> scope.launch {
                     snackbarHostState.currentSnackbarData?.dismiss()
-                    snackbarHostState.showSnackbar(context.getString(R.string.write_template_saved, event.name))
+                    snackbarHostState.showSnackbar(resources.getString(R.string.write_template_saved, event.name))
                 }
                 WriteEvent.RecordRemoved -> scope.launch {
                     snackbarHostState.currentSnackbarData?.dismiss()
