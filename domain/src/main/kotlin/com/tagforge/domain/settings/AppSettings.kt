@@ -16,6 +16,8 @@ data class AppSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val dynamicColor: Boolean = true,
     val hapticsEnabled: Boolean = true,
+    /** Keep a history of reads and writes (HT-01). Turning it off stops new entries; existing ones stay until cleared. */
+    val saveHistory: Boolean = true,
     /** Gates the raw console and raw config writes (Phase 6). Off by default. */
     val advancedMode: Boolean = false,
 )

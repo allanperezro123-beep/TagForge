@@ -29,6 +29,7 @@ class ScanCoordinatorTest {
     /** Operation whose body is supplied by each test. */
     private class ProbeOp(
         override val kind: OperationKind = OperationKind.READ,
+        override val timeoutMs: Long? = null,
         private val body: suspend (TagSession, (OperationPhase) -> Unit) -> TagResult<String>,
     ) : TagOperation<String> {
         var executions = 0
@@ -116,6 +117,38 @@ class ScanCoordinatorTest {
         runCurrent()
         assertEquals(ScanState.Failure(OperationKind.READ, tag.info, TagError.Timeout), coordinator.state.value)
         assertTrue(tag.closed)
+    }
+
+    @Test
+    fun anOperationCanAskForALongerTimeoutThanTheDefault() = runTest {
+        val coordinator = coordinator()
+        val op = ProbeOp(timeoutMs = 60_000) { _, _ -> delay(30_000); Outcome.Ok("slow but fine") }
+        val tag = session()
+        coordinator.arm(op)
+        coordinator.onTagDiscovered(tag)
+
+        advanceTimeBy(29_999)
+        assertIs<ScanState.Working>(coordinator.state.value)
+
+        advanceTimeBy(2)
+        runCurrent()
+        assertEquals(ScanState.Success(OperationKind.READ, tag.info, "slow but fine"), coordinator.state.value)
+    }
+
+    @Test
+    fun anOperationWithItsOwnTimeoutStillTimesOutAtThatLimit() = runTest {
+        val coordinator = coordinator()
+        val op = ProbeOp(timeoutMs = 60_000) { _, _ -> delay(90_000); Outcome.Ok("too late") }
+        val tag = session()
+        coordinator.arm(op)
+        coordinator.onTagDiscovered(tag)
+
+        advanceTimeBy(59_999)
+        assertIs<ScanState.Working>(coordinator.state.value)
+
+        advanceTimeBy(2)
+        runCurrent()
+        assertEquals(ScanState.Failure(OperationKind.READ, tag.info, TagError.Timeout), coordinator.state.value)
     }
 
     @Test

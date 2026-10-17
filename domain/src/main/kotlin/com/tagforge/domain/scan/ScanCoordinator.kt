@@ -103,7 +103,7 @@ class ScanCoordinator(
 
         try {
             val result: TagResult<T> = try {
-                withTimeout(timeoutMs) { arm.op.execute(session) { phase -> publish(arm, ScanState.Working(kind, phase)) } }
+                withTimeout(arm.op.timeoutMs ?: timeoutMs) { arm.op.execute(session) { phase -> publish(arm, ScanState.Working(kind, phase)) } }
             } catch (_: TimeoutCancellationException) {
                 Outcome.Err(TagError.Timeout)
             } catch (e: CancellationException) {
