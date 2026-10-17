@@ -24,6 +24,25 @@ data class NdefRecord(
             return NdefRecord(Tnf.WELL_KNOWN, TYPE_URI, payload = payload)
         }
 
+        /** TNF 0x02 record: the media type is the TYPE field. */
+        fun mime(mimeType: String, payload: Bytes): NdefRecord =
+            NdefRecord(Tnf.MIME, Bytes.copyOf(mimeType.toByteArray(Charsets.US_ASCII)), payload = payload)
+
+        /** `text/vcard` record holding an already-built vCard document. */
+        fun vcard(document: String): NdefRecord = mime(MIME_VCARD, Bytes.copyOf(document.toByteArray(Charsets.UTF_8)))
+
+        /** TNF 0x04 record whose type is `domain:type`. */
+        fun external(domain: String, type: String, payload: Bytes): NdefRecord =
+            NdefRecord(Tnf.EXTERNAL, Bytes.copyOf("$domain:$type".toByteArray(Charsets.US_ASCII)), payload = payload)
+
+        /** Android Application Record: launches (or offers to install) [packageName]. Should be the LAST record. */
+        fun aar(packageName: String): NdefRecord =
+            external(AAR_DOMAIN, AAR_TYPE, Bytes.copyOf(packageName.toByteArray(Charsets.US_ASCII)))
+
+        const val MIME_VCARD = "text/vcard"
+        const val AAR_DOMAIN = "android.com"
+        const val AAR_TYPE = "pkg"
+
         val TYPE_TEXT: Bytes = Bytes.of(0x54)
         val TYPE_URI: Bytes = Bytes.of(0x55)
         private const val MAX_LANGUAGE_LENGTH = 63

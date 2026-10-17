@@ -1,6 +1,10 @@
 package com.tagforge.domain.ndef
 
 import com.tagforge.domain.common.Bytes
+import com.tagforge.domain.ndef.spec.BluetoothOob
+import com.tagforge.domain.ndef.spec.SmartPoster
+import com.tagforge.domain.ndef.spec.VCard
+import com.tagforge.domain.ndef.spec.WifiWsc
 
 /** Turns raw [NdefRecord]s into [ParsedRecord]s. Never throws: anything unrecognised becomes Unknown. */
 object RecordInterpreter {
@@ -11,9 +15,11 @@ object RecordInterpreter {
         Tnf.WELL_KNOWN -> when (record.type) {
             NdefRecord.TYPE_TEXT -> decodeText(record) ?: ParsedRecord.Unknown(record)
             NdefRecord.TYPE_URI -> decodeUri(record) ?: ParsedRecord.Unknown(record)
+            SmartPoster.TYPE -> SmartPoster.parse(record)?.let { ParsedRecord.SmartPoster(record, it.uri, it.title) }
+                ?: ParsedRecord.Unknown(record)
             else -> ParsedRecord.Unknown(record)
         }
-        Tnf.MIME -> ParsedRecord.Mime(record, record.type.asText(), record.payload)
+        Tnf.MIME -> decodeMime(record)
         Tnf.ABSOLUTE_URI -> ParsedRecord.Uri(record, record.type.asText())
         Tnf.EXTERNAL -> decodeExternal(record)
         else -> ParsedRecord.Unknown(record)
@@ -52,11 +58,28 @@ object RecordInterpreter {
         return if (prefix != null) ParsedRecord.Uri(record, prefix + rest) else ParsedRecord.Uri(record, rest, prefixKnown = false)
     }
 
+    /** Rich decoders apply only when the payload really parses; otherwise the record stays a generic MIME card. */
+    private fun decodeMime(record: NdefRecord): ParsedRecord {
+        val mime = record.type.asText()
+        val generic = ParsedRecord.Mime(record, mime, record.payload)
+        return when (mime.lowercase()) {
+            WifiWsc.MIME_TYPE -> WifiWsc.parse(record.payload)?.let { ParsedRecord.Wifi(record, it) }
+            BluetoothOob.MIME_TYPE -> BluetoothOob.parse(record.payload)?.let { ParsedRecord.Bluetooth(record, it) }
+            NdefRecord.MIME_VCARD -> VCard.parse(record.payload.asText())?.let { ParsedRecord.VCard(record, it) }
+            else -> null
+        } ?: generic
+    }
+
     private fun decodeExternal(record: NdefRecord): ParsedRecord {
         val name = record.type.asText()
         val colon = name.indexOf(':')
         if (colon <= 0) return ParsedRecord.Unknown(record)
-        return ParsedRecord.External(record, name.substring(0, colon), name.substring(colon + 1), record.payload)
+        val domain = name.substring(0, colon)
+        val type = name.substring(colon + 1)
+        if (domain == NdefRecord.AAR_DOMAIN && type == NdefRecord.AAR_TYPE) {
+            return ParsedRecord.Aar(record, record.payload.asText())
+        }
+        return ParsedRecord.External(record, domain, type, record.payload)
     }
 
     private fun Bytes.asText(charset: java.nio.charset.Charset = Charsets.UTF_8): String = String(toByteArray(), charset)

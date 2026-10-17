@@ -2,12 +2,22 @@ package com.tagforge.domain.ndef
 
 import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.fakes.hex
+import com.tagforge.domain.ndef.spec.BluetoothAddress
+import com.tagforge.domain.ndef.spec.BluetoothOob
+import com.tagforge.domain.ndef.spec.VCard
+import com.tagforge.domain.ndef.spec.VCardFields
+import com.tagforge.domain.ndef.spec.WifiAuth
+import com.tagforge.domain.ndef.spec.WifiCredentials
+import com.tagforge.domain.ndef.spec.WifiEncryption
+import com.tagforge.domain.ndef.spec.WifiWsc
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
-/** P1 subset of TS-04: Text, URI, generic MIME, External, Unknown (rich decoders arrive in Phase 2). */
+/** TS-04: Text, URI, generic MIME, External, Unknown plus the Phase 2 rich decoders (WiFi, Bluetooth, vCard, AAR, Smart Poster). */
 class RecordInterpreterTest {
+
+    private val CRLF = String(charArrayOf(Char(13), Char(10)))
 
     private fun utf8(text: String): Bytes = Bytes.copyOf(text.toByteArray())
 
@@ -31,12 +41,12 @@ class RecordInterpreterTest {
 
     @Test
     fun interpretsExternalTypeSplitAtFirstColon() {
-        val record = NdefRecord(Tnf.EXTERNAL, utf8("android.com:pkg"), payload = utf8("com.a"))
+        val record = NdefRecord(Tnf.EXTERNAL, utf8("example.com:ticket"), payload = utf8("42"))
         val parsed = RecordInterpreter.interpret(record)
         assertIs<ParsedRecord.External>(parsed)
-        assertEquals("android.com", parsed.domain)
-        assertEquals("pkg", parsed.type)
-        assertEquals(utf8("com.a"), parsed.payload)
+        assertEquals("example.com", parsed.domain)
+        assertEquals("ticket", parsed.type)
+        assertEquals(utf8("42"), parsed.payload)
     }
 
     @Test
@@ -53,7 +63,7 @@ class RecordInterpreterTest {
     }
 
     @Test
-    fun smartPosterAndOtherWellKnownTypesAreUnknownInPhaseOne() {
+    fun truncatedSmartPosterBodyStaysUnknown() {
         val smartPoster = NdefRecord(Tnf.WELL_KNOWN, utf8("Sp"), payload = "D1 01 02 55 03".hex())
         assertEquals(ParsedRecord.Unknown(smartPoster), RecordInterpreter.interpret(smartPoster))
     }
@@ -78,10 +88,54 @@ class RecordInterpreterTest {
             listOf(
                 NdefRecord.text("hi"),
                 NdefRecord.uri("https://example.com"),
-                NdefRecord(Tnf.EXTERNAL, utf8("android.com:pkg"), payload = utf8("com.a")),
+                NdefRecord.aar("com.a"),
             ),
         )
         val parsed = RecordInterpreter.interpret(message)
-        assertEquals(listOf("Text", "Uri", "External"), parsed.map { it::class.simpleName })
+        assertEquals(listOf("Text", "Uri", "Aar"), parsed.map { it::class.simpleName })
+    }
+
+    // ---- Phase 2 rich decoders (TS-04 mixed message, reconciliation #9) ----------------------------
+
+    @Test
+    fun interpretsWifiCredentialRecord() {
+        val creds = WifiCredentials("Home", "pass1234", WifiAuth.WPA2_PSK, WifiEncryption.AES)
+        val parsed = RecordInterpreter.interpret(WifiWsc.record(creds))
+        assertIs<ParsedRecord.Wifi>(parsed)
+        assertEquals(creds, parsed.credentials)
+    }
+
+    @Test
+    fun unparsableWifiPayloadFallsBackToGenericMime() {
+        val record = NdefRecord.mime(WifiWsc.MIME_TYPE, "10 4A 00".hex())
+        assertIs<ParsedRecord.Mime>(RecordInterpreter.interpret(record))
+    }
+
+    @Test
+    fun interpretsBluetoothOobRecord() {
+        val parsed = RecordInterpreter.interpret(BluetoothOob.record("AA:BB:CC:DD:EE:FF", "X"))
+        assertIs<ParsedRecord.Bluetooth>(parsed)
+        assertEquals(BluetoothAddress("AA:BB:CC:DD:EE:FF", "X"), parsed.address)
+    }
+
+    @Test
+    fun interpretsVCardRecord() {
+        val fields = VCardFields(name = "Ana", phone = "+57300")
+        val parsed = RecordInterpreter.interpret(NdefRecord.vcard(VCard.build(fields)))
+        assertIs<ParsedRecord.VCard>(parsed)
+        assertEquals(fields, parsed.fields)
+    }
+
+    @Test
+    fun vCardWithoutNameStaysGenericMime() {
+        val record = NdefRecord.vcard("BEGIN:VCARD" + CRLF + "VERSION:3.0" + CRLF + "END:VCARD")
+        assertIs<ParsedRecord.Mime>(RecordInterpreter.interpret(record))
+    }
+
+    @Test
+    fun interpretsAndroidApplicationRecordWithItsPackage() {
+        val parsed = RecordInterpreter.interpret(NdefRecord.aar("com.tagforge.app"))
+        assertIs<ParsedRecord.Aar>(parsed)
+        assertEquals("com.tagforge.app", parsed.packageName)
     }
 }
