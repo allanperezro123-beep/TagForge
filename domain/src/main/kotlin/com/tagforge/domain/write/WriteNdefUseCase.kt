@@ -58,7 +58,7 @@ class WriteNdefUseCase(
         }
 
         phase(OperationPhase.READING)
-        when (val declined = confirmAgainstExistingContent(session)) {
+        when (val declined = OverwriteGuard.check(session, confirmOverwrite)) {
             null -> Unit
             else -> return declined
         }
@@ -70,21 +70,6 @@ class WriteNdefUseCase(
         phase(OperationPhase.VERIFYING)
         return verify(session, expected)
     }
-
-    /** Null = go ahead. Otherwise the error to return (cancelled by the user, or the tag could not be inspected). */
-    private suspend fun confirmAgainstExistingContent(session: TagSession): Outcome.Err<TagError>? =
-        when (val read = session.readNdef()) {
-            is Outcome.Ok -> {
-                val existing = read.value
-                if (existing == null || confirmOverwrite(existing)) null else Outcome.Err(TagError.Cancelled)
-            }
-            is Outcome.Err -> when (read.error) {
-                TagError.NotNdef -> null   // blank tag: nothing to lose
-                is TagError.Malformed -> if (confirmOverwrite(null)) null else Outcome.Err(TagError.Cancelled)
-                is TagError.Nak, TagError.AuthRequired -> Outcome.Err(TagError.AuthRequired)
-                else -> read
-            }
-        }
 
     private fun capacityOf(info: TagInfo): Int? = info.ndef?.maxSize ?: info.ntag?.let(NdefBudget::presetCapacity)
 

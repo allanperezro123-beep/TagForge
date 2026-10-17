@@ -36,4 +36,6 @@ data class TagInfo(
     val sak: Int? = null,
     val historicalBytes: Bytes? = null,
     val ndef: NdefInfo? = null,
+    /** Per-technology facts from the OS (TT-05); empty for tags built without a platform tag. */
+    val details: TechDetails = TechDetails(),
 )

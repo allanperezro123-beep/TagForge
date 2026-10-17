@@ -31,6 +31,35 @@ object Type2WritePlanner {
      * @param leading Lock/Memory Control TLVs that must stay in front of the NDEF TLV
      * @return the ordered writes, or null when the framed message does not fit the tag's NDEF area
      */
+    /**
+     * Plans the writes that turn the user area [current] into a ready-made [image] (page-aligned, at most as long as
+     * [current]), skipping pages that already match. When the image carries an NDEF TLV, [leadingSize] bytes of Lock/
+     * Memory Control TLVs precede it and its length field takes [lengthSize] bytes: those header pages are first
+     * written with length 0, the body follows, and the real header is committed last, exactly like [plan].
+     * Without an NDEF TLV ([leadingSize] null) the pages are simply written in ascending order.
+     */
+    fun planImage(model: NtagModel, current: Bytes, image: Bytes, leadingSize: Int?, lengthSize: Int = 1): List<PageWrite> {
+        require(image.size % PAGE == 0 && image.size <= current.size) { "image must be page aligned and fit the user area" }
+        val pageCount = image.size / PAGE
+        fun page(source: Bytes, index: Int) = source.slice(index * PAGE, (index + 1) * PAGE)
+        fun write(index: Int, data: Bytes) = PageWrite(model.userStart + index, data)
+
+        if (leadingSize == null) {
+            return (0 until pageCount).filter { page(image, it) != page(current, it) }.map { write(it, page(image, it)) }
+        }
+        val headerPages = (leadingSize / PAGE)..((leadingSize + lengthSize) / PAGE)
+        val cleared = image.toByteArray().also { it[leadingSize + 1] = 0 }.let(Bytes::copyOf)
+
+        val steps = ArrayList<PageWrite>()
+        for (p in headerPages) page(cleared, p).let { if (it != page(current, p)) steps += write(p, it) }
+        for (p in 0 until pageCount) {
+            if (p in headerPages) continue
+            page(image, p).let { if (it != page(current, p)) steps += write(p, it) }
+        }
+        for (p in headerPages) page(image, p).let { if (it != page(cleared, p)) steps += write(p, it) }
+        return steps
+    }
+
     fun plan(model: NtagModel, current: Bytes, message: Bytes, leading: Bytes): List<PageWrite>? {
         var framed = Type2Tlv.wrap(message, leading)
         val area = model.ccNdefSize

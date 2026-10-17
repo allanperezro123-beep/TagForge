@@ -10,10 +10,16 @@ sealed interface TagError {
     data object NotNdef : TagError
     data object ReadOnly : TagError
     data object AuthRequired : TagError
+
+    /** Clone: the destination tag has the same UID as the source, i.e. it is the source tag. */
+    data object SameTag : TagError
     data class Unsupported(val what: String) : TagError {
         companion object {
             /** A MIFARE Classic card on a phone without the NXP controller (or an operation Classic does not support). */
             const val MIFARE_CLASSIC = "mifare-classic"
+
+            /** Copying raw user pages only works between chips of the same model. */
+            const val USER_PAGES_MODEL = "user-pages-model"
         }
     }
     data class CapacityExceeded(val required: Int, val available: Int) : TagError
