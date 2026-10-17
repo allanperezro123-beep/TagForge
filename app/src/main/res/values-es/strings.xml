@@ -1,4 +1,150 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- App -->
     <string name="app_name">Tag Forge</string>
+
+    <!-- Common -->
+    <string name="common_back">Atrás</string>
+    <string name="common_close">Cerrar</string>
+    <string name="common_cancel">Cancelar</string>
+    <string name="common_retry">Intentar de nuevo</string>
+    <string name="common_yes">Sí</string>
+    <string name="common_no">No</string>
+    <string name="common_loading">Cargando…</string>
+    <string name="common_unknown">Desconocido</string>
+
+    <!-- Navigation -->
+    <string name="nav_read">Leer</string>
+    <string name="nav_more">Más</string>
+
+    <!-- NFC status -->
+    <string name="nfc_unsupported_title">NFC no está disponible</string>
+    <string name="nfc_unsupported_body">Este dispositivo no tiene NFC, por lo que no se pueden leer etiquetas.</string>
+    <string name="nfc_disabled_title">NFC está desactivado</string>
+    <string name="nfc_disabled_body">Activa NFC para leer etiquetas.</string>
+    <string name="nfc_open_settings">Abrir ajustes de NFC</string>
+
+    <!-- Scan feedback -->
+    <string name="scan_waiting_title">Listo para escanear</string>
+    <string name="scan_waiting_hint">Acerca una etiqueta a la parte trasera del teléfono. La antena suele estar cerca de la cámara.</string>
+    <string name="scan_working_title">Leyendo etiqueta…</string>
+    <string name="scan_working_hint">Mantén la etiqueta quieta</string>
+    <string name="scan_success_title">Listo</string>
+    <string name="scan_failure_title">Algo salió mal</string>
+    <string name="scan_next_hint">Acerca otra etiqueta para escanearla.</string>
+    <string name="scan_radar_description">Animación de escaneo</string>
+
+    <!-- Errors (one per TagError) -->
+    <string name="error_tag_lost_title">La etiqueta se alejó</string>
+    <string name="error_tag_lost_body">Mantén la etiqueta firme contra el teléfono e inténtalo de nuevo.</string>
+    <string name="error_timeout">La etiqueta tardó demasiado en responder. Inténtalo de nuevo.</string>
+    <string name="error_cancelled">Cancelado.</string>
+    <string name="error_not_ndef">Esta etiqueta no tiene datos NDEF.</string>
+    <string name="error_read_only">Esta etiqueta está bloqueada y no se puede modificar.</string>
+    <string name="error_auth_required">Esta etiqueta está protegida con contraseña.</string>
+    <string name="error_auth_failed">Contraseña incorrecta.</string>
+    <string name="error_unsupported">No compatible: %1$s</string>
+    <string name="error_capacity">El mensaje necesita %1$d bytes pero la etiqueta admite %2$d.</string>
+    <string name="error_verify_mismatch">El contenido de la etiqueta no coincide con lo escrito.</string>
+    <string name="error_nak">La etiqueta rechazó el comando (código %1$d).</string>
+    <string name="error_malformed">Los datos de la etiqueta no son válidos.</string>
+    <string name="error_io">No se pudo comunicar con la etiqueta.</string>
+
+    <!-- Read screen -->
+    <string name="read_title">Leer etiqueta</string>
+    <string name="read_tab_records">Registros</string>
+    <string name="read_tab_info">Información</string>
+    <string name="read_tab_hex">Hex</string>
+    <string name="read_empty_tag_title">Etiqueta vacía</string>
+    <string name="read_empty_tag_body">Esta etiqueta no tiene registros NDEF.</string>
+    <string name="read_notice_ndef_unreadable">No se pudieron leer los datos NDEF. La vista hex aún muestra la memoria en bruto.</string>
+    <string name="read_notice_not_ndef">Esta etiqueta no contiene datos NDEF.</string>
+    <string name="read_notice_unsupported_classic">MIFARE Classic no se puede leer en este dispositivo porque no tiene el controlador NFC de NXP.</string>
+    <string name="read_notice_unsupported_family">Esta aplicación no puede leer este tipo de etiqueta.</string>
+    <string name="read_protected_title">Protegida con contraseña</string>
+    <string name="read_protected_body">Parte de la memoria de esta etiqueta requiere una contraseña. Abajo se muestran los datos básicos.</string>
+    <string name="read_unlock">Desbloquear</string>
+    <string name="read_unlock_unavailable">El desbloqueo de etiquetas llegará en una versión posterior.</string>
+    <plurals name="read_records_count">
+        <item quantity="one">%d registro</item>
+        <item quantity="other">%d registros</item>
+    </plurals>
+
+    <!-- Records -->
+    <string name="record_type_text">Texto</string>
+    <string name="record_type_uri">URI</string>
+    <string name="record_type_mime">MIME</string>
+    <string name="record_type_external">Externo</string>
+    <string name="record_type_unknown">Registro desconocido</string>
+    <string name="record_field_language">Idioma</string>
+    <string name="record_field_tnf">TNF</string>
+    <string name="record_field_type">Tipo</string>
+    <string name="record_field_payload">Contenido</string>
+    <string name="record_field_size">Tamaño</string>
+    <string name="record_size_bytes">%1$d bytes</string>
+    <string name="record_show_raw">Mostrar hex en bruto</string>
+    <string name="record_hide_raw">Ocultar hex en bruto</string>
+    <string name="record_unknown_prefix">Prefijo de URI desconocido</string>
+    <string name="record_secret_hidden">Oculto. Toca para mostrar.</string>
+    <string name="record_secret_shown">Visible. Toca para ocultar.</string>
+
+    <!-- Info tab -->
+    <string name="info_uid">UID</string>
+    <string name="info_manufacturer">Fabricante</string>
+    <string name="info_type">Tipo de etiqueta</string>
+    <string name="info_type_unknown_nfca">Etiqueta NfcA desconocida (ATQA %1$s, SAK %2$s)</string>
+    <string name="info_technologies">Tecnologías</string>
+    <string name="info_atqa">ATQA</string>
+    <string name="info_sak">SAK</string>
+    <string name="info_memory">Memoria</string>
+    <string name="info_memory_value">%1$d bytes (capacidad NDEF %2$d bytes)</string>
+    <string name="info_memory_total">%1$d bytes</string>
+    <string name="info_writable">Escribible</string>
+    <string name="info_can_lock">Se puede hacer de solo lectura</string>
+    <string name="info_ndef">NDEF</string>
+    <string name="info_ndef_present">Presente</string>
+    <string name="info_ndef_empty">Formateada, vacía</string>
+    <string name="info_ndef_absent">No presente</string>
+    <string name="info_family_ntag">NTAG21x</string>
+    <string name="info_family_ultralight">MIFARE Ultralight</string>
+    <string name="info_family_classic">MIFARE Classic</string>
+    <string name="info_family_desfire">MIFARE DESFire</string>
+    <string name="info_family_iso15693">ISO 15693</string>
+    <string name="info_family_felica">FeliCa</string>
+    <string name="info_family_iso14443_4">ISO 14443-4</string>
+
+    <!-- Hex tab -->
+    <string name="hex_unavailable">No se pudo leer la memoria en bruto de esta etiqueta.</string>
+    <string name="hex_unreadable_range">Las páginas %1$d a %2$d están protegidas y no se pueden leer.</string>
+    <string name="hex_row_description">Página %1$d, bytes %2$s</string>
+    <string name="hex_page_header">Página</string>
+
+    <!-- More -->
+    <string name="more_title">Más</string>
+    <string name="more_settings">Ajustes</string>
+    <string name="more_settings_summary">Tema, respuesta y modo avanzado</string>
+    <string name="more_about">Acerca de</string>
+    <string name="more_about_summary">Versión y privacidad</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_section_appearance">Apariencia</string>
+    <string name="settings_section_feedback">Respuesta</string>
+    <string name="settings_section_advanced">Avanzado</string>
+    <string name="settings_theme">Tema</string>
+    <string name="settings_theme_system">Predeterminado del sistema</string>
+    <string name="settings_theme_light">Claro</string>
+    <string name="settings_theme_dark">Oscuro</string>
+    <string name="settings_dynamic_color">Color dinámico</string>
+    <string name="settings_dynamic_color_desc">Usa los colores de tu fondo de pantalla (Android 12 y posterior).</string>
+    <string name="settings_haptics">Respuesta háptica</string>
+    <string name="settings_haptics_desc">Vibra cuando se detecta una etiqueta o termina una acción.</string>
+    <string name="settings_advanced">Modo avanzado</string>
+    <string name="settings_advanced_desc">Muestra herramientas de bajo nivel para etiquetas. Actívalo solo si sabes lo que haces.</string>
+
+    <!-- About -->
+    <string name="about_title">Acerca de</string>
+    <string name="about_version">Versión %1$s</string>
+    <string name="about_description">Lee y escribe etiquetas NFC. Hecha desde cero, sin que ningún dato salga de tu dispositivo.</string>
+    <string name="about_privacy">Sin cuenta, sin analíticas y sin acceso a la red.</string>
 </resources>

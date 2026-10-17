@@ -1,4 +1,150 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- App -->
     <string name="app_name">Tag Forge</string>
+
+    <!-- Common -->
+    <string name="common_back">Back</string>
+    <string name="common_close">Close</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_retry">Try again</string>
+    <string name="common_yes">Yes</string>
+    <string name="common_no">No</string>
+    <string name="common_loading">Loading…</string>
+    <string name="common_unknown">Unknown</string>
+
+    <!-- Navigation -->
+    <string name="nav_read">Read</string>
+    <string name="nav_more">More</string>
+
+    <!-- NFC status -->
+    <string name="nfc_unsupported_title">NFC is not available</string>
+    <string name="nfc_unsupported_body">This device has no NFC, so tags cannot be read.</string>
+    <string name="nfc_disabled_title">NFC is turned off</string>
+    <string name="nfc_disabled_body">Turn on NFC to read tags.</string>
+    <string name="nfc_open_settings">Open NFC settings</string>
+
+    <!-- Scan feedback -->
+    <string name="scan_waiting_title">Ready to scan</string>
+    <string name="scan_waiting_hint">Hold a tag against the back of your phone. The antenna is usually near the camera.</string>
+    <string name="scan_working_title">Reading tag…</string>
+    <string name="scan_working_hint">Keep the tag still</string>
+    <string name="scan_success_title">Done</string>
+    <string name="scan_failure_title">Something went wrong</string>
+    <string name="scan_next_hint">Hold another tag to scan it.</string>
+    <string name="scan_radar_description">Scanning animation</string>
+
+    <!-- Errors (one per TagError) -->
+    <string name="error_tag_lost_title">Tag moved away</string>
+    <string name="error_tag_lost_body">Keep the tag steady against the phone and try again.</string>
+    <string name="error_timeout">The tag took too long to respond. Try again.</string>
+    <string name="error_cancelled">Cancelled.</string>
+    <string name="error_not_ndef">This tag has no NDEF data.</string>
+    <string name="error_read_only">This tag is locked and cannot be changed.</string>
+    <string name="error_auth_required">This tag is password protected.</string>
+    <string name="error_auth_failed">Wrong password.</string>
+    <string name="error_unsupported">Not supported: %1$s</string>
+    <string name="error_capacity">The message needs %1$d bytes but the tag holds %2$d.</string>
+    <string name="error_verify_mismatch">The tag content does not match what was written.</string>
+    <string name="error_nak">The tag refused the command (code %1$d).</string>
+    <string name="error_malformed">The tag data is invalid.</string>
+    <string name="error_io">Could not talk to the tag.</string>
+
+    <!-- Read screen -->
+    <string name="read_title">Read tag</string>
+    <string name="read_tab_records">Records</string>
+    <string name="read_tab_info">Info</string>
+    <string name="read_tab_hex">Hex</string>
+    <string name="read_empty_tag_title">Empty tag</string>
+    <string name="read_empty_tag_body">This tag has no NDEF records.</string>
+    <string name="read_notice_ndef_unreadable">The NDEF data could not be read. The hex view still shows the raw memory.</string>
+    <string name="read_notice_not_ndef">This tag holds no NDEF data.</string>
+    <string name="read_notice_unsupported_classic">MIFARE Classic cannot be read on this device because it lacks the NXP NFC controller.</string>
+    <string name="read_notice_unsupported_family">This kind of tag cannot be read by this app.</string>
+    <string name="read_protected_title">Password protected</string>
+    <string name="read_protected_body">Part of this tag\'s memory needs a password. The basic details are shown below.</string>
+    <string name="read_unlock">Unlock</string>
+    <string name="read_unlock_unavailable">Unlocking tags arrives in a later version.</string>
+    <plurals name="read_records_count">
+        <item quantity="one">%d record</item>
+        <item quantity="other">%d records</item>
+    </plurals>
+
+    <!-- Records -->
+    <string name="record_type_text">Text</string>
+    <string name="record_type_uri">URI</string>
+    <string name="record_type_mime">MIME</string>
+    <string name="record_type_external">External</string>
+    <string name="record_type_unknown">Unknown record</string>
+    <string name="record_field_language">Language</string>
+    <string name="record_field_tnf">TNF</string>
+    <string name="record_field_type">Type</string>
+    <string name="record_field_payload">Payload</string>
+    <string name="record_field_size">Size</string>
+    <string name="record_size_bytes">%1$d bytes</string>
+    <string name="record_show_raw">Show raw hex</string>
+    <string name="record_hide_raw">Hide raw hex</string>
+    <string name="record_unknown_prefix">Unknown URI prefix</string>
+    <string name="record_secret_hidden">Hidden. Tap to show.</string>
+    <string name="record_secret_shown">Shown. Tap to hide.</string>
+
+    <!-- Info tab -->
+    <string name="info_uid">UID</string>
+    <string name="info_manufacturer">Manufacturer</string>
+    <string name="info_type">Tag type</string>
+    <string name="info_type_unknown_nfca">Unknown NfcA tag (ATQA %1$s, SAK %2$s)</string>
+    <string name="info_technologies">Technologies</string>
+    <string name="info_atqa">ATQA</string>
+    <string name="info_sak">SAK</string>
+    <string name="info_memory">Memory</string>
+    <string name="info_memory_value">%1$d bytes (NDEF capacity %2$d bytes)</string>
+    <string name="info_memory_total">%1$d bytes</string>
+    <string name="info_writable">Writable</string>
+    <string name="info_can_lock">Can be made read-only</string>
+    <string name="info_ndef">NDEF</string>
+    <string name="info_ndef_present">Present</string>
+    <string name="info_ndef_empty">Formatted, empty</string>
+    <string name="info_ndef_absent">Not present</string>
+    <string name="info_family_ntag">NTAG21x</string>
+    <string name="info_family_ultralight">MIFARE Ultralight</string>
+    <string name="info_family_classic">MIFARE Classic</string>
+    <string name="info_family_desfire">MIFARE DESFire</string>
+    <string name="info_family_iso15693">ISO 15693</string>
+    <string name="info_family_felica">FeliCa</string>
+    <string name="info_family_iso14443_4">ISO 14443-4</string>
+
+    <!-- Hex tab -->
+    <string name="hex_unavailable">The raw memory could not be read from this tag.</string>
+    <string name="hex_unreadable_range">Pages %1$d to %2$d are protected and cannot be read.</string>
+    <string name="hex_row_description">Page %1$d, bytes %2$s</string>
+    <string name="hex_page_header">Page</string>
+
+    <!-- More -->
+    <string name="more_title">More</string>
+    <string name="more_settings">Settings</string>
+    <string name="more_settings_summary">Theme, feedback and advanced mode</string>
+    <string name="more_about">About</string>
+    <string name="more_about_summary">Version and privacy</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_section_feedback">Feedback</string>
+    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_system">System default</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_dynamic_color">Dynamic color</string>
+    <string name="settings_dynamic_color_desc">Use the colors of your wallpaper (Android 12 and later).</string>
+    <string name="settings_haptics">Haptic feedback</string>
+    <string name="settings_haptics_desc">Vibrate when a tag is detected or an action finishes.</string>
+    <string name="settings_advanced">Advanced mode</string>
+    <string name="settings_advanced_desc">Shows low-level tag tools. Only turn it on if you know what you are doing.</string>
+
+    <!-- About -->
+    <string name="about_title">About</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_description">Read and write NFC tags. Built from scratch, with no data leaving your device.</string>
+    <string name="about_privacy">No account, no analytics and no network access.</string>
 </resources>
