@@ -39,6 +39,7 @@ fun SettingsScreen(
     onThemeSelected: (ThemeMode) -> Unit,
     onDynamicColorChanged: (Boolean) -> Unit,
     onHapticsChanged: (Boolean) -> Unit,
+    onSaveHistoryChanged: (Boolean) -> Unit,
     onAdvancedChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -73,6 +74,14 @@ fun SettingsScreen(
                 description = stringResource(R.string.settings_haptics_desc),
                 checked = state.settings.hapticsEnabled,
                 onCheckedChange = onHapticsChanged,
+            )
+
+            SectionHeader(stringResource(R.string.settings_section_history))
+            SwitchRow(
+                title = stringResource(R.string.settings_save_history),
+                description = stringResource(R.string.settings_save_history_desc),
+                checked = state.settings.saveHistory,
+                onCheckedChange = onSaveHistoryChanged,
             )
 
             SectionHeader(stringResource(R.string.settings_section_advanced))

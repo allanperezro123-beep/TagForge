@@ -33,10 +33,16 @@ private const val PREVIEW_BYTES = 64
 
 /**
  * One NDEF record: decoded content first, with a raw-hex expander so nothing is ever hidden from a power user.
- * Stateless apart from the expander toggle; it takes the already-parsed record and nothing else.
+ * Stateless apart from the expander toggle; it takes the already-parsed record and nothing else. [actions] is an
+ * optional slot under the content for screens that edit the record (the write review).
  */
 @Composable
-fun RecordCard(parsed: ParsedRecord, index: Int, modifier: Modifier = Modifier) {
+fun RecordCard(
+    parsed: ParsedRecord,
+    index: Int,
+    modifier: Modifier = Modifier,
+    actions: (@Composable () -> Unit)? = null,
+) {
     var showRaw by rememberSaveable(index) { mutableStateOf(false) }
 
     OutlinedCard(modifier = modifier.fillMaxWidth()) {
@@ -52,6 +58,7 @@ fun RecordCard(parsed: ParsedRecord, index: Int, modifier: Modifier = Modifier) 
                 Text(stringResource(if (showRaw) R.string.record_hide_raw else R.string.record_show_raw))
             }
             if (showRaw) RawRecord(parsed.record)
+            actions?.invoke()
         }
     }
 }

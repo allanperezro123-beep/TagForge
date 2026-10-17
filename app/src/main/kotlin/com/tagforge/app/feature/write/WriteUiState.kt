@@ -58,6 +58,9 @@ sealed interface WriteEvent {
     data object Succeeded : WriteEvent
     data object Failed : WriteEvent
     data class TemplateSaved(val name: String) : WriteEvent
+
+    /** A record was just removed: the screen offers Undo for a few seconds. */
+    data object RecordRemoved : WriteEvent
 }
 
 /** Everything the Write screen can show. The derived fields are recomputed by the ViewModel on every change. */

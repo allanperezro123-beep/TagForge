@@ -107,15 +107,18 @@ class WriteViewModel(
         state.copy(step = WriteStep.FORM, editing = EditingRecord(index, spec))
     }
 
-    fun onRemoveRecord(index: Int) = mutate { state ->
-        val spec = state.records.getOrNull(index) ?: return@mutate state
-        removed = index to spec
-        val draft = WriteDraft(state.records).remove(index)
-        state.copy(
-            records = draft.records,
-            step = if (draft.records.isEmpty()) WriteStep.TYPE else state.step,
-            canUndoRemove = true,
-        )
+    fun onRemoveRecord(index: Int) {
+        mutate { state ->
+            val spec = state.records.getOrNull(index) ?: return@mutate state
+            removed = index to spec
+            val draft = WriteDraft(state.records).remove(index)
+            state.copy(
+                records = draft.records,
+                step = if (draft.records.isEmpty()) WriteStep.TYPE else state.step,
+                canUndoRemove = true,
+            )
+        }
+        if (removed != null) eventChannel.trySend(WriteEvent.RecordRemoved)
     }
 
     fun onUndoRemove() = mutate { state ->
@@ -200,6 +203,15 @@ class WriteViewModel(
         }
         if (state.sheet is WriteSheet.Working) return
         armJob?.cancel()
+        coordinator.disarm()
+        mutate { it.copy(sheet = null, overwrite = null) }
+    }
+
+    /** The tab left the screen: stop waiting for a tag, but never abort a write that is already running. */
+    fun onHidden() {
+        if (_state.value.sheet is WriteSheet.Working) return
+        armJob?.cancel()
+        pendingDecision?.complete(false)
         coordinator.disarm()
         mutate { it.copy(sheet = null, overwrite = null) }
     }

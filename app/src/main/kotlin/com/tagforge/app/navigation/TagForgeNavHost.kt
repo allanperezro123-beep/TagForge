@@ -7,15 +7,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import com.tagforge.app.BuildConfig
+import com.tagforge.app.feature.history.HistoryRoute
+import com.tagforge.app.feature.history.TagDetailRoute
 import com.tagforge.app.feature.more.AboutScreen
 import com.tagforge.app.feature.more.MoreScreen
 import com.tagforge.app.feature.read.ReadRoute
 import com.tagforge.app.feature.settings.SettingsRoute
+import com.tagforge.app.feature.templates.TemplatesRoute
+import com.tagforge.app.feature.write.WriteRoute
 
 /** App shell: one NavHost, with the bottom bar shown only on top-level destinations. */
 @Composable
@@ -28,13 +34,7 @@ fun TagForgeApp() {
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
-                TagForgeBottomBar(currentDestination = destination) { target ->
-                    navController.navigate(target.route) {
-                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                }
+                TagForgeBottomBar(currentDestination = destination) { target -> navController.navigateToTopLevel(target.route) }
             }
         },
     ) { padding ->
@@ -44,20 +44,49 @@ fun TagForgeApp() {
 
 @Composable
 fun TagForgeNavHost(
-    navController: androidx.navigation.NavHostController,
+    navController: NavHostController,
     modifier: Modifier = Modifier,
 ) {
     NavHost(navController = navController, startDestination = Route.Read, modifier = modifier) {
         composable<Route.Read> { ReadRoute() }
+        composable<Route.Write> { entry -> WriteRoute(templateId = entry.toRoute<Route.Write>().templateId) }
         composable<Route.More> {
             MoreScreen(
+                onOpenHistory = { navController.navigate(Route.History) },
+                onOpenTemplates = { navController.navigate(Route.Templates) },
                 onOpenSettings = { navController.navigate(Route.Settings) },
                 onOpenAbout = { navController.navigate(Route.About) },
+            )
+        }
+        composable<Route.History> {
+            HistoryRoute(
+                onBack = { navController.popBackStack() },
+                onOpen = { navController.navigate(Route.TagDetail(it)) },
+                onScan = { navController.navigateToTopLevel(Route.Read) },
+            )
+        }
+        composable<Route.TagDetail> { entry ->
+            TagDetailRoute(historyId = entry.toRoute<Route.TagDetail>().historyId, onBack = { navController.popBackStack() })
+        }
+        composable<Route.Templates> {
+            TemplatesRoute(
+                onBack = { navController.popBackStack() },
+                onOpen = { navController.navigate(Route.Write(it)) },
+                onGoToWrite = { navController.navigateToTopLevel(Route.Write()) },
             )
         }
         composable<Route.Settings> { SettingsRoute(onBack = { navController.popBackStack() }) }
         composable<Route.About> {
             AboutScreen(versionName = BuildConfig.VERSION_NAME, onBack = { navController.popBackStack() })
         }
+    }
+}
+
+/** Switches tab the way the bottom bar does: one back stack per tab, state saved and restored. */
+private fun NavHostController.navigateToTopLevel(route: Route) {
+    navigate(route) {
+        popUpTo(graph.findStartDestination().id) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
     }
 }

@@ -18,6 +18,7 @@ fun SettingsRoute(onBack: () -> Unit) {
         onThemeSelected = viewModel::onThemeSelected,
         onDynamicColorChanged = viewModel::onDynamicColorChanged,
         onHapticsChanged = viewModel::onHapticsChanged,
+        onSaveHistoryChanged = viewModel::onSaveHistoryChanged,
         onAdvancedChanged = viewModel::onAdvancedChanged,
     )
 }

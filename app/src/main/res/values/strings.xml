@@ -174,4 +174,232 @@
     <string name="wifi_enc_none">None</string>
     <string name="wifi_enc_tkip">TKIP</string>
     <string name="wifi_enc_aes">AES (CCMP)</string>
+
+    <!-- Navigation (Phase 2) -->
+    <string name="nav_write">Write</string>
+
+    <!-- Write wizard -->
+    <string name="write_title">Write tag</string>
+    <string name="write_step_type">What do you want to write?</string>
+    <string name="write_step_type_hint">Pick a type. You can combine several records on one tag.</string>
+    <string name="write_group_basic">Basic</string>
+    <string name="write_group_communication">Communication</string>
+    <string name="write_group_people">Places and people</string>
+    <string name="write_group_connectivity">Connectivity</string>
+    <string name="write_group_advanced">Advanced</string>
+    <string name="write_type_text">Text</string>
+    <string name="write_type_url">Link</string>
+    <string name="write_type_email">Email</string>
+    <string name="write_type_phone">Phone</string>
+    <string name="write_type_sms">SMS</string>
+    <string name="write_type_geo">Location</string>
+    <string name="write_type_contact">Contact</string>
+    <string name="write_type_wifi">WiFi</string>
+    <string name="write_type_bluetooth">Bluetooth</string>
+    <string name="write_type_app">App</string>
+    <string name="write_type_mime">Custom MIME</string>
+    <string name="write_type_external">External type</string>
+    <string name="write_type_text_desc">A short note</string>
+    <string name="write_type_url_desc">Opens a web address</string>
+    <string name="write_type_email_desc">Starts a new email</string>
+    <string name="write_type_phone_desc">Starts a call</string>
+    <string name="write_type_sms_desc">Starts a text message</string>
+    <string name="write_type_geo_desc">Opens a map</string>
+    <string name="write_type_contact_desc">Saves a contact card</string>
+    <string name="write_type_wifi_desc">Joins a WiFi network</string>
+    <string name="write_type_bluetooth_desc">Shares a Bluetooth device</string>
+    <string name="write_type_app_desc">Launches an installed app</string>
+    <string name="write_type_mime_desc">Any media type and content</string>
+    <string name="write_type_external_desc">Your own record type</string>
+
+    <string name="write_step_form_title">Fill in the details</string>
+    <string name="write_field_text">Text</string>
+    <string name="write_field_language">Language code</string>
+    <string name="write_field_url">Web address</string>
+    <string name="write_field_to">Email address</string>
+    <string name="write_field_subject">Subject (optional)</string>
+    <string name="write_field_body">Message (optional)</string>
+    <string name="write_field_number">Phone number</string>
+    <string name="write_field_latitude">Latitude</string>
+    <string name="write_field_longitude">Longitude</string>
+    <string name="write_field_place">Place name (optional)</string>
+    <string name="write_field_name">Name</string>
+    <string name="write_field_phone">Phone (optional)</string>
+    <string name="write_field_email">Email (optional)</string>
+    <string name="write_field_org">Organization (optional)</string>
+    <string name="write_field_site">Website (optional)</string>
+    <string name="write_field_note">Note (optional)</string>
+    <string name="write_field_ssid">Network name (SSID)</string>
+    <string name="write_field_password">Password</string>
+    <string name="write_field_security">Security</string>
+    <string name="write_field_encryption">Encryption</string>
+    <string name="write_field_mac">Bluetooth address</string>
+    <string name="write_field_device">Device name (optional)</string>
+    <string name="write_field_package">Package name</string>
+    <string name="write_field_mime">MIME type</string>
+    <string name="write_field_payload_text">Content</string>
+    <string name="write_field_domain">Domain</string>
+    <string name="write_field_ext_type">Type</string>
+    <string name="write_field_payload_hex">Payload in hex (optional)</string>
+    <string name="write_password_show">Show password</string>
+    <string name="write_password_hide">Hide password</string>
+    <string name="write_wifi_open_hint">Open networks have no password.</string>
+
+    <string name="write_error_required">This field is required</string>
+    <string name="write_error_url">Enter a full address such as https://example.com</string>
+    <string name="write_error_email">Enter an email like name@example.com</string>
+    <string name="write_error_phone">Enter 3 to 20 digits. A leading +, spaces, dashes and brackets are fine</string>
+    <string name="write_error_language">Use a language code such as en or es-CO</string>
+    <string name="write_error_number">Enter a number such as 4.711</string>
+    <string name="write_error_latitude_range">Latitude must be between -90 and 90</string>
+    <string name="write_error_longitude_range">Longitude must be between -180 and 180</string>
+    <string name="write_error_ssid_long">A network name can use at most 32 bytes</string>
+    <string name="write_error_password_length">A WPA password needs 8 to 63 characters, or 64 hex digits</string>
+    <string name="write_error_mac">Use six pairs of hex digits like AA:BB:CC:DD:EE:FF</string>
+    <string name="write_error_package">Use a package name like com.example.app</string>
+    <string name="write_error_mime">Use a type like text/plain</string>
+    <string name="write_error_hex">Use pairs of hex digits like 01 AB FF</string>
+    <string name="write_error_external">No spaces or colons, and ASCII only</string>
+    <string name="write_error_too_long">This is too long</string>
+
+    <string name="write_continue">Continue</string>
+    <string name="write_add_to_message">Add to message</string>
+    <string name="write_save_changes">Save changes</string>
+    <string name="write_fix_fields">Fix the highlighted fields to continue</string>
+
+    <string name="write_preview_title">Live preview</string>
+    <string name="write_preview_empty">Complete the form to see what will be written.</string>
+    <string name="write_preview_bytes">%1$d bytes</string>
+    <string name="write_preview_show_hex">Show bytes</string>
+    <string name="write_preview_hide_hex">Hide bytes</string>
+    <string name="write_preview_hex_title">NDEF bytes</string>
+
+    <string name="write_review_title">Review</string>
+    <string name="write_empty_title">Nothing to write yet</string>
+    <string name="write_empty_body">Choose a record type to start building your tag.</string>
+    <string name="write_add_record">Add record</string>
+    <string name="write_edit_record">Edit</string>
+    <string name="write_remove_record">Remove</string>
+    <string name="write_move_up">Move up</string>
+    <string name="write_move_down">Move down</string>
+    <string name="write_record_invalid">Needs attention</string>
+    <string name="write_record_removed">Record removed</string>
+    <string name="write_undo">Undo</string>
+    <string name="write_include_aar">Open Tag Forge when tapped</string>
+    <string name="write_include_aar_desc">Adds an Android Application Record (34 bytes) so this app launches on tap.</string>
+
+    <string name="write_target_title">Target tag</string>
+    <string name="write_target_detected">Last tag (%1$d B)</string>
+    <string name="write_budget_title">Space on the tag</string>
+    <string name="write_budget_value">%1$d / %2$d bytes</string>
+    <string name="write_budget_overhead">Tag framing: %1$d bytes (not counted)</string>
+    <string name="write_budget_state_ok">Fits</string>
+    <string name="write_budget_state_warning">Almost full</string>
+    <string name="write_budget_state_over">Too large</string>
+    <string name="write_budget_over">%1$d bytes too large for %2$s.</string>
+    <string name="write_budget_over_suggest">%1$d bytes too large for %2$s. Use %3$s or shorten the content.</string>
+    <string name="write_budget_over_none">%1$d bytes too large for %2$s. Shorten the content.</string>
+    <string name="write_budget_segment">Record %1$d: %2$d bytes</string>
+    <string name="write_budget_description">%1$d of %2$d bytes used, %3$s</string>
+
+    <string name="write_action">Write to tag</string>
+    <string name="write_blocked_empty">Add at least one record</string>
+    <string name="write_blocked_invalid">Fix the records that need attention</string>
+    <string name="write_blocked_over">The message is larger than the tag</string>
+    <string name="write_blocked_nfc">Turn on NFC to write</string>
+    <string name="write_save_template">Save as template</string>
+
+    <string name="write_sheet_waiting_title">Hold the tag to the phone</string>
+    <string name="write_sheet_waiting_hint">Writing %1$d bytes. The antenna is usually near the camera.</string>
+    <string name="write_sheet_connecting">Tag found</string>
+    <string name="write_sheet_writing">Writing…</string>
+    <string name="write_sheet_verifying">Verifying…</string>
+    <string name="write_sheet_keep_still">Keep the tag still</string>
+    <string name="write_sheet_success">Written and verified</string>
+    <string name="write_sheet_success_detail">%1$d bytes on %2$s</string>
+    <string name="write_sheet_failed">Could not write the tag</string>
+    <string name="write_sheet_done">Done</string>
+    <string name="write_sheet_again">Write another tag</string>
+    <string name="write_sheet_change_target">Choose a bigger tag, then try again.</string>
+    <string name="write_sheet_locked_hint">Use a tag that is not locked.</string>
+
+    <string name="write_overwrite_title">Replace the existing content?</string>
+    <string name="write_overwrite_body">This tag already contains: %1$s</string>
+    <string name="write_overwrite_unreadable">This tag already contains data that could not be read.</string>
+    <string name="write_overwrite_confirm">Replace</string>
+
+    <string name="write_template_name">Template name</string>
+    <string name="write_template_default_name">My template</string>
+    <string name="write_template_saved">Saved as template: %1$s</string>
+    <string name="common_save">Save</string>
+
+    <!-- Example values shown as placeholders; the same in every language -->
+    <string name="write_hint_url" translatable="false">https://example.com</string>
+    <string name="write_hint_phone" translatable="false">+57 300 123 4567</string>
+    <string name="write_hint_latitude" translatable="false">4.711</string>
+    <string name="write_hint_longitude" translatable="false">-74.0721</string>
+    <string name="write_hint_mac" translatable="false">AA:BB:CC:DD:EE:FF</string>
+    <string name="write_hint_package" translatable="false">com.example.app</string>
+    <string name="write_hint_mime" translatable="false">text/plain</string>
+    <string name="write_hint_domain" translatable="false">example.com</string>
+
+    <string name="settings_section_history">History</string>
+    <string name="settings_save_history">Save history</string>
+    <string name="settings_save_history_desc">Keep a list of the tags you read and write. Passwords are never saved.</string>
+
+    <!-- History and templates (Phase 2) -->
+    <string name="history_title">History</string>
+    <string name="history_empty_title">No history yet</string>
+    <string name="history_empty_body">Tags you read or write will show up here.</string>
+    <string name="history_empty_action">Read a tag</string>
+    <string name="history_empty_summary">Empty tag</string>
+    <string name="history_kind_read">Read</string>
+    <string name="history_kind_write">Write</string>
+    <string name="history_kind_erase">Erase</string>
+    <string name="history_kind_format">Format</string>
+    <string name="history_kind_clone">Clone</string>
+    <string name="history_kind_batch">Batch write</string>
+    <string name="history_outcome_success">Done</string>
+    <string name="history_outcome_failed_taglost">Tag moved away</string>
+    <string name="history_outcome_failed_read_only">Tag is locked</string>
+    <string name="history_outcome_failed_capacity">Message too large</string>
+    <string name="history_outcome_failed_verify">Verification failed</string>
+    <string name="history_outcome_failed_auth">Password protected</string>
+    <string name="history_outcome_failed_other">Failed</string>
+    <string name="history_row_meta">%1$s · %2$s</string>
+    <string name="history_row_description">%1$s, %2$s, %3$s, %4$s</string>
+    <string name="history_delete">Delete entry</string>
+    <string name="history_deleted">Entry deleted</string>
+    <string name="history_clear">Clear history</string>
+    <string name="history_clear_title">Clear the whole history?</string>
+    <string name="history_clear_body">Every entry is removed. Your templates are not affected.</string>
+    <string name="history_clear_confirm">Clear history</string>
+    <string name="history_detail_title">Saved tag</string>
+    <string name="history_detail_when">When</string>
+    <string name="history_detail_action">Action</string>
+    <string name="history_detail_result">Result</string>
+    <string name="history_detail_unreadable">The saved NDEF data can no longer be read.</string>
+    <string name="history_detail_no_records">This entry has no NDEF records.</string>
+    <string name="history_detail_not_found_title">Entry not found</string>
+    <string name="history_detail_not_found_body">It may have been deleted.</string>
+
+    <string name="templates_title">Templates</string>
+    <string name="templates_empty_title">No templates yet</string>
+    <string name="templates_empty_body">Build a message in Write and save it as a template to reuse it in one tap.</string>
+    <string name="templates_empty_action">Go to Write</string>
+    <plurals name="templates_records">
+        <item quantity="one">%d record</item>
+        <item quantity="other">%d records</item>
+    </plurals>
+    <string name="templates_rename">Rename</string>
+    <string name="templates_rename_title">Rename template</string>
+    <string name="templates_delete">Delete</string>
+    <string name="templates_deleted">Template deleted</string>
+    <string name="templates_menu">Options for %1$s</string>
+    <string name="templates_open_hint">Opens in the Write wizard</string>
+
+    <string name="more_history">History</string>
+    <string name="more_history_summary">Everything you read and wrote</string>
+    <string name="more_templates">Templates</string>
+    <string name="more_templates_summary">Reuse saved messages</string>
 </resources>

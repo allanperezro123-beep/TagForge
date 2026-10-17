@@ -310,6 +310,18 @@ class WriteViewModelTest {
     }
 
     @Test
+    fun removingARecordAnnouncesItSoTheScreenCanOfferUndo() = runTest {
+        val vm = viewModel()
+        vm.addRecord(uri)
+        vm.addRecord(RecordSpec.Text("a"))
+
+        vm.events.test {
+            vm.onRemoveRecord(0)
+            assertEquals(WriteEvent.RecordRemoved, awaitItem())
+        }
+    }
+
+    @Test
     fun recordsCanBeReordered() = runTest {
         val vm = viewModel()
         vm.addRecord(RecordSpec.Text("a"))
@@ -709,6 +721,41 @@ class WriteViewModelTest {
 
         gated.gate.complete(Unit)
         advanceUntilIdle()
+        assertIs<WriteSheet.Success>(vm.uiState.value.sheet)
+        assertEquals(NdefMessage(listOf(NdefRecord.uri("https://example.com"))), userContent(tag))
+    }
+
+    @Test
+    fun leavingTheScreenWhileWaitingDisarmsSoNoTagIsWrittenInTheBackground() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.addRecord(uri)
+        val tag = blankTag()
+
+        vm.onWrite()
+        vm.onHidden()
+        coordinator.onTagDiscovered(session(tag))
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.sheet)
+        assertEquals(0, tag.writeCount)
+    }
+
+    @Test
+    fun leavingTheScreenWhileTheTagIsBeingWrittenDoesNotAbortTheWrite() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.addRecord(uri)
+        val tag = blankTag()
+        val gated = GatedSession(session(tag), CompletableDeferred())
+
+        vm.onWrite()
+        coordinator.onTagDiscovered(gated)
+        runCurrent()
+        vm.onHidden()
+        gated.gate.complete(Unit)
+        advanceUntilIdle()
+
         assertIs<WriteSheet.Success>(vm.uiState.value.sheet)
         assertEquals(NdefMessage(listOf(NdefRecord.uri("https://example.com"))), userContent(tag))
     }

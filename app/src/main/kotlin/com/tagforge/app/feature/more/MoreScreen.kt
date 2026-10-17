@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.Bookmarks
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -23,6 +25,8 @@ import com.tagforge.app.R
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoreScreen(
+    onOpenHistory: () -> Unit,
+    onOpenTemplates: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAbout: () -> Unit,
     modifier: Modifier = Modifier,
@@ -32,6 +36,18 @@ fun MoreScreen(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.more_title)) }) },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
+            MoreEntry(
+                icon = Icons.Outlined.History,
+                title = stringResource(R.string.more_history),
+                summary = stringResource(R.string.more_history_summary),
+                onClick = onOpenHistory,
+            )
+            MoreEntry(
+                icon = Icons.Outlined.Bookmarks,
+                title = stringResource(R.string.more_templates),
+                summary = stringResource(R.string.more_templates_summary),
+                onClick = onOpenTemplates,
+            )
             MoreEntry(
                 icon = Icons.Outlined.Settings,
                 title = stringResource(R.string.more_settings),

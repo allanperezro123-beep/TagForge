@@ -3,15 +3,29 @@ package com.tagforge.app.navigation
 import kotlinx.serialization.Serializable
 
 /**
- * Type-safe navigation destinations. Later phases add Write, Tools, Tasks and their detail routes here.
+ * Type-safe navigation destinations. Later phases add Tools, Tasks and their detail routes here.
  * Nested under [Route] so a destination can never clash with the container composable of the same feature.
  */
 sealed interface Route {
     @Serializable
     data object Read : Route
 
+    /** [templateId] opens the wizard prefilled from a saved template. */
+    @Serializable
+    data class Write(val templateId: Long? = null) : Route
+
     @Serializable
     data object More : Route
+
+    @Serializable
+    data object History : Route
+
+    @Serializable
+    data object Templates : Route
+
+    /** A stored history entry rendered like a fresh read. */
+    @Serializable
+    data class TagDetail(val historyId: Long) : Route
 
     @Serializable
     data object Settings : Route
