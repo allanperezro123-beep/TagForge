@@ -3,6 +3,7 @@ package com.tagforge.app.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -30,8 +31,17 @@ import com.tagforge.app.feature.write.WriteRoute
 
 /** App shell: one NavHost, with the bottom bar shown only on top-level destinations. */
 @Composable
-fun TagForgeApp() {
+fun TagForgeApp(
+    openPermissionCenter: Boolean = false,
+    onPermissionCenterOpened: () -> Unit = {},
+) {
     val navController = rememberNavController()
+    LaunchedEffect(openPermissionCenter) {
+        if (openPermissionCenter) {
+            navController.navigate(Route.PermissionCenter)
+            onPermissionCenterOpened()
+        }
+    }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val destination = backStackEntry?.destination
     val showBottomBar = TopLevelDestination.entries.any { destination?.hasRoute(it.routeClass) == true }

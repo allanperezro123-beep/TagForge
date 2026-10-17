@@ -2,6 +2,14 @@
 <resources>
     <style name="Theme.TagForge" parent="android:Theme.Material.Light.NoActionBar" />
 
+    <!-- Task runner: a see-through window so the confirmation sheet floats over whatever was on screen. -->
+    <style name="Theme.TagForge.Translucent" parent="Theme.TagForge">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+
     <style name="Theme.TagForge.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>

@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.lifecycle.ViewModel
 import com.tagforge.app.infrastructure.nfc.NfcAvailability
 import com.tagforge.domain.task.DeviceFacts
+import com.tagforge.domain.task.SpecialGrant
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,7 +13,23 @@ import kotlinx.coroutines.flow.asStateFlow
  * What the Permission Center lists. QUERY_ALL_PACKAGES, SEND_SMS and CALL_PHONE are deliberately NOT here: the app
  * never asks for them (SMS and calls only open the messaging and dialer apps).
  */
-enum class PermissionKind { WRITE_SETTINGS, NOTIFICATION_POLICY, NOTIFICATIONS, NFC, ALARMS }
+enum class PermissionKind {
+    WRITE_SETTINGS,
+    NOTIFICATION_POLICY,
+    NOTIFICATIONS,
+    NFC,
+    ALARMS,
+    ;
+
+    companion object {
+        /** The row that explains and fixes [grant]. */
+        fun of(grant: SpecialGrant): PermissionKind = when (grant) {
+            SpecialGrant.WRITE_SETTINGS -> WRITE_SETTINGS
+            SpecialGrant.NOTIFICATION_POLICY -> NOTIFICATION_POLICY
+            SpecialGrant.POST_NOTIFICATIONS -> NOTIFICATIONS
+        }
+    }
+}
 
 enum class PermissionState {
     GRANTED,

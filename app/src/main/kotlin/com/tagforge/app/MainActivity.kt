@@ -1,5 +1,6 @@
 package com.tagforge.app
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -15,11 +16,15 @@ import com.tagforge.app.infrastructure.nfc.NfcReaderController
 import com.tagforge.app.navigation.TagForgeApp
 import com.tagforge.app.ui.theme.TagForgeTheme
 import com.tagforge.domain.settings.AppSettings
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var readerController: NfcReaderController
+
+    /** The task runner's "Fix" button asks for the Permission Center. Consumed once the screen is open. */
+    private val openPermissionCenter = MutableStateFlow(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -27,6 +32,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val container = (application as TagForgeApplication).container
+        openPermissionCenter.value = intent.getBooleanExtra(EXTRA_OPEN_PERMISSION_CENTER, false)
 
         // Reader mode lives and dies with the resumed Activity (TS-01); no foreground dispatch.
         readerController = NfcReaderController(this, container.scanCoordinator, container.ndefCodec, container.dispatchers.io)
@@ -43,9 +49,23 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val settings by container.settingsStore.settings.collectAsStateWithLifecycle(AppSettings())
+            val permissionCenterRequested by openPermissionCenter.collectAsStateWithLifecycle()
             TagForgeTheme(themeMode = settings.themeMode, dynamicColor = settings.dynamicColor) {
-                TagForgeApp()
+                TagForgeApp(
+                    openPermissionCenter = permissionCenterRequested,
+                    onPermissionCenterOpened = { openPermissionCenter.value = false },
+                )
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.getBooleanExtra(EXTRA_OPEN_PERMISSION_CENTER, false)) openPermissionCenter.value = true
+    }
+
+    companion object {
+        const val EXTRA_OPEN_PERMISSION_CENTER = "com.tagforge.app.extra.OPEN_PERMISSION_CENTER"
     }
 }
