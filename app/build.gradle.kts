@@ -2,7 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
-    // ksp + room are added in Phase 2 (task 2.12) when the database lands.
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.room)
 }
 
 android {
@@ -15,6 +16,7 @@ android {
         targetSdk = 35
         versionCode = 100
         versionName = "0.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -54,6 +56,11 @@ android {
     }
 }
 
+// Room exports its schema JSON on every build; the files are committed so every version change needs a migration.
+room {
+    schemaDirectory("$projectDir/schemas")
+}
+
 dependencies {
     implementation(project(":domain"))
 
@@ -73,6 +80,9 @@ dependencies {
     implementation(libs.compose.material.icons.extended)
 
     implementation(libs.datastore.preferences)
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
     implementation(libs.kotlinx.coroutines.android)
 
     debugImplementation(libs.compose.ui.tooling)
@@ -87,5 +97,6 @@ dependencies {
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.room.testing)
     androidTestImplementation(libs.compose.ui.test.junit4)
 }

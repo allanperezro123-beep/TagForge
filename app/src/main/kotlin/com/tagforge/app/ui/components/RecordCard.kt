@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.tagforge.app.R
+import com.tagforge.app.ui.text.labelRes
 import com.tagforge.app.ui.theme.HexTextStyle
 import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.ndef.NdefRecord
@@ -62,6 +63,11 @@ private fun typeLabel(parsed: ParsedRecord): String = stringResource(
         is ParsedRecord.Uri -> R.string.record_type_uri
         is ParsedRecord.Mime -> R.string.record_type_mime
         is ParsedRecord.External -> R.string.record_type_external
+        is ParsedRecord.Wifi -> R.string.record_type_wifi
+        is ParsedRecord.Bluetooth -> R.string.record_type_bluetooth
+        is ParsedRecord.VCard -> R.string.record_type_contact
+        is ParsedRecord.Aar -> R.string.record_type_aar
+        is ParsedRecord.SmartPoster -> R.string.record_type_smart_poster
         is ParsedRecord.Unknown -> R.string.record_type_unknown
     },
 )
@@ -87,6 +93,39 @@ private fun RecordContent(parsed: ParsedRecord) {
         is ParsedRecord.External -> {
             FieldRow(stringResource(R.string.record_field_type), "${parsed.domain}:${parsed.type}")
             FieldRow(stringResource(R.string.record_field_size), stringResource(R.string.record_size_bytes, parsed.payload.size))
+        }
+        is ParsedRecord.Wifi -> {
+            val credentials = parsed.credentials
+            Text(credentials.ssid, style = MaterialTheme.typography.bodyLarge)
+            FieldRow(stringResource(R.string.record_field_security), stringResource(credentials.auth.labelRes()))
+            FieldRow(stringResource(R.string.record_field_encryption), stringResource(credentials.encryption.labelRes()))
+            val key = credentials.key
+            if (key.isNullOrEmpty()) {
+                Text(stringResource(R.string.record_wifi_open), style = MaterialTheme.typography.bodyMedium)
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.record_field_password), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    SecretValue(key)
+                }
+            }
+        }
+        is ParsedRecord.Bluetooth -> {
+            parsed.address.name?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
+            FieldRow(stringResource(R.string.record_field_address), parsed.address.mac)
+        }
+        is ParsedRecord.VCard -> {
+            val fields = parsed.fields
+            Text(fields.name, style = MaterialTheme.typography.bodyLarge)
+            fields.phone?.let { FieldRow(stringResource(R.string.record_field_phone), it) }
+            fields.email?.let { FieldRow(stringResource(R.string.record_field_email), it) }
+            fields.org?.let { FieldRow(stringResource(R.string.record_field_org), it) }
+            fields.url?.let { FieldRow(stringResource(R.string.record_field_url), it) }
+            fields.note?.let { FieldRow(stringResource(R.string.record_field_note), it) }
+        }
+        is ParsedRecord.Aar -> FieldRow(stringResource(R.string.record_field_package), parsed.packageName)
+        is ParsedRecord.SmartPoster -> {
+            parsed.title?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
+            Text(parsed.uri, style = MaterialTheme.typography.bodyMedium)
         }
         is ParsedRecord.Unknown -> {
             FieldRow(stringResource(R.string.record_field_tnf), parsed.record.tnf.name)

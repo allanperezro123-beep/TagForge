@@ -147,4 +147,31 @@
     <string name="about_version">Versión %1$s</string>
     <string name="about_description">Lee y escribe etiquetas NFC. Hecha desde cero, sin que ningún dato salga de tu dispositivo.</string>
     <string name="about_privacy">Sin cuenta, sin analíticas y sin acceso a la red.</string>
+
+    <!-- Registros enriquecidos (Fase 2) -->
+    <string name="record_type_wifi">Red WiFi</string>
+    <string name="record_type_bluetooth">Bluetooth</string>
+    <string name="record_type_contact">Contacto</string>
+    <string name="record_type_aar">Abrir aplicación</string>
+    <string name="record_type_smart_poster">Póster inteligente</string>
+    <string name="record_field_ssid">Red</string>
+    <string name="record_field_security">Seguridad</string>
+    <string name="record_field_encryption">Cifrado</string>
+    <string name="record_field_password">Contraseña</string>
+    <string name="record_field_address">Dirección</string>
+    <string name="record_field_name">Nombre</string>
+    <string name="record_field_phone">Teléfono</string>
+    <string name="record_field_email">Correo</string>
+    <string name="record_field_org">Organización</string>
+    <string name="record_field_url">Sitio web</string>
+    <string name="record_field_note">Nota</string>
+    <string name="record_field_package">Paquete de la aplicación</string>
+    <string name="record_field_title">Título</string>
+    <string name="record_wifi_open">Red abierta, sin contraseña</string>
+    <string name="wifi_auth_open">Abierta</string>
+    <string name="wifi_auth_wpa">WPA personal</string>
+    <string name="wifi_auth_wpa2">WPA2 personal</string>
+    <string name="wifi_enc_none">Ninguno</string>
+    <string name="wifi_enc_tkip">TKIP</string>
+    <string name="wifi_enc_aes">AES (CCMP)</string>
 </resources>
