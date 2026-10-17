@@ -252,6 +252,46 @@ class WriteNdefUseCaseTest {
         assertEquals("00 00 00 BD".hex(), tag.page(NtagModel.NTAG213.dynLock), "never spills into the lock pages")
     }
 
+    /** A session that knows the chip model but has no Android `Ndef` info (the OS did not expose the NDEF technology). */
+    private class NoNdefInfoSession(private val inner: FakeTagSession) : TagSession by inner {
+        override val info: TagInfo get() = inner.info.copy(ndef = null)
+        override suspend fun identify(): TagResult<TagInfo> = when (val r = inner.identify()) {
+            is Outcome.Ok -> Outcome.Ok(r.value.copy(ndef = null))
+            is Outcome.Err -> r
+        }
+    }
+
+    /** S3: with no Ndef info the use case must accept exactly what the wizard meter accepts (androidMaxSize). */
+    @Test
+    fun anExactFit137ByteMessageIsAcceptedEvenWithoutNdefInfo() {
+        val tag = ntag()
+        val exact = NdefMessage(listOf(NdefRecord.text("a".repeat(130), "en")))   // 137 bytes
+        assertEquals(137, DefaultNdefCodec.encode(exact).size)
+
+        val result = write(exact, NoNdefInfoSession(FakeTagSession.ntag(tag)))
+
+        assertIs<Outcome.Ok<WriteReport>>(result)
+        assertEquals(DefaultNdefCodec.encode(exact), contentOf(tag))
+    }
+
+    /** Header of a single `application/x-tf` MIME record: flags, type length, payload length (1 B short form, 4 B long), 16 B type. */
+    private fun mimeHeaderSize(totalSize: Int): Int = if (totalSize - 19 <= 255) 19 else 22
+
+    @Test
+    fun withoutNdefInfoOneByteOverTheMeterCapacityIsStillRejectedBeforeAnyWrite() {
+        for ((model, capacity) in listOf(NtagModel.NTAG213 to 137, NtagModel.NTAG215 to 492, NtagModel.NTAG216 to 868)) {
+            val tag = ntag(model)
+            val tooBig = NdefMessage(listOf(NdefRecord.mime("application/x-tf", Bytes.of(*IntArray(capacity + 1 - mimeHeaderSize(capacity + 1)) { 7 }))))
+            val size = DefaultNdefCodec.encode(tooBig).size
+            assertEquals(capacity + 1, size, "$model: fixture is one byte over")
+
+            val result = write(tooBig, NoNdefInfoSession(FakeTagSession.ntag(tag)))
+
+            assertEquals(Outcome.Err(TagError.CapacityExceeded(required = capacity + 1, available = capacity)), result, "$model")
+            assertEquals(0, tag.writeCount, "$model")
+        }
+    }
+
     @Test
     fun theSameMessageFitsAnNtag215() {
         val tag = ntag(NtagModel.NTAG215)

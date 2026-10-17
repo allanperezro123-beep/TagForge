@@ -71,7 +71,8 @@ class WriteNdefUseCase(
         return verify(session, expected)
     }
 
-    private fun capacityOf(info: TagInfo): Int? = info.ndef?.maxSize ?: info.ntag?.let(NdefBudget::presetCapacity)
+    /** Same number the wizard meter shows: what Android's `Ndef.maxSize` reports, or its offline equivalent per chip. */
+    private fun capacityOf(info: TagInfo): Int? = info.ndef?.maxSize ?: info.ntag?.let(NdefBudget::androidMaxSize)
 
     private suspend fun writeMessage(session: TagSession, info: TagInfo, encoded: Bytes): TagResult<Unit> {
         val model = info.ntag
@@ -96,7 +97,7 @@ class WriteNdefUseCase(
         val leading = (Type2Tlv.unwrap(current) as? Outcome.Ok)?.value?.leadingBytes?.let { current.slice(0, it) }
             ?: model.factoryLockControlTlv ?: Bytes.EMPTY
         val steps = Type2WritePlanner.plan(model, current, encoded, leading)
-            ?: return Outcome.Err(TagError.CapacityExceeded(encoded.size, NdefBudget.presetCapacity(model)))
+            ?: return Outcome.Err(TagError.CapacityExceeded(encoded.size, NdefBudget.androidMaxSize(model)))
 
         return Type2Io.execute(transceiver, steps)
     }

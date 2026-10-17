@@ -37,6 +37,8 @@ internal fun HistoryEntity.toDomain() = HistoryEntry(
 internal fun Template.toEntity() = TemplateEntity(
     id = id,
     name = name,
+    // Intentional: templates keep the WiFi password in clear (a reusable WiFi tag needs it), unlike history, which
+    // redacts it (HistorySummarizer.redact). Mitigated by allowBackup=false and the app-private database.
     recordsJson = RecordSpecJson.encode(records),
     createdAt = createdAt.toEpochMilliseconds(),
     updatedAt = updatedAt.toEpochMilliseconds(),
