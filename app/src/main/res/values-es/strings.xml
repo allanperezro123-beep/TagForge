@@ -685,4 +685,13 @@
     <string name="task_runner_finished_ok">Todo listo</string>
     <string name="task_runner_finished_attention">Terminado, revisa los resultados</string>
     <string name="task_runner_action_number">Acción %1$d de %2$d</string>
+
+    <!-- Read: task card -->
+    <string name="read_task_title">Tarea de Tag Forge</string>
+    <plurals name="read_task_actions">
+        <item quantity="one">%d acción</item>
+        <item quantity="other">%d acciones</item>
+    </plurals>
+    <string name="read_task_review">Revisar y ejecutar</string>
+    <string name="read_task_invalid">Esta etiqueta tiene una tarea de Tag Forge que no se puede ejecutar:</string>
 </resources>

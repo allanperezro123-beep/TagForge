@@ -3,12 +3,15 @@ package com.tagforge.app.feature.read
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tagforge.app.infrastructure.nfc.NfcAvailability
+import com.tagforge.domain.common.Outcome
 import com.tagforge.domain.history.RecordHistoryUseCase
 import com.tagforge.domain.read.TagScan
 import com.tagforge.domain.scan.ScanCoordinator
 import com.tagforge.domain.scan.ScanState
 import com.tagforge.domain.scan.TagOperation
 import com.tagforge.domain.tag.TagError
+import com.tagforge.domain.task.TaskError
+import com.tagforge.domain.task.TaskMessageBuilder
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -41,6 +44,9 @@ class ReadViewModel(
 
     val uiState: StateFlow<ReadUiState> = combine(availability, scanState, ::toUiState)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), ReadUiState.Waiting)
+
+    /** The scan whose task already went to the runner, so a double tap on Run opens one sheet, not two. */
+    private var launchedScan: TagScan? = null
 
     private val eventChannel = Channel<ReadEvent>(Channel.BUFFERED)
     val events: Flow<ReadEvent> = eventChannel.receiveAsFlow()
@@ -75,6 +81,19 @@ class ReadViewModel(
     /** Back to "ready to scan" after an error. */
     fun onRetry() = arm()
 
+    /**
+     * Run on a task card (TK-05 "Foreground scan"). Reader mode suppresses the manifest filter while this screen is
+     * open, so the tag is routed here and handed to the SAME confirmation flow, exactly once per scan.
+     */
+    fun onRunTask() {
+        val success = uiState.value as? ReadUiState.Success ?: return
+        if (success.task !is TaskOnTag.Valid) return
+        if (launchedScan === success.scan) return
+        val ndef = success.scan.readout.rawNdef ?: return
+        launchedScan = success.scan
+        eventChannel.trySend(ReadEvent.OpenTaskRunner(ndef))
+    }
+
     fun onUnlockClicked() {
         eventChannel.trySend(ReadEvent.UnlockUnavailable)
     }
@@ -93,12 +112,21 @@ class ReadViewModel(
         NfcAvailability.ENABLED -> when (scan) {
             ScanState.Idle, is ScanState.Waiting -> ReadUiState.Waiting
             is ScanState.Working -> ReadUiState.Reading(scan.phase)
-            is ScanState.Success -> ReadUiState.Success(scan.value)
+            is ScanState.Success -> ReadUiState.Success(scan.value, taskOn(scan.value))
             is ScanState.Failure -> when (scan.error) {
                 TagError.Cancelled -> ReadUiState.Waiting
                 TagError.AuthRequired -> ReadUiState.Protected(scan.tag)
                 else -> ReadUiState.Error(scan.error, scan.tag)
             }
+        }
+    }
+
+    /** Null when the tag has no task record; a hostile one is reported, never executed. */
+    private fun taskOn(scan: TagScan): TaskOnTag? {
+        val message = scan.readout.message ?: return null
+        return when (val task = TaskMessageBuilder.extract(message)) {
+            is Outcome.Ok -> TaskOnTag.Valid(task.value)
+            is Outcome.Err -> if (task.error == TaskError.NotATask) null else TaskOnTag.Invalid(task.error)
         }
     }
 

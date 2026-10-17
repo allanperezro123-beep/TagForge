@@ -21,6 +21,13 @@ import com.tagforge.domain.scan.OperationKind
 import com.tagforge.domain.scan.OperationPhase
 import com.tagforge.domain.scan.ScanCoordinator
 import com.tagforge.domain.scan.TagOperation
+import com.tagforge.domain.task.RingerMode
+import com.tagforge.domain.task.TaskAction
+import com.tagforge.domain.task.TaskError
+import com.tagforge.domain.task.TaskMessageBuilder
+import com.tagforge.domain.task.TaskPayload
+import com.tagforge.domain.common.Bytes
+import com.tagforge.domain.common.Outcome
 import com.tagforge.domain.tag.TagError
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +47,7 @@ import org.junit.Before
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReadViewModelTest {
@@ -351,5 +359,133 @@ class ReadViewModelTest {
         advanceUntilIdle()
 
         assertIs<com.tagforge.domain.scan.ScanState.Success<*>>(next.value, "the arriving screen still got its tag")
+    }
+
+    // ---- Tag Forge task tags (TK-05 "Foreground scan") -----------------------------------------------------------
+
+    private val taskPayload = TaskPayload("Night", listOf(TaskAction.SetRinger(RingerMode.VIBRATE), TaskAction.OpenUrl("https://example.com")))
+
+    private fun ntagWithMessage(message: NdefMessage): FakeTagSession {
+        val session = FakeTagSession.ntag(FakeNtag21x(NtagModel.NTAG215))
+        kotlinx.coroutines.runBlocking { session.writeNdef(message) }
+        return session
+    }
+
+    private fun taskTag(): FakeTagSession =
+        ntagWithMessage((TaskMessageBuilder.build(taskPayload, "com.tagforge.app") as Outcome.Ok).value)
+
+    @Test
+    fun aTaskTagIsRecognisedAsATaskCardAndNothingRunsOrOpensByItself() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.onVisible()
+        vm.events.test {
+            vm.uiState.test {
+                awaitItem()
+                coordinator.onTagDiscovered(taskTag())
+                advanceUntilIdle()
+
+                val success = expectMostRecentItem()
+                assertIs<ReadUiState.Success>(success)
+                assertEquals(TaskOnTag.Valid(taskPayload), success.task)
+            }
+            assertEquals(ReadEvent.TagDetected, awaitItem())
+            assertEquals(ReadEvent.Succeeded, awaitItem())
+            expectNoEvents()   // no OpenTaskRunner: the user has to press Run
+        }
+    }
+
+    @Test
+    fun runOpensTheRunnerFlowExactlyOncePerScan() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.onVisible()
+        val expectedBytes = (TaskMessageBuilder.build(taskPayload, "com.tagforge.app") as Outcome.Ok).value
+            .let(com.tagforge.domain.ndef.DefaultNdefCodec::encode)
+        vm.uiState.test {
+            awaitItem()
+            coordinator.onTagDiscovered(taskTag())
+            advanceUntilIdle()
+            expectMostRecentItem()
+
+            vm.events.test {
+                skipItems(2)   // TagDetected, Succeeded
+                vm.onRunTask()
+                vm.onRunTask()   // a double tap must not open two sheets
+
+                assertEquals(ReadEvent.OpenTaskRunner(expectedBytes), awaitItem())
+                expectNoEvents()
+            }
+        }
+    }
+
+    @Test
+    fun scanningTheNextTaskTagAllowsRunAgain() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.onVisible()
+        vm.uiState.test {
+            awaitItem()
+            coordinator.onTagDiscovered(taskTag())
+            advanceUntilIdle()
+            expectMostRecentItem()
+            vm.events.test {
+                skipItems(2)
+                vm.onRunTask()
+                assertIs<ReadEvent.OpenTaskRunner>(awaitItem())
+
+                coordinator.onTagDiscovered(taskTag())
+                advanceUntilIdle()
+                skipItems(2)
+                vm.onRunTask()
+                assertIs<ReadEvent.OpenTaskRunner>(awaitItem())
+            }
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun anOrdinaryTagHasNoTaskCardAndRunDoesNothing() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.onVisible()
+        vm.uiState.test {
+            awaitItem()
+            coordinator.onTagDiscovered(ntagWithText("hello"))
+            advanceUntilIdle()
+
+            val success = expectMostRecentItem()
+            assertIs<ReadUiState.Success>(success)
+            assertNull(success.task)
+
+            vm.events.test {
+                skipItems(2)
+                vm.onRunTask()
+                expectNoEvents()
+            }
+        }
+    }
+
+    @Test
+    fun aHostileTaskTagIsShownAsInvalidAndCannotBeRun() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.onVisible()
+        val hostile = ntagWithMessage(NdefMessage(listOf(NdefRecord.mime("application/x-tf", Bytes.of(0x20, 0x00)))))
+        vm.uiState.test {
+            awaitItem()
+            coordinator.onTagDiscovered(hostile)
+            advanceUntilIdle()
+
+            val success = expectMostRecentItem()
+            assertIs<ReadUiState.Success>(success)
+            assertEquals(TaskOnTag.Invalid(TaskError.UnsupportedVersion(2)), success.task)
+
+            vm.events.test {
+                skipItems(2)
+                vm.onRunTask()
+                expectNoEvents()
+            }
+        }
     }
 }

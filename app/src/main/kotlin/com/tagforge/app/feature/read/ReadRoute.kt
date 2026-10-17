@@ -16,6 +16,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tagforge.app.R
 import com.tagforge.app.di.rememberAppContainer
 import com.tagforge.app.di.tagForgeViewModel
+import com.tagforge.app.feature.taskrunner.TaskRunnerActivity
 import com.tagforge.app.ui.haptics.rememberHaptics
 import com.tagforge.domain.read.ReadFullTagUseCase
 import com.tagforge.domain.settings.AppSettings
@@ -55,6 +56,7 @@ fun ReadRoute() {
                 ReadEvent.Succeeded -> currentHaptics.confirm()
                 ReadEvent.Failed -> currentHaptics.reject()
                 ReadEvent.UnlockUnavailable -> snackbarHostState.showSnackbar(unlockMessage)
+                is ReadEvent.OpenTaskRunner -> context.startActivity(TaskRunnerActivity.forTagMessage(context, event.ndef.toByteArray()))
             }
         }
     }
@@ -71,5 +73,6 @@ fun ReadRoute() {
         },
         onRetry = viewModel::onRetry,
         onUnlock = viewModel::onUnlockClicked,
+        onRunTask = viewModel::onRunTask,
     )
 }
