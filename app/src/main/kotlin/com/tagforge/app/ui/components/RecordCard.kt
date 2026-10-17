@@ -23,11 +23,14 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.tagforge.app.R
-import com.tagforge.app.ui.text.labelRes
+import com.tagforge.app.ui.text.authLabel
+import com.tagforge.app.ui.text.encryptionLabel
+import com.tagforge.app.ui.text.text
 import com.tagforge.app.ui.theme.HexTextStyle
 import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.ndef.NdefRecord
 import com.tagforge.domain.ndef.ParsedRecord
+import com.tagforge.domain.ndef.spec.WifiPasswordState
 
 private const val PREVIEW_BYTES = 64
 
@@ -104,15 +107,16 @@ private fun RecordContent(parsed: ParsedRecord) {
         is ParsedRecord.Wifi -> {
             val credentials = parsed.credentials
             Text(credentials.ssid, style = MaterialTheme.typography.bodyLarge)
-            FieldRow(stringResource(R.string.record_field_security), stringResource(credentials.auth.labelRes()))
-            FieldRow(stringResource(R.string.record_field_encryption), stringResource(credentials.encryption.labelRes()))
-            val key = credentials.key
-            if (key.isNullOrEmpty()) {
-                Text(stringResource(R.string.record_wifi_open), style = MaterialTheme.typography.bodyMedium)
-            } else {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FieldRow(stringResource(R.string.record_field_security), authLabel(credentials.authCode).text())
+            FieldRow(stringResource(R.string.record_field_encryption), encryptionLabel(credentials.encryptionCode).text())
+            when (val password = credentials.passwordState) {
+                WifiPasswordState.None ->
+                    Text(stringResource(R.string.record_wifi_open), style = MaterialTheme.typography.bodyMedium)
+                WifiPasswordState.NotStored ->
+                    Text(stringResource(R.string.record_wifi_password_not_stored), style = MaterialTheme.typography.bodyMedium)
+                is WifiPasswordState.Present -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.record_field_password), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    SecretValue(key)
+                    SecretValue(password.key)
                 }
             }
         }

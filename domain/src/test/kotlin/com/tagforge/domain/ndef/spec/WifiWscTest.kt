@@ -74,6 +74,76 @@ class WifiWscTest {
         assertEquals("Café", parsed?.ssid)
     }
 
+    // ---- real-world tags: codes outside the three this app writes must still decode (W2) -------------------
+
+    @Test
+    fun wpaWpa2MixedWithTkipAesStillDecodesAsAWifiCredential() {
+        val parsed = WifiWsc.parse(RawWsc.payload("Home", "pass1234", RawWsc.AUTH_WPA_WPA2_MIXED, RawWsc.ENC_TKIP_AES))
+        assertEquals("Home", parsed?.ssid)
+        assertEquals("pass1234", parsed?.key)
+        assertEquals(RawWsc.AUTH_WPA_WPA2_MIXED, parsed?.authCode)
+        assertEquals(RawWsc.ENC_TKIP_AES, parsed?.encryptionCode)
+    }
+
+    @Test
+    fun wpa3AndCompletelyUnknownCodesAreKeptRaw() {
+        val wpa3 = WifiWsc.parse(RawWsc.payload("Lab", "sae-secret-9", RawWsc.AUTH_WPA3_SAE, 0x0008))
+        assertEquals(RawWsc.AUTH_WPA3_SAE, wpa3?.authCode)
+        assertEquals(WifiEncryption.AES, wpa3?.encryption)
+        assertNull(wpa3?.auth, "WPA3 is not a WifiAuth the form can write")
+
+        val odd = WifiWsc.parse(RawWsc.payload("Odd", "k3y-value", 0x1234, 0x00F0))
+        assertEquals(0x1234, odd?.authCode)
+        assertEquals(0x00F0, odd?.encryptionCode)
+        assertNull(odd?.auth)
+        assertNull(odd?.encryption)
+    }
+
+    @Test
+    fun knownCodesStillExposeTheirEnums() {
+        val parsed = WifiWsc.parse(wpa2Payload)
+        assertEquals(WifiAuth.WPA2_PSK, parsed?.auth)
+        assertEquals(WifiEncryption.AES, parsed?.encryption)
+    }
+
+    // ---- password state (W1) ------------------------------------------------------------------------------
+
+    @Test
+    fun passwordStateDistinguishesOpenNotStoredAndPresent() {
+        assertEquals(WifiPasswordState.None, WifiCredentials("Cafe", null, WifiAuth.OPEN, WifiEncryption.NONE).passwordState)
+        assertEquals(WifiPasswordState.Present("pass1234"), home.passwordState)
+        assertEquals(WifiPasswordState.NotStored, home.copy(key = null).passwordState)
+        assertEquals(WifiPasswordState.NotStored, home.copy(key = "").passwordState)
+        // a code this app does not model is still a secured network
+        val mixed = WifiWsc.parse(RawWsc.payload("Home", "", RawWsc.AUTH_WPA_WPA2_MIXED, RawWsc.ENC_TKIP_AES))!!
+        assertEquals(WifiPasswordState.NotStored, mixed.passwordState)
+    }
+
+    // ---- network key redaction at TLV level ----------------------------------------------------------------
+
+    @Test
+    fun redactionEmptiesTheKeyButKeepsEveryOtherAttribute() {
+        val redacted = WifiWsc.redactNetworkKey(wpa2Payload)
+        assertEquals(WifiWsc.encode(home.copy(key = null)), redacted)
+        assertEquals("Home", WifiWsc.parse(redacted)?.ssid)
+        assertNull(WifiWsc.parse(redacted)?.key)
+    }
+
+    @Test
+    fun redactionKeepsUnknownCodesAndAttributesIntact() {
+        val original = RawWsc.payload("Home", "pass1234", RawWsc.AUTH_WPA_WPA2_MIXED, RawWsc.ENC_TKIP_AES)
+        val redacted = WifiWsc.redactNetworkKey(original)
+        assertEquals(original.size - "pass1234".length, redacted.size)
+        assertEquals(false, RawWsc.hexOf("pass1234") in redacted.toHex())
+        assertEquals(RawWsc.AUTH_WPA_WPA2_MIXED, WifiWsc.parse(redacted)?.authCode)
+    }
+
+    @Test
+    fun anUnwalkablePayloadIsDroppedAndAnEmptyOneStaysEmpty() {
+        assertEquals(Bytes.EMPTY, WifiWsc.redactNetworkKey("10 4A 00".hex()))
+        assertEquals(Bytes.EMPTY, WifiWsc.redactNetworkKey(Bytes.EMPTY))
+    }
+
     @Test
     fun garbageParsesToNull() {
         assertNull(WifiWsc.parse("10 4A 00".hex()))

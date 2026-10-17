@@ -4,6 +4,7 @@ import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.fakes.hex
 import com.tagforge.domain.ndef.spec.BluetoothAddress
 import com.tagforge.domain.ndef.spec.BluetoothOob
+import com.tagforge.domain.ndef.spec.RawWsc
 import com.tagforge.domain.ndef.spec.VCard
 import com.tagforge.domain.ndef.spec.VCardFields
 import com.tagforge.domain.ndef.spec.WifiAuth
@@ -103,6 +104,17 @@ class RecordInterpreterTest {
         val parsed = RecordInterpreter.interpret(WifiWsc.record(creds))
         assertIs<ParsedRecord.Wifi>(parsed)
         assertEquals(creds, parsed.credentials)
+    }
+
+    @Test
+    fun wifiRecordsWithCodesTheAppDoesNotWriteStillRenderAsWifi() {
+        val mixed = RawWsc.record(RawWsc.payload("Home", "pass1234", RawWsc.AUTH_WPA_WPA2_MIXED, RawWsc.ENC_TKIP_AES))
+        val parsedMixed = RecordInterpreter.interpret(mixed)
+        assertIs<ParsedRecord.Wifi>(parsedMixed)
+        assertEquals("Home", parsedMixed.credentials.ssid)
+
+        val wpa3 = RawWsc.record(RawWsc.payload("Lab", "sae-secret-9", RawWsc.AUTH_WPA3_SAE, 0x0008))
+        assertEquals("Lab", (RecordInterpreter.interpret(wpa3) as ParsedRecord.Wifi).credentials.ssid)
     }
 
     @Test

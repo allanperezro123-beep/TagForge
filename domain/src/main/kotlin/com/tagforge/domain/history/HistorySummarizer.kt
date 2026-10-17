@@ -23,11 +23,15 @@ object HistorySummarizer {
         return if (joined.length <= MAX_LENGTH) joined else joined.take(MAX_LENGTH - ELLIPSIS.length) + ELLIPSIS
     }
 
-    /** The same message with every WiFi network key removed. Everything else is returned untouched. */
+    /**
+     * The same message with every WiFi network key removed. Works on the raw WSC TLV of any `application/vnd.wfa.wsc`
+     * record, NOT on the decoded credentials: real tags carry auth/encryption codes this app does not model
+     * (WPA/WPA2 mixed, WPA3-SAE, TKIP+AES) and a payload that fails to decode must never be stored as-is.
+     * Everything else is returned untouched.
+     */
     fun redact(message: NdefMessage): NdefMessage = NdefMessage(
         message.records.map { record ->
-            val parsed = RecordInterpreter.interpret(record)
-            if (parsed is ParsedRecord.Wifi) WifiWsc.record(parsed.credentials.copy(key = null)) else record
+            if (WifiWsc.isWscRecord(record)) record.copy(payload = WifiWsc.redactNetworkKey(record.payload)) else record
         },
     )
 

@@ -2,6 +2,7 @@ package com.tagforge.domain.ndef.spec
 
 import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.ndef.NdefRecord
+import com.tagforge.domain.ndef.Tnf
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -31,13 +32,41 @@ enum class WifiEncryption(val code: Int) {
     }
 }
 
-/** [key] is null or empty for an open network. */
+/**
+ * [key] is null or empty for an open network (or when it was deliberately not stored, see [passwordState]).
+ * The codes are the raw on-tag values so credentials with codes this app does not write itself (WPA/WPA2 mixed
+ * 0x0022, WPA3-SAE 0x0040, TKIP+AES 0x000C, ...) still decode; [auth] / [encryption] are null for those.
+ */
 data class WifiCredentials(
     val ssid: String,
     val key: String?,
-    val auth: WifiAuth,
-    val encryption: WifiEncryption,
-)
+    val authCode: Int,
+    val encryptionCode: Int,
+) {
+    constructor(ssid: String, key: String?, auth: WifiAuth, encryption: WifiEncryption) :
+        this(ssid, key, auth.code, encryption.code)
+
+    val auth: WifiAuth? get() = WifiAuth.fromCode(authCode)
+    val encryption: WifiEncryption? get() = WifiEncryption.fromCode(encryptionCode)
+
+    /** What the UI should say about the password: nothing needed, held back on purpose, or the value itself. */
+    val passwordState: WifiPasswordState
+        get() = when {
+            !key.isNullOrEmpty() -> WifiPasswordState.Present(key)
+            authCode == WifiAuth.OPEN.code -> WifiPasswordState.None
+            else -> WifiPasswordState.NotStored
+        }
+}
+
+sealed interface WifiPasswordState {
+    /** Open network: there is no password. */
+    data object None : WifiPasswordState
+
+    /** A secured network whose key is absent, e.g. stripped from history. */
+    data object NotStored : WifiPasswordState
+
+    data class Present(val key: String) : WifiPasswordState
+}
 
 /**
  * Wi-Fi Simple Configuration (WSC) credential carried in an `application/vnd.wfa.wsc` MIME record.
@@ -68,8 +97,8 @@ object WifiWsc {
             listOf(
                 attribute(ATTR_NETWORK_INDEX, Bytes.of(NETWORK_INDEX)),
                 attribute(ATTR_SSID, utf8(credentials.ssid)),
-                attribute(ATTR_AUTH_TYPE, u16(credentials.auth.code)),
-                attribute(ATTR_ENCRYPTION_TYPE, u16(credentials.encryption.code)),
+                attribute(ATTR_AUTH_TYPE, u16(credentials.authCode)),
+                attribute(ATTR_ENCRYPTION_TYPE, u16(credentials.encryptionCode)),
                 attribute(ATTR_NETWORK_KEY, utf8(credentials.key.orEmpty())),
                 attribute(ATTR_MAC_ADDRESS, Bytes.of(*IntArray(MAC_BYTES) { 0xFF })),
             ),
@@ -83,12 +112,34 @@ object WifiWsc {
         val fields = attributes(credential) ?: return null
 
         val ssid = fields.firstOrNull { it.first == ATTR_SSID }?.second?.let(::text) ?: return null
-        val auth = fields.firstOrNull { it.first == ATTR_AUTH_TYPE }?.second?.let(::readU16)?.let(WifiAuth::fromCode)
-            ?: return null
-        val encryption = fields.firstOrNull { it.first == ATTR_ENCRYPTION_TYPE }?.second?.let(::readU16)
-            ?.let(WifiEncryption::fromCode) ?: return null
+        val auth = fields.firstOrNull { it.first == ATTR_AUTH_TYPE }?.second?.let(::readU16) ?: return null
+        val encryption = fields.firstOrNull { it.first == ATTR_ENCRYPTION_TYPE }?.second?.let(::readU16) ?: return null
         val key = fields.firstOrNull { it.first == ATTR_NETWORK_KEY }?.second?.let(::text)?.takeIf { it.isNotEmpty() }
         return WifiCredentials(ssid, key, auth, encryption)
+    }
+
+    /** True for a MIME record whose media type is the WSC one (case-insensitive), whether or not its payload parses. */
+    fun isWscRecord(record: NdefRecord): Boolean =
+        record.tnf == Tnf.MIME && String(record.type.toByteArray(), Charsets.US_ASCII).equals(MIME_TYPE, ignoreCase = true)
+
+    /**
+     * [payload] with every Network Key (0x1027) value emptied, at any nesting level, independent of whether the
+     * auth/encryption codes are ones this app knows. Bytes that do not walk as TLV cannot be trusted to be free of
+     * a key, so they are dropped entirely (empty result) rather than stored.
+     */
+    fun redactNetworkKey(payload: Bytes): Bytes = stripKeys(payload) ?: Bytes.EMPTY
+
+    private fun stripKeys(bytes: Bytes): Bytes? {
+        if (bytes.isEmpty()) return bytes
+        val attributes = attributes(bytes) ?: return null
+        val rebuilt = attributes.map { (id, value) ->
+            when (id) {
+                ATTR_NETWORK_KEY -> attribute(id, Bytes.EMPTY)
+                ATTR_CREDENTIAL -> attribute(id, stripKeys(value) ?: return null)
+                else -> attribute(id, value)
+            }
+        }
+        return Bytes.concat(rebuilt)
     }
 
     /** Splits [bytes] into (id, value) pairs; null if an attribute runs past the end. */

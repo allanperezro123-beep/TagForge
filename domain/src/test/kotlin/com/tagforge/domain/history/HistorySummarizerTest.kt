@@ -4,6 +4,7 @@ import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.ndef.DefaultNdefCodec
 import com.tagforge.domain.ndef.NdefMessage
 import com.tagforge.domain.ndef.NdefRecord
+import com.tagforge.domain.ndef.spec.RawWsc
 import com.tagforge.domain.ndef.spec.RecordSpec
 import com.tagforge.domain.ndef.spec.RecordSpecEncoder
 import com.tagforge.domain.tag.TagError
@@ -84,6 +85,70 @@ class HistorySummarizerTest {
         assertEquals(text, redacted.records[0])
         assertEquals("hi · Home", HistorySummarizer.summarize(redacted))
         assertEquals(2, redacted.records.size)
+    }
+
+    // ---- redaction must not depend on the auth/encryption codes being ones the app knows (C1) -----------------
+
+    private fun redactedHex(record: NdefRecord): String =
+        DefaultNdefCodec.encode(HistorySummarizer.redact(NdefMessage(listOf(record)))).toHex()
+
+    private fun assertKeyIsGone(record: NdefRecord, key: String) {
+        val keyHex = RawWsc.hexOf(key)
+        assertTrue(keyHex in DefaultNdefCodec.encode(NdefMessage(listOf(record))).toHex(), "sanity: the input carries the key")
+        assertFalse(keyHex in redactedHex(record), "the network key survived redaction")
+    }
+
+    @Test
+    fun wpaWpa2MixedCredentialsAreRedacted() {
+        val record = RawWsc.record(RawWsc.payload("Home", "pass1234", RawWsc.AUTH_WPA_WPA2_MIXED, 0x0008))
+        assertKeyIsGone(record, "pass1234")
+    }
+
+    @Test
+    fun tkipPlusAesEncryptionCredentialsAreRedacted() {
+        val record = RawWsc.record(RawWsc.payload("Home", "tkipaes-secret", 0x0020, RawWsc.ENC_TKIP_AES))
+        assertKeyIsGone(record, "tkipaes-secret")
+    }
+
+    @Test
+    fun wpa3CredentialsAreRedacted() {
+        val record = RawWsc.record(RawWsc.payload("Home", "sae-secret-9", RawWsc.AUTH_WPA3_SAE, 0x0008))
+        assertKeyIsGone(record, "sae-secret-9")
+    }
+
+    @Test
+    fun aWscPayloadThatDoesNotParseAsTlvIsNeverStored() {
+        // Credential claims 0xFF bytes but the payload ends sooner: no TLV walk can be trusted.
+        val broken = RawWsc.attr(0x104A, Bytes.of(0x10)) +
+            Bytes.of(0x10, 0x0E, 0x00, 0xFF) + RawWsc.text(0x1045, "Home") + RawWsc.text(0x1027, "broken-secret")
+        assertKeyIsGone(RawWsc.record(broken), "broken-secret")
+    }
+
+    @Test
+    fun aWscRecordWhoseBytesAreNotTlvAtAllIsNeverStored() {
+        val garbage = Bytes.copyOf("password=plain-secret".toByteArray())
+        assertKeyIsGone(RawWsc.record(garbage), "plain-secret")
+    }
+
+    @Test
+    fun aTopLevelNetworkKeyOutsideTheCredentialIsRedactedToo() {
+        val payload = RawWsc.attr(0x104A, Bytes.of(0x10)) + RawWsc.text(0x1027, "toplevel-secret")
+        assertKeyIsGone(RawWsc.record(payload), "toplevel-secret")
+    }
+
+    @Test
+    fun theWscMimeTypeIsMatchedCaseInsensitively() {
+        val record = RawWsc.record(
+            RawWsc.payload("Home", "mixedcase-key", RawWsc.AUTH_WPA_WPA2_MIXED, RawWsc.ENC_TKIP_AES),
+            mimeType = "Application/VND.WFA.WSC",
+        )
+        assertKeyIsGone(record, "mixedcase-key")
+    }
+
+    @Test
+    fun otherMimeRecordsAreNotTouchedByTheWscRedaction() {
+        val plain = NdefRecord.mime("text/plain", Bytes.copyOf("pass1234".toByteArray()))
+        assertEquals(plain, HistorySummarizer.redact(NdefMessage(listOf(plain))).records.single())
     }
 
     // ---- outcomes -------------------------------------------------------------------------------------------

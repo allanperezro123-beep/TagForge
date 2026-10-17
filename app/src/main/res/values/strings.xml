@@ -168,12 +168,18 @@
     <string name="record_field_note">Note</string>
     <string name="record_field_package">App package</string>
     <string name="record_wifi_open">Open network, no password</string>
+    <string name="record_wifi_password_not_stored">Password not stored</string>
     <string name="wifi_auth_open">Open</string>
     <string name="wifi_auth_wpa">WPA personal</string>
     <string name="wifi_auth_wpa2">WPA2 personal</string>
+    <string name="wifi_auth_wpa_wpa2">WPA/WPA2 personal</string>
+    <string name="wifi_auth_wpa3">WPA3 personal</string>
+    <string name="wifi_auth_other">Other (%1$s)</string>
     <string name="wifi_enc_none">None</string>
     <string name="wifi_enc_tkip">TKIP</string>
     <string name="wifi_enc_aes">AES (CCMP)</string>
+    <string name="wifi_enc_tkip_aes">TKIP + AES</string>
+    <string name="wifi_enc_other">Other (%1$s)</string>
 
     <!-- Navigation (Phase 2) -->
     <string name="nav_write">Write</string>

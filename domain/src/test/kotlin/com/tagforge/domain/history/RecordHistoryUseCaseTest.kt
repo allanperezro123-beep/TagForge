@@ -10,6 +10,7 @@ import com.tagforge.domain.fakes.InMemoryHistoryRepository
 import com.tagforge.domain.ndef.DefaultNdefCodec
 import com.tagforge.domain.ndef.NdefMessage
 import com.tagforge.domain.ndef.NdefRecord
+import com.tagforge.domain.ndef.spec.RawWsc
 import com.tagforge.domain.ndef.spec.RecordSpec
 import com.tagforge.domain.ndef.spec.RecordSpecEncoder
 import com.tagforge.domain.ntag.NtagModel
@@ -115,6 +116,41 @@ class RecordHistoryUseCaseTest {
             assertEquals("Home", entry.summary)
             assertFalse(passwordHex in entry.ndef!!.toHex(), "entry ${entry.kind} leaked the key")
         }
+    }
+
+    /** C1: real-world credentials carry codes the app does not write itself; the key must still never be stored. */
+    private suspend fun assertNeverStoresKey(payload: Bytes, key: String) {
+        val message = NdefMessage(listOf(RawWsc.record(payload)))
+        val keyHex = RawWsc.hexOf(key)
+        assertTrue(keyHex in DefaultNdefCodec.encode(message).toHex(), "sanity: the message carries the key")
+        val (_, session) = scanOf(NdefMessage.EMPTY)
+
+        recorder.recordWrite(session.info, message, null)
+        val (scan, _) = scanOf(message)
+        recorder.recordRead(scan)
+
+        val stored = entries()
+        assertEquals(2, stored.size)
+        for (entry in stored) {
+            assertFalse(keyHex in entry.ndef!!.toHex(), "entry ${entry.kind} leaked the key")
+            assertFalse(key in entry.summary, "entry ${entry.kind} summary leaked the key")
+        }
+    }
+
+    @Test
+    fun wpaWpa2MixedKeysNeverReachHistory() = runTest {
+        assertNeverStoresKey(RawWsc.payload("Home", "pass1234", RawWsc.AUTH_WPA_WPA2_MIXED, RawWsc.ENC_TKIP_AES), "pass1234")
+    }
+
+    @Test
+    fun wpa3KeysNeverReachHistory() = runTest {
+        assertNeverStoresKey(RawWsc.payload("Home", "sae-secret-9", RawWsc.AUTH_WPA3_SAE, 0x0008), "sae-secret-9")
+    }
+
+    @Test
+    fun unparseableWscPayloadsNeverReachHistory() = runTest {
+        val truncated = RawWsc.attr(0x104A, Bytes.of(0x10)) + Bytes.of(0x10, 0x0E, 0x00, 0xFF) + RawWsc.text(0x1027, "broken-secret")
+        assertNeverStoresKey(truncated, "broken-secret")
     }
 
     @Test
