@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.tagforge.domain.ntag.NtagModel
 import com.tagforge.domain.settings.AppSettings
 import com.tagforge.domain.settings.ThemeMode
 import kotlinx.coroutines.CoroutineScope
@@ -100,6 +101,32 @@ class DataStoreSettingsStoreTest {
         data.edit { it[stringPreferencesKey("theme_mode")] = "sepia" }
 
         assertEquals(ThemeMode.SYSTEM, DataStoreSettingsStore(data).settings.first().themeMode)
+    }
+
+    @Test
+    fun saveHistoryDefaultsOnAndTheLastTargetChipDefaultsToNtag213() = runBlocking {
+        val settings = DataStoreSettingsStore(InMemoryPreferences()).settings.first()
+        assertEquals(true, settings.saveHistory)
+        assertEquals(NtagModel.NTAG213, settings.lastTargetModel)
+    }
+
+    @Test
+    fun saveHistoryAndLastTargetPersistAcrossStores() = runBlocking {
+        val data = InMemoryPreferences()
+        DataStoreSettingsStore(data).update { it.copy(saveHistory = false, lastTargetModel = NtagModel.NTAG216) }
+
+        val reopened = DataStoreSettingsStore(data).settings.first()
+
+        assertEquals(false, reopened.saveHistory)
+        assertEquals(NtagModel.NTAG216, reopened.lastTargetModel)
+    }
+
+    @Test
+    fun anUnknownStoredTargetChipFallsBackToNtag213() = runBlocking {
+        val data = InMemoryPreferences()
+        data.edit { it[stringPreferencesKey("last_target_model")] = "NTAG999" }
+
+        assertEquals(NtagModel.NTAG213, DataStoreSettingsStore(data).settings.first().lastTargetModel)
     }
 
     @Test

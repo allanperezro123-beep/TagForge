@@ -3,6 +3,7 @@ package com.tagforge.app.feature.read
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tagforge.app.infrastructure.nfc.NfcAvailability
+import com.tagforge.domain.history.RecordHistoryUseCase
 import com.tagforge.domain.read.TagScan
 import com.tagforge.domain.scan.ScanCoordinator
 import com.tagforge.domain.scan.ScanState
@@ -31,6 +32,7 @@ class ReadViewModel(
     private val coordinator: ScanCoordinator,
     private val operation: TagOperation<TagScan>,
     availability: Flow<NfcAvailability>,
+    private val recordHistory: RecordHistoryUseCase,
 ) : ViewModel() {
 
     private val armed = MutableStateFlow<StateFlow<ScanState<TagScan>>?>(null)
@@ -48,7 +50,10 @@ class ReadViewModel(
             scanState.distinctUntilChangedBy { it::class }.collect { state ->
                 when {
                     state is ScanState.Working -> eventChannel.trySend(ReadEvent.TagDetected)
-                    state is ScanState.Success -> eventChannel.trySend(ReadEvent.Succeeded)
+                    state is ScanState.Success -> {
+                        eventChannel.trySend(ReadEvent.Succeeded)
+                        recordHistory.recordRead(state.value)
+                    }
                     // a cancelled arm and a protected tag are expected states, not failures to buzz about
                     state is ScanState.Failure && state.error != TagError.Cancelled -> eventChannel.trySend(ReadEvent.Failed)
                 }

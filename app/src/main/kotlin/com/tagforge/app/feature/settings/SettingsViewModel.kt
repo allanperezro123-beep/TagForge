@@ -32,6 +32,8 @@ class SettingsViewModel(private val store: SettingsStore) : ViewModel() {
 
     fun onAdvancedChanged(enabled: Boolean) = update { it.copy(advancedMode = enabled) }
 
+    fun onSaveHistoryChanged(enabled: Boolean) = update { it.copy(saveHistory = enabled) }
+
     private fun update(transform: (AppSettings) -> AppSettings) {
         viewModelScope.launch { store.update(transform) }
     }

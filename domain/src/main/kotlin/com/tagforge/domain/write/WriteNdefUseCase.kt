@@ -120,7 +120,9 @@ class WriteNdefUseCase(
                 is Outcome.Err -> return sent
                 is Outcome.Ok -> sent.value
             }
-            when (val ack = NtagResponses.checkAck(response)) {
+            // Some NFC controllers swallow the 4-bit ACK and return nothing; the mandatory read-back is the real proof.
+            val acknowledged = if (response.isEmpty()) Outcome.Ok(Unit) else NtagResponses.checkAck(response)
+            when (val ack = acknowledged) {
                 is Outcome.Ok -> Unit
                 is Outcome.Err ->
                     // a refusal before anything changed means the tag is write-protected

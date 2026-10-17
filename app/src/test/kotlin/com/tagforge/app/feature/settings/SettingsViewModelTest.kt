@@ -101,4 +101,16 @@ class SettingsViewModelTest {
         }
         assertEquals(AppSettings(themeMode = ThemeMode.DARK, advancedMode = true), store.current)
     }
+
+    @Test
+    fun saveHistoryCanBeSwitchedOffAndBackOn() = runTest {
+        val vm = SettingsViewModel(store)
+        vm.uiState.test {
+            assertTrue(awaitItem().settings.saveHistory)
+            vm.onSaveHistoryChanged(false)
+            assertFalse(awaitItem().settings.saveHistory)
+            vm.onSaveHistoryChanged(true)
+            assertTrue(awaitItem().settings.saveHistory)
+        }
+    }
 }

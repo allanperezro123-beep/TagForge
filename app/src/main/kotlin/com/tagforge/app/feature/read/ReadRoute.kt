@@ -32,6 +32,7 @@ fun ReadRoute() {
             coordinator = it.scanCoordinator,
             operation = ReadFullTagUseCase(it.readTagUseCase, it.readMemoryUseCase),
             availability = it.nfcAvailabilityMonitor.availability,
+            recordHistory = it.recordHistory,
         )
     }
     val state by viewModel.uiState.collectAsStateWithLifecycle()

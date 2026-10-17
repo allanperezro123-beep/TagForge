@@ -2,6 +2,7 @@ package com.tagforge.app.infrastructure.nfc
 
 import android.nfc.Tag
 import android.nfc.tech.Ndef
+import android.nfc.tech.NdefFormatable
 import android.nfc.tech.NfcA
 import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.common.Outcome
@@ -23,7 +24,8 @@ import kotlinx.coroutines.withContext
 
 /**
  * [TagSession] over a real `android.nfc.Tag`. Every blocking call runs on [io] (G3) and every platform exception is
- * mapped to a typed [TagError] (G4). Writing, formatting and locking arrive with the write/tools phases.
+ * mapped to a typed [TagError] (G4). Raw NTAG writes go through [transceiver]; [writeNdef] is the generic path
+ * for every other NDEF tag (and for unformatted tags that Android can format while writing).
  */
 class AndroidTagSession(
     private val tag: Tag,
@@ -41,6 +43,14 @@ class AndroidTagSession(
     private fun closeNdefQuietly() {
         try {
             Ndef.get(tag)?.takeIf { it.isConnected }?.close()
+        } catch (_: Throwable) {
+            // already gone
+        }
+    }
+
+    private fun closeFormatableQuietly() {
+        try {
+            NdefFormatable.get(tag)?.takeIf { it.isConnected }?.close()
         } catch (_: Throwable) {
             // already gone
         }
@@ -108,7 +118,38 @@ class AndroidTagSession(
         }
     }
 
-    override suspend fun writeNdef(message: NdefMessage): TagResult<Unit> = Outcome.Err(TagError.Unsupported("write"))
+    override suspend fun writeNdef(message: NdefMessage): TagResult<Unit> = withContext(io) {
+        try {
+            val platformMessage = android.nfc.NdefMessage(codec.encode(message).toByteArray())
+            val ndef = Ndef.get(tag)
+            if (ndef != null) {
+                if (!ndef.isConnected) {
+                    nfcATransceiver?.close()
+                    ndef.connect()
+                }
+                when {
+                    !ndef.isWritable -> Outcome.Err(TagError.ReadOnly)
+                    platformMessage.byteArrayLength > ndef.maxSize ->
+                        Outcome.Err(TagError.CapacityExceeded(platformMessage.byteArrayLength, ndef.maxSize))
+                    else -> {
+                        ndef.writeNdefMessage(platformMessage)
+                        Outcome.Ok(Unit)
+                    }
+                }
+            } else {
+                // An unformatted tag: format it and write in one step.
+                val formatable = NdefFormatable.get(tag) ?: return@withContext Outcome.Err(TagError.NotNdef)
+                nfcATransceiver?.close()
+                formatable.connect()
+                formatable.format(platformMessage)
+                Outcome.Ok(Unit)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            Outcome.Err(TagErrorMapper.map(e))
+        }
+    }
 
     override suspend fun formatNdef(initial: NdefMessage?): TagResult<Unit> = Outcome.Err(TagError.Unsupported("format"))
 
@@ -118,6 +159,7 @@ class AndroidTagSession(
         withContext(io) {
             nfcATransceiver?.close()
             closeNdefQuietly()
+            closeFormatableQuietly()
         }
     }
 }

@@ -3,8 +3,13 @@ package com.tagforge.app.feature.read
 import app.cash.turbine.test
 import com.tagforge.app.infrastructure.nfc.NfcAvailability
 import com.tagforge.domain.common.TagResult
+import com.tagforge.domain.history.HistoryKind
+import com.tagforge.domain.history.RecordHistoryUseCase
 import com.tagforge.domain.fakes.FakeNtag21x
+import com.tagforge.domain.fakes.FakeSettingsStore
 import com.tagforge.domain.fakes.FakeTagSession
+import com.tagforge.domain.fakes.FixedClock
+import com.tagforge.domain.fakes.InMemoryHistoryRepository
 import com.tagforge.domain.fakes.hex
 import com.tagforge.domain.ndef.NdefMessage
 import com.tagforge.domain.ndef.NdefRecord
@@ -21,6 +26,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -53,10 +59,12 @@ class ReadViewModelTest {
 
     private fun TestScope.coordinator() = ScanCoordinator(this, StandardTestDispatcher(testScheduler))
 
+    private val history = InMemoryHistoryRepository()
+
     private fun TestScope.viewModel(
         coordinator: ScanCoordinator = coordinator(),
         operation: TagOperation<TagScan> = ReadFullTagUseCase(),
-    ) = ReadViewModel(coordinator, operation, availability)
+    ) = ReadViewModel(coordinator, operation, availability, RecordHistoryUseCase(history, FakeSettingsStore(), FixedClock()))
 
     private fun ntagWithText(text: String): FakeTagSession {
         val session = FakeTagSession.ntag(FakeNtag21x(NtagModel.NTAG213))
@@ -189,6 +197,60 @@ class ReadViewModelTest {
             assertIs<ReadUiState.Success>(state)
             assertEquals(NdefMessage(listOf(NdefRecord.text("two", "en"))), state.scan.readout.message)
         }
+    }
+
+    // ---- history (HT-01 "Read logged") ------------------------------------------------------------------
+
+    @Test
+    fun aSuccessfulReadIsLoggedWithTheTagUidAndRawNdef() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.onVisible()
+        vm.uiState.test {
+            awaitItem()
+            coordinator.onTagDiscovered(ntagWithText("hello"))
+            advanceUntilIdle()
+            expectMostRecentItem()
+        }
+
+        val entry = history.observe().first().single()
+        assertEquals(HistoryKind.READ, entry.kind)
+        assertEquals(FakeNtag21x.DEFAULT_UID, entry.uid)
+        assertEquals("hello", entry.summary)
+        assertEquals(com.tagforge.domain.ndef.DefaultNdefCodec.encode(NdefMessage(listOf(NdefRecord.text("hello", "en")))), entry.ndef)
+    }
+
+    @Test
+    fun eachTagThatIsReadGetsItsOwnEntry() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.onVisible()
+        vm.uiState.test {
+            awaitItem()
+            coordinator.onTagDiscovered(ntagWithText("one"))
+            advanceUntilIdle()
+            coordinator.onTagDiscovered(ntagWithText("two"))
+            advanceUntilIdle()
+            expectMostRecentItem()
+        }
+
+        assertEquals(listOf("two", "one"), history.observe().first().map { it.summary })
+    }
+
+    @Test
+    fun aFailedReadLeavesNoHistoryEntry() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.onVisible()
+        val tag = FakeNtag21x(NtagModel.NTAG213).apply { failNext(TagError.TagLost) }
+        vm.uiState.test {
+            awaitItem()
+            coordinator.onTagDiscovered(FakeTagSession.ntag(tag))
+            advanceUntilIdle()
+            expectMostRecentItem()
+        }
+
+        assertEquals(0, history.observe().first().size)
     }
 
     // ---- lifecycle --------------------------------------------------------------------------------

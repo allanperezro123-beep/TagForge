@@ -1,5 +1,7 @@
 package com.tagforge.domain.settings
 
+import com.tagforge.domain.ntag.NtagModel
+
 /** Persisted by stable [code]; never rename a code. */
 enum class ThemeMode(val code: String) {
     SYSTEM("system"),
@@ -20,4 +22,6 @@ data class AppSettings(
     val saveHistory: Boolean = true,
     /** Gates the raw console and raw config writes (Phase 6). Off by default. */
     val advancedMode: Boolean = false,
+    /** The chip the write wizard measures its size meter against when no tag has been scanned. */
+    val lastTargetModel: NtagModel = NtagModel.NTAG213,
 )

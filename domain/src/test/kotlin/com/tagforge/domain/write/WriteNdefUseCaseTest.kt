@@ -314,6 +314,36 @@ class WriteNdefUseCaseTest {
         assertEquals(Outcome.Err(TagError.Io("rf noise")), write(uriMessage, FakeTagSession.ntag(tag)))
     }
 
+    /** Some NFC controllers swallow the 4-bit ACK of a WRITE and hand back an empty response. */
+    private class AckSwallowingSession(private val inner: FakeTagSession) : TagSession by inner {
+        override fun transceiver(tech: TagTech): TagTransceiver? = inner.transceiver(tech)?.let { real ->
+            object : TagTransceiver by real {
+                override suspend fun transceive(command: Bytes): TagResult<Bytes> {
+                    val response = real.transceive(command)
+                    return if (command[0] == 0xA2 && response is Outcome.Ok) Outcome.Ok(Bytes.EMPTY) else response
+                }
+            }
+        }
+    }
+
+    @Test
+    fun anEmptyWriteResponseIsNotAFailureBecauseTheReadBackProvesTheWrite() {
+        val tag = ntag()
+        val result = write(uriMessage, AckSwallowingSession(FakeTagSession.ntag(tag)))
+        assertIs<Outcome.Ok<WriteReport>>(result)
+        assertEquals(DefaultNdefCodec.encode(uriMessage), contentOf(tag))
+    }
+
+    @Test
+    fun anEmptyWriteResponseCannotHideAWriteThatDidNotLand() {
+        val tag = ntag()
+        val session = object : TagSession by AckSwallowingSession(FakeTagSession.ntag(tag)) {
+            // reads after the writes keep seeing the old (empty) tag, as if the writes had been dropped
+            override suspend fun readNdef(): TagResult<NdefMessage?> = Outcome.Ok(null)
+        }
+        assertIs<TagError.VerifyMismatch>((write(uriMessage, session) as Outcome.Err).error)
+    }
+
     /** A tag that only supports the generic NDEF path (no NfcA transceiver), like an Android `Ndef`-only tag. */
     private class RecordingSession(private val corrupt: Boolean = false) : TagSession {
         val writes = mutableListOf<NdefMessage>()

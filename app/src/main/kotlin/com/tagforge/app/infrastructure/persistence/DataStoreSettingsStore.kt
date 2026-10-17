@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.tagforge.domain.ntag.NtagModel
 import com.tagforge.domain.ports.SettingsStore
 import com.tagforge.domain.settings.AppSettings
 import com.tagforge.domain.settings.ThemeMode
@@ -31,6 +32,8 @@ class DataStoreSettingsStore(private val dataStore: DataStore<Preferences>) : Se
             preferences[DYNAMIC_COLOR] = updated.dynamicColor
             preferences[HAPTICS] = updated.hapticsEnabled
             preferences[ADVANCED_MODE] = updated.advancedMode
+            preferences[SAVE_HISTORY] = updated.saveHistory
+            preferences[LAST_TARGET_MODEL] = updated.lastTargetModel.displayName
         }
     }
 
@@ -41,6 +44,9 @@ class DataStoreSettingsStore(private val dataStore: DataStore<Preferences>) : Se
             dynamicColor = this[DYNAMIC_COLOR] ?: defaults.dynamicColor,
             hapticsEnabled = this[HAPTICS] ?: defaults.hapticsEnabled,
             advancedMode = this[ADVANCED_MODE] ?: defaults.advancedMode,
+            saveHistory = this[SAVE_HISTORY] ?: defaults.saveHistory,
+            lastTargetModel = NtagModel.entries.firstOrNull { it.displayName == this[LAST_TARGET_MODEL] }
+                ?: defaults.lastTargetModel,
         )
     }
 
@@ -49,5 +55,7 @@ class DataStoreSettingsStore(private val dataStore: DataStore<Preferences>) : Se
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         val HAPTICS = booleanPreferencesKey("haptics")
         val ADVANCED_MODE = booleanPreferencesKey("advanced_mode")
+        val SAVE_HISTORY = booleanPreferencesKey("save_history")
+        val LAST_TARGET_MODEL = stringPreferencesKey("last_target_model")
     }
 }
