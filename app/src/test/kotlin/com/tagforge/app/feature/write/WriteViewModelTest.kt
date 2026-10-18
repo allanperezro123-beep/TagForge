@@ -80,6 +80,7 @@ class WriteViewModelTest {
         coordinator: ScanCoordinator = coordinator(),
         templateId: Long? = null,
         initialRecords: List<RecordSpec> = emptyList(),
+        armOnOpen: Boolean = false,
     ) = WriteViewModel(
         coordinator = coordinator,
         settings = settings,
@@ -90,6 +91,7 @@ class WriteViewModelTest {
         availability = availability,
         initialTemplateId = templateId,
         initialRecords = initialRecords,
+        armOnOpen = armOnOpen,
     )
 
     private fun WriteViewModel.addRecord(spec: RecordSpec) {
@@ -420,6 +422,52 @@ class WriteViewModelTest {
         val invalid = viewModel(initialRecords = listOf(RecordSpec.Uri("")))
         runCurrent()
         assertEquals(null, invalid.uiState.value.qrPayload)
+    }
+
+    // ---- pinned template shortcut (PR-03) -------------------------------------------------------------------------------
+
+    @Test
+    fun aTemplateShortcutOpensAlreadyWaitingForATagToWrite() = runTest {
+        val records = listOf<RecordSpec>(uri)
+        val id = templates.upsert(Template(name = "Link", records = records, createdAt = clock.now(), updatedAt = clock.now()))
+
+        val vm = viewModel(templateId = id, armOnOpen = true)
+        runCurrent()
+
+        assertEquals(records, vm.uiState.value.records)
+        assertEquals(WriteSheet.Waiting(messageSize = 16), vm.uiState.value.sheet)
+    }
+
+    @Test
+    fun withoutTheShortcutFlagATemplateOnlyPrefillsAndNeverArms() = runTest {
+        val id = templates.upsert(Template(name = "Link", records = listOf(uri), createdAt = clock.now(), updatedAt = clock.now()))
+
+        val vm = viewModel(templateId = id, armOnOpen = false)
+        runCurrent()
+
+        assertEquals(null, vm.uiState.value.sheet)
+    }
+
+    @Test
+    fun aShortcutForATemplateThatCannotBeWrittenStaysAtTheReviewWithoutArming() = runTest {
+        val id = templates.upsert(Template(name = "Broken", records = listOf(RecordSpec.Uri("")), createdAt = clock.now(), updatedAt = clock.now()))
+
+        val vm = viewModel(templateId = id, armOnOpen = true)
+        runCurrent()
+
+        assertEquals(WriteStep.REVIEW, vm.uiState.value.step)
+        assertEquals(null, vm.uiState.value.sheet)
+    }
+
+    @Test
+    fun aShortcutWithNfcOffDoesNotArm() = runTest {
+        availability.value = NfcAvailability.DISABLED
+        val id = templates.upsert(Template(name = "Link", records = listOf(uri), createdAt = clock.now(), updatedAt = clock.now()))
+
+        val vm = viewModel(templateId = id, armOnOpen = true)
+        runCurrent()
+
+        assertEquals(null, vm.uiState.value.sheet)
     }
 
     @Test

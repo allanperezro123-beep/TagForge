@@ -23,8 +23,11 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            // Static shortcuts need the real package, suffix included (resources get no manifest placeholders).
+            resValue("string", "shortcut_target_package", "com.tagforge.app.debug")
         }
         release {
+            resValue("string", "shortcut_target_package", "com.tagforge.app")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -39,6 +42,7 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        resValues = true
     }
 
     androidResources {

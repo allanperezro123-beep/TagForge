@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Static launcher shortcuts (PR-03): open Scan or Write. Neither writes anything by itself. The link format is
+     ShortcutLinks.kt; the target package comes from a build-type resource because debug builds have a suffix. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:icon="@drawable/ic_shortcut_scan"
+        android:shortcutId="scan"
+        android:shortcutLongLabel="@string/shortcut_scan_long"
+        android:shortcutShortLabel="@string/shortcut_scan_short">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="tagforge://scan"
+            android:targetClass="com.tagforge.app.MainActivity"
+            android:targetPackage="@string/shortcut_target_package" />
+    </shortcut>
+    <shortcut
+        android:icon="@drawable/ic_shortcut_write"
+        android:shortcutId="write"
+        android:shortcutLongLabel="@string/shortcut_write_long"
+        android:shortcutShortLabel="@string/shortcut_write_short">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="tagforge://write"
+            android:targetClass="com.tagforge.app.MainActivity"
+            android:targetPackage="@string/shortcut_target_package" />
+    </shortcut>
+</shortcuts>

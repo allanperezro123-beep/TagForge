@@ -53,6 +53,7 @@ fun TemplatesScreen(
     onOpen: (Long) -> Unit,
     onRename: (Long, String) -> Unit,
     onDelete: (Long) -> Unit,
+    onPin: (Template) -> Unit,
     onGoToWrite: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -84,6 +85,7 @@ fun TemplatesScreen(
                             template,
                             onOpen = { onOpen(template.id) },
                             onRename = { renaming = template.id },
+                            onPin = { onPin(template) },
                             onDelete = { onDelete(template.id) },
                         )
                         HorizontalDivider()
@@ -106,7 +108,7 @@ fun TemplatesScreen(
 }
 
 @Composable
-private fun TemplateRow(template: Template, onOpen: () -> Unit, onRename: () -> Unit, onDelete: () -> Unit) {
+private fun TemplateRow(template: Template, onOpen: () -> Unit, onRename: () -> Unit, onPin: () -> Unit, onDelete: () -> Unit) {
     var menuOpen by rememberSaveable { mutableStateOf(false) }
     val kinds = template.records.map { stringResource(it.kind().titleRes()) }.distinct().joinToString(", ")
 
@@ -129,6 +131,13 @@ private fun TemplateRow(template: Template, onOpen: () -> Unit, onRename: () -> 
                         onClick = {
                             menuOpen = false
                             onRename()
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.templates_pin)) },
+                        onClick = {
+                            menuOpen = false
+                            onPin()
                         },
                     )
                     DropdownMenuItem(

@@ -22,6 +22,8 @@ import com.tagforge.app.feature.more.MoreScreen
 import com.tagforge.app.feature.productivity.BatchWriteRoute
 import com.tagforge.app.feature.productivity.ImportExportRoute
 import com.tagforge.app.feature.productivity.QrRoute
+import com.tagforge.app.feature.productivity.ShortcutLinks
+import com.tagforge.app.feature.productivity.ShortcutTarget
 import com.tagforge.app.feature.read.ReadRoute
 import com.tagforge.app.feature.settings.PermissionCenterRoute
 import com.tagforge.app.feature.settings.SettingsRoute
@@ -39,12 +41,21 @@ import com.tagforge.app.feature.write.WriteRoute
 fun TagForgeApp(
     openPermissionCenter: Boolean = false,
     onPermissionCenterOpened: () -> Unit = {},
+    shortcut: ShortcutTarget? = null,
+    onShortcutOpened: () -> Unit = {},
 ) {
     val navController = rememberNavController()
     LaunchedEffect(openPermissionCenter) {
         if (openPermissionCenter) {
             navController.navigate(Route.PermissionCenter)
             onPermissionCenterOpened()
+        }
+    }
+    LaunchedEffect(shortcut) {
+        if (shortcut != null) {
+            val route = ShortcutLinks.route(shortcut)
+            if (shortcut is ShortcutTarget.WriteTemplate) navController.navigate(route) else navController.navigateToTopLevel(route)
+            onShortcutOpened()
         }
     }
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -74,6 +85,7 @@ fun TagForgeNavHost(
             WriteRoute(
                 templateId = route.templateId,
                 qrText = route.qrText,
+                armOnOpen = route.armOnOpen,
                 onShowQr = { navController.navigate(Route.Qr(it)) },
             )
         }

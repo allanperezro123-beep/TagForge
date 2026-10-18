@@ -53,6 +53,8 @@ class WriteViewModel(
     initialTemplateId: Long? = null,
     /** Records decoded from a QR code; opens the wizard at the review step so they can be edited before writing. */
     initialRecords: List<RecordSpec> = emptyList(),
+    /** A pinned-template shortcut: once the template is loaded, wait for a tag straight away if it can be written. */
+    armOnOpen: Boolean = false,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(derive(WriteUiState(analysis = WriteDraft().analyse(0, appPackage))))
@@ -78,6 +80,7 @@ class WriteViewModel(
             viewModelScope.launch {
                 val template = templates.get(initialTemplateId) ?: return@launch
                 if (template.records.isNotEmpty()) mutate { it.copy(records = template.records, step = WriteStep.REVIEW) }
+                if (armOnOpen) onWrite()
             }
         }
     }

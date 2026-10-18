@@ -42,6 +42,7 @@ import kotlinx.coroutines.launch
 fun WriteRoute(
     templateId: Long? = null,
     qrText: String? = null,
+    armOnOpen: Boolean = false,
     onShowQr: (String) -> Unit = {},
     onBack: (() -> Unit)? = null,
 ) {
@@ -57,6 +58,7 @@ fun WriteRoute(
             availability = it.nfcAvailabilityMonitor.availability,
             initialTemplateId = templateId,
             initialRecords = qrText?.let { text -> listOf(QrPayloadMapper.fromQr(text)) }.orEmpty(),
+            armOnOpen = armOnOpen,
         )
     }
     val state by viewModel.uiState.collectAsStateWithLifecycle()

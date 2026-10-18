@@ -861,6 +861,22 @@
     <string name="import_problem_invalid_value">falta un valor o está fuera de rango</string>
     <string name="import_problem_too_long">un valor es demasiado largo</string>
 
+    <!-- Shortcuts and widget -->
+    <string name="shortcut_scan_short">Leer</string>
+    <string name="shortcut_scan_long">Leer una etiqueta</string>
+    <string name="shortcut_write_short">Escribir</string>
+    <string name="shortcut_write_long">Escribir una etiqueta</string>
+    <string name="shortcut_pinned_label">Escribir: %1$s</string>
+    <string name="shortcut_pinned_long_label">Escribir la plantilla %1$s</string>
+    <string name="templates_pin">Fijar en la pantalla de inicio</string>
+    <string name="templates_pin_requested">Confirma en la pantalla de inicio para añadir el acceso directo.</string>
+    <string name="templates_pin_unsupported">Este lanzador no permite fijar accesos directos.</string>
+    <string name="widget_description">Botones de leer y escribir para la pantalla de inicio</string>
+    <string name="widget_scan">Leer</string>
+    <string name="widget_write">Escribir</string>
+    <string name="widget_scan_description">Leer una etiqueta</string>
+    <string name="widget_write_description">Escribir una etiqueta</string>
+
     <!-- QR codes -->
     <string name="more_qr">Códigos QR</string>
     <string name="more_qr_summary">Muestra una etiqueta como código QR o lee uno desde una imagen</string>

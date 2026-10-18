@@ -7,10 +7,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tagforge.app.R
 import com.tagforge.app.di.tagForgeViewModel
+import com.tagforge.app.infrastructure.android.PinResult
+import com.tagforge.app.infrastructure.android.ShortcutPinner
+import kotlinx.coroutines.launch
 
 /** Container for the template list: owns the ViewModel and the delete-with-Undo snackbar. */
 @Composable
@@ -20,6 +26,9 @@ fun TemplatesRoute(onBack: () -> Unit, onOpen: (Long) -> Unit, onGoToWrite: () -
     val snackbarHostState = remember { SnackbarHostState() }
     val deletedMessage = stringResource(R.string.templates_deleted)
     val undoLabel = stringResource(R.string.write_undo)
+    val context = LocalContext.current
+    val resources = LocalResources.current
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(state.lastDeleted?.id) {
         if (state.lastDeleted != null) {
@@ -36,6 +45,14 @@ fun TemplatesRoute(onBack: () -> Unit, onOpen: (Long) -> Unit, onGoToWrite: () -
         onOpen = onOpen,
         onRename = viewModel::onRename,
         onDelete = viewModel::onDelete,
+        onPin = { template ->
+            val result = ShortcutPinner.pinTemplate(context, template.id, template.name)
+            val message = if (result == PinResult.REQUESTED) R.string.templates_pin_requested else R.string.templates_pin_unsupported
+            scope.launch {
+                snackbarHostState.currentSnackbarData?.dismiss()
+                snackbarHostState.showSnackbar(resources.getString(message))
+            }
+        },
         onGoToWrite = onGoToWrite,
     )
 }

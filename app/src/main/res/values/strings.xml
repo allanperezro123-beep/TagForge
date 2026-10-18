@@ -871,6 +871,22 @@
     <string name="import_problem_invalid_value">a value is missing or out of range</string>
     <string name="import_problem_too_long">a value is too long</string>
 
+    <!-- Shortcuts and widget -->
+    <string name="shortcut_scan_short">Scan</string>
+    <string name="shortcut_scan_long">Scan a tag</string>
+    <string name="shortcut_write_short">Write</string>
+    <string name="shortcut_write_long">Write a tag</string>
+    <string name="shortcut_pinned_label">Write: %1$s</string>
+    <string name="shortcut_pinned_long_label">Write the template %1$s</string>
+    <string name="templates_pin">Pin to home screen</string>
+    <string name="templates_pin_requested">Confirm on the home screen to add the shortcut.</string>
+    <string name="templates_pin_unsupported">This launcher cannot pin shortcuts.</string>
+    <string name="widget_description">Scan and write buttons for the home screen</string>
+    <string name="widget_scan">Scan</string>
+    <string name="widget_write">Write</string>
+    <string name="widget_scan_description">Scan a tag</string>
+    <string name="widget_write_description">Write a tag</string>
+
     <!-- QR codes -->
     <string name="more_qr">QR codes</string>
     <string name="more_qr_summary">Show a tag as a QR code or read one from a picture</string>
