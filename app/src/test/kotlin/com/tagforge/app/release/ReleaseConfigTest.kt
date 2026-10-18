@@ -74,7 +74,7 @@ class ReleaseConfigTest {
     @Test
     fun noSecretsAreCommitted() {
         val ignore = repoFile(".gitignore").readText()
-        for (pattern in listOf("keystore.properties", "*.jks", "*.keystore")) assertTrue(pattern in ignore, pattern)
+        for (pattern in listOf("keystore.properties", "*.jks", "*.keystore", "*.p12", "*.pfx", "keystore/")) assertTrue(pattern in ignore, pattern)
     }
 
     @Test

@@ -2,6 +2,9 @@
 keystore.properties
 *.jks
 *.keystore
+*.p12
+*.pfx
+keystore/
 
 # Local machine config
 local.properties
