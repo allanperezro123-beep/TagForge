@@ -47,6 +47,12 @@ sealed interface SecurityFailure {
     /** AUTH0 must lie between the first user page and the PWD page, so the password page itself is protected. */
     data object Auth0OutOfRange : SecurityFailure
 
+    /** Nothing was asked for (no CFGLCK and no attempt limit). */
+    data object NothingToChange : SecurityFailure
+
+    /** The confirmed plan belongs to another operation than the use case that was asked to run it. */
+    data object WrongPlan : SecurityFailure
+
     /** The tag no longer holds what the plan was built from (read just before the first write): nothing was written. */
     data object StateChanged : SecurityFailure
 

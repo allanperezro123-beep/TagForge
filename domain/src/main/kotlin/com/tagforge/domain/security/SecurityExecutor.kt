@@ -21,8 +21,14 @@ data class SecurityReport(val operation: SecurityOperation, val tag: TagInfo, va
  */
 internal object SecurityExecutor {
 
-    suspend fun run(session: TagSession, confirmed: ConfirmedPlan, phase: (OperationPhase) -> Unit): TagResult<SecurityReport> {
+    suspend fun run(
+        session: TagSession,
+        confirmed: ConfirmedPlan,
+        expected: SecurityOperation,
+        phase: (OperationPhase) -> Unit,
+    ): TagResult<SecurityReport> {
         val plan = confirmed.plan
+        if (plan.operation != expected) return fail(SecurityFailure.WrongPlan)
         if (!plan.isForTag(session.info.uid)) return fail(SecurityFailure.UidMismatch)
 
         phase(OperationPhase.CONNECTING)

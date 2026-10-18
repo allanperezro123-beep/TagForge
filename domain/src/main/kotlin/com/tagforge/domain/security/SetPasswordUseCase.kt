@@ -28,7 +28,7 @@ class SetPasswordUseCase(private val confirmed: ConfirmedPlan) : TagOperation<Se
     override val kind: OperationKind = OperationKind.SECURITY
 
     override suspend fun execute(session: TagSession, phase: (OperationPhase) -> Unit): TagResult<SecurityReport> =
-        SecurityExecutor.run(session, confirmed, phase)
+        SecurityExecutor.run(session, confirmed, SecurityOperation.SET_PASSWORD, phase)
 
     companion object {
         private val RFUI_PAIR = Bytes.of(0x00, 0x00)

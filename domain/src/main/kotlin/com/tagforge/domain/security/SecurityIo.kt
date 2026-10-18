@@ -4,14 +4,33 @@ import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.common.Outcome
 import com.tagforge.domain.common.TagResult
 import com.tagforge.domain.ntag.NtagCommands
+import com.tagforge.domain.ntag.NtagModel
 import com.tagforge.domain.ntag.NtagResponses
+import com.tagforge.domain.ports.TagSession
 import com.tagforge.domain.ports.TagTransceiver
 import com.tagforge.domain.tag.TagError
+import com.tagforge.domain.tag.TagInfo
+import com.tagforge.domain.tag.TagTech
+
+/** An identified NTAG21x ready for raw frames. */
+internal class NtagLink(val info: TagInfo, val model: NtagModel, val transceiver: TagTransceiver)
 
 /** Raw frames shared by the NS use cases. Maps NAK codes to the errors the security screens explain. */
 internal object SecurityIo {
     private const val NAK_INVALID = 0x0
     private const val NAK_COUNTER_OVERFLOW = 0x4
+
+    /** Identifies the tag; [TagError.Security] UnsupportedChip when it is not an NTAG21x reachable over NfcA. */
+    suspend fun connect(session: TagSession): TagResult<NtagLink> {
+        val info = when (val identified = session.identify()) {
+            is Outcome.Err -> return identified
+            is Outcome.Ok -> identified.value
+        }
+        val model = info.ntag
+        val transceiver = session.transceiver(TagTech.NFC_A)
+        if (model == null || transceiver == null) return Outcome.Err(TagError.Security(SecurityFailure.UnsupportedChip))
+        return Outcome.Ok(NtagLink(info, model, transceiver))
+    }
 
     /** FAST_READ [from]..[to]; a NAK means the pages are behind the password, so [TagError.AuthRequired]. */
     suspend fun readPages(t: TagTransceiver, from: Int, to: Int): TagResult<Bytes> {
