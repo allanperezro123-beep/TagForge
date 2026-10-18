@@ -1,10 +1,7 @@
 package com.tagforge.app.feature.tools.security
 
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.os.PersistableBundle
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -16,6 +13,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tagforge.app.di.rememberAppContainer
 import com.tagforge.app.di.tagForgeViewModel
 import com.tagforge.app.feature.tools.openNfcSettings
+import com.tagforge.app.infrastructure.android.SensitiveClipboard
 import com.tagforge.app.ui.components.SecureWindow
 import com.tagforge.app.ui.haptics.rememberHaptics
 import com.tagforge.domain.settings.AppSettings
@@ -72,7 +70,7 @@ fun SecurityRoute(
                 onLimitUnderstood = viewModel::onLimitUnderstood,
                 onProbeLimit = viewModel::onProbeLimit,
                 onNext = viewModel::onNext,
-                onCopy = { copySensitive(context, it) },
+                onCopy = { SensitiveClipboard.copy(context, "tag password", it) },
                 onShare = { shareToSelf(context, it) },
             ),
             onTypedChange = viewModel::onTypedChange,
@@ -88,17 +86,8 @@ fun SecurityRoute(
     )
 }
 
-/** Copies [text] and tells Android it is sensitive so keyboards and the clipboard preview do not show it. */
-private fun copySensitive(context: Context, text: String) {
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    val clip = ClipData.newPlainText("tag password", text)
-    clip.description.extras = PersistableBundle().apply { putBoolean(EXTRA_IS_SENSITIVE, true) }
-    clipboard.setPrimaryClip(clip)
-}
-
 private fun shareToSelf(context: Context, text: String) {
     val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
     context.startActivity(Intent.createChooser(send, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 }
 
-private const val EXTRA_IS_SENSITIVE = "android.content.extra.IS_SENSITIVE"

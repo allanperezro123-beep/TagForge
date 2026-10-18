@@ -1,7 +1,5 @@
 package com.tagforge.app.feature.tools
 
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -16,6 +14,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tagforge.app.R
 import com.tagforge.app.di.rememberAppContainer
 import com.tagforge.app.di.tagForgeViewModel
+import com.tagforge.app.infrastructure.android.SensitiveClipboard
 import com.tagforge.app.infrastructure.android.ShareExporter
 import com.tagforge.app.ui.haptics.rememberHaptics
 import com.tagforge.domain.settings.AppSettings
@@ -60,8 +59,7 @@ fun DumpRoute(onBack: () -> Unit) {
             onPageSelected = viewModel::onPageSelected,
             onCopy = {
                 state.report?.let { report ->
-                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.setPrimaryClip(ClipData.newPlainText(resources.getString(R.string.dump_title), DumpFormats.toText(report)))
+                    SensitiveClipboard.copy(context, resources.getString(R.string.dump_title), DumpFormats.toText(report))
                     // Android 13+ shows its own confirmation; older versions need ours.
                     if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
                         viewModel.onCopied()
