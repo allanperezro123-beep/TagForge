@@ -34,7 +34,6 @@ object ActionValidator {
     val ALLOWED_SCHEMES: Set<String> = setOf("http", "https", "tel", "mailto", "geo", "sms")
 
     private val SCHEME = Regex("^([A-Za-z][A-Za-z0-9+.\\-]*):")
-    private val HTTP_HOST = Regex("^https?://[^/?#]+", RegexOption.IGNORE_CASE)
     private val PHONE = Regex("^\\+?[0-9*#()\\-. ]{1,32}$")
     private val PACKAGE = Regex("^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$")
 
@@ -79,7 +78,9 @@ object ActionValidator {
         if (!allowed) return blocked(BlockReason.DISALLOWED_SCHEME)
 
         if (scheme == "http" || scheme == "https") {
-            if (!HTTP_HOST.containsMatchIn(url)) return blocked(BlockReason.INVALID_URL)
+            val authority = UrlHost.authorityOf(url) ?: return blocked(BlockReason.INVALID_URL)
+            // `https://trusted.com@evil.com` shows one host and contacts another: user info is never legitimate here.
+            if (authority.any { it == '@' || it == '\\' }) return blocked(BlockReason.INVALID_URL)
             if (scheme == "http" && httpOnly) return ActionCheck.Warn(ActionWarning.INSECURE_HTTP)
         }
         return ActionCheck.Ok

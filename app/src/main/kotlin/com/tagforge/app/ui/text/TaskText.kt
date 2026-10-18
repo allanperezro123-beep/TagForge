@@ -19,6 +19,7 @@ import com.tagforge.domain.task.SpecialGrant
 import com.tagforge.domain.task.TaskAction
 import com.tagforge.domain.task.TaskError
 import com.tagforge.domain.task.TaskRisk
+import com.tagforge.domain.task.UrlHost
 import com.tagforge.domain.task.VolumeStream
 import kotlin.math.roundToInt
 
@@ -33,6 +34,13 @@ object TaskText {
     private const val SECONDS_PER_HOUR = 3600
 
     /** One line describing what [action] will do, parameters included. */
+    /** The host a web action contacts, shown on its own line so a look-alike address cannot hide it (S2). */
+    fun hostOf(action: TaskAction): String? = when (action) {
+        is TaskAction.OpenUrl -> UrlHost.of(action.url)
+        is TaskAction.HttpRequest -> UrlHost.of(action.url)
+        else -> null
+    }
+
     fun describe(resources: Resources, action: TaskAction): String = when (action) {
         is TaskAction.SetRinger -> resources.getString(R.string.task_do_ringer, resources.getString(ringerRes(action.mode)))
         is TaskAction.SetVolume -> resources.getString(R.string.task_do_volume, resources.getString(streamRes(action.stream)), action.level)

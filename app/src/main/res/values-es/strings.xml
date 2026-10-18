@@ -588,6 +588,7 @@
     <string name="task_do_bluetooth_on">Activar el Bluetooth</string>
     <string name="task_do_bluetooth_off">Desactivar el Bluetooth</string>
     <string name="task_do_settings">Abrir los ajustes de %1$s</string>
+    <string name="task_runner_host">Va a: %1$s</string>
     <string name="task_do_open_url">Abrir %1$s</string>
     <string name="task_do_launch_app">Abrir la app %1$s</string>
     <string name="task_do_alarm">Crear una alarma para las %1$s</string>

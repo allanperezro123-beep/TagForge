@@ -1,7 +1,10 @@
 package com.tagforge.app.ui.text
 
 import com.tagforge.app.feature.settings.PermissionKind
+import com.tagforge.domain.task.HttpMethod
+import com.tagforge.domain.task.RingerMode
 import com.tagforge.domain.task.SpecialGrant
+import com.tagforge.domain.task.TaskAction
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -28,5 +31,17 @@ class TaskTextTest {
         assertEquals(PermissionKind.WRITE_SETTINGS, PermissionKind.of(SpecialGrant.WRITE_SETTINGS))
         assertEquals(PermissionKind.NOTIFICATION_POLICY, PermissionKind.of(SpecialGrant.NOTIFICATION_POLICY))
         assertEquals(PermissionKind.NOTIFICATIONS, PermissionKind.of(SpecialGrant.POST_NOTIFICATIONS))
+    }
+
+    @Test
+    fun webActionsNameTheHostTheyReallyContact() {
+        assertEquals("evil.example.net", TaskText.hostOf(TaskAction.OpenUrl("https://Evil.Example.net/login")))
+        assertEquals("192.168.1.5:8080", TaskText.hostOf(TaskAction.HttpRequest("http://192.168.1.5:8080/on", HttpMethod.POST)))
+    }
+
+    @Test
+    fun otherActionsAndNonWebLinksHaveNoHostLine() {
+        assertEquals(null, TaskText.hostOf(TaskAction.OpenUrl("tel:+573001234567")))
+        assertEquals(null, TaskText.hostOf(TaskAction.SetRinger(RingerMode.VIBRATE)))
     }
 }

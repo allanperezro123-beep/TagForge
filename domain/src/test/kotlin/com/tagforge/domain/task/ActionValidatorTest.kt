@@ -130,4 +130,33 @@ class ActionValidatorTest {
             TaskAction.Flashlight(true), TaskAction.MediaKey(MediaButton.NEXT), TaskAction.OpenSettings(SettingsTarget.NFC),
         ).forEach { assertEquals(ActionCheck.Ok, check(it), it.toString()) }
     }
+
+    // ---- S2: the host the user sees is the host that is contacted ------------------------------------------------------------
+
+    @Test
+    fun urlsWithUserInfoAreBlockedBecauseTheyDisguiseTheRealHost() {
+        listOf(
+            "https://trusted.example.com@evil.example.net/login", "http://user:secret@example.com/", "https://a.com\\@evil.com/",
+            "https://@evil.com", "HTTPS://bank.com@evil.com",
+        ).forEach {
+            assertEquals(blocked(BlockReason.INVALID_URL), check(TaskAction.OpenUrl(it)), it)
+            assertEquals(blocked(BlockReason.INVALID_URL), check(TaskAction.HttpRequest(it, HttpMethod.GET)), it)
+        }
+    }
+
+    @Test
+    fun anAtSignOutsideTheAuthorityIsFine() {
+        listOf("https://example.com/@user", "https://example.com/a?mail=a@b.co", "https://example.com/#x@y", "mailto:a@b.co")
+            .forEach { assertEquals(ActionCheck.Ok, check(TaskAction.OpenUrl(it)), it) }
+    }
+
+    @Test
+    fun theDisplayedHostIsTheAuthorityInLowerCase() {
+        assertEquals("example.com", UrlHost.of("https://Example.COM/a/b?c=d"))
+        assertEquals("example.com:8443", UrlHost.of("HTTP://example.com:8443/x"))
+        assertEquals("192.168.1.5", UrlHost.of("http://192.168.1.5/on"))
+        assertEquals("example.com", UrlHost.of("https://example.com"))
+        assertEquals(null, UrlHost.of("tel:+573001234567"))
+        assertEquals(null, UrlHost.of("mailto:a@b.co"))
+    }
 }

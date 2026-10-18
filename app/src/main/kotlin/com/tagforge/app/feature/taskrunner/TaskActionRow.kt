@@ -61,6 +61,9 @@ fun TaskActionRow(
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(description, style = MaterialTheme.typography.bodyLarge)
+        TaskText.hostOf(item.action)?.let { host ->
+            Text(stringResource(R.string.task_runner_host, host), style = MaterialTheme.typography.titleSmall)
+        }
         RiskBadge(item.risk)
 
         val check = item.check
