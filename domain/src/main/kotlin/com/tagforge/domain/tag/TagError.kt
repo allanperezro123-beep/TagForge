@@ -28,4 +28,7 @@ sealed interface TagError {
     data class Nak(val code: Int) : TagError
     data class Malformed(val detail: String) : TagError
     data class Io(val detail: String?) : TagError
+
+    /** An NS operation (password, lock, configuration) failed in a way the UI explains in detail. */
+    data class Security(val failure: com.tagforge.domain.security.SecurityFailure) : TagError
 }

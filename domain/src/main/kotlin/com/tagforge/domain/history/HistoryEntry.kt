@@ -1,6 +1,7 @@
 package com.tagforge.domain.history
 
 import com.tagforge.domain.common.Bytes
+import com.tagforge.domain.security.SecurityFailure
 import com.tagforge.domain.tag.TagError
 import kotlin.time.Instant
 
@@ -43,6 +44,11 @@ enum class HistoryOutcome(val code: String) {
             is TagError.CapacityExceeded -> FAILED_CAPACITY
             is TagError.VerifyMismatch -> FAILED_VERIFY
             TagError.AuthRequired, is TagError.AuthFailed -> FAILED_AUTH
+            is TagError.Security -> when (val failure = error.failure) {
+                is SecurityFailure.Partial -> of(failure.cause)
+                SecurityFailure.AuthExhausted -> FAILED_AUTH
+                else -> FAILED_OTHER
+            }
             else -> FAILED_OTHER
         }
     }
