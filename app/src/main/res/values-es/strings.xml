@@ -952,4 +952,25 @@
     <string name="batch_prompt_overwrite">Esta etiqueta ya tiene datos. Escribir los reemplaza.</string>
     <string name="batch_prompt_overwrite_with">Esta etiqueta ya contiene: %1$s. Escribir la reemplaza.</string>
     <string name="batch_prompt_confirm">Reemplazar</string>
+
+    <!-- Security (NS) errors -->
+    <string name="error_sec_uid_mismatch">Esta no es la etiqueta que confirmaste. No se le envió nada. Acerca la etiqueta original.</string>
+    <string name="error_sec_config_locked">Las páginas de configuración están bloqueadas para siempre (CFGLCK). Ya no se pueden cambiar.</string>
+    <string name="error_sec_unremovable">La configuración está bloqueada y hay una contraseña, así que la protección ya no se puede cambiar ni quitar.</string>
+    <string name="error_sec_auth_exhausted">Se alcanzó el límite de intentos: esta zona quedó bloqueada para siempre, incluso con la contraseña correcta.</string>
+    <string name="error_sec_advanced_required">Esto requiere el modo Avanzado. Actívalo en Ajustes.</string>
+    <string name="error_sec_unsupported_chip">Solo NTAG213, NTAG215 y NTAG216 admiten esto.</string>
+    <string name="error_sec_not_protected">Esta etiqueta no tiene protección con contraseña.</string>
+    <string name="error_sec_password_required">Esta etiqueta está protegida. Escribe su contraseña actual.</string>
+    <string name="error_sec_auth0_range">La página inicial protegida debe estar entre la primera página de usuario y la página de la contraseña.</string>
+    <string name="error_sec_state_changed">La etiqueta ya no contiene lo planeado. No se escribió nada. Empieza de nuevo.</string>
+    <string name="error_sec_nothing_to_change">No hay nada que cambiar: la etiqueta ya lo tiene.</string>
+    <string name="error_sec_wrong_plan">Ese plan es de otra operación. No se envió nada.</string>
+    <string name="error_sec_cannot_make_read_only">Esta etiqueta no se puede dejar de solo lectura con la API NDEF estándar.</string>
+    <string name="error_sec_not_verified">Todas las escrituras se completaron, pero al releer la etiqueta no se vio el resultado esperado. Vuelve a escanearla para ver su estado real.</string>
+    <string name="error_sec_partial_set_password">La contraseña se escribió pero la protección NO está activa (%1$d de %2$d escrituras hechas). Reintenta con la misma contraseña.</string>
+    <string name="error_sec_partial_remove">La eliminación se interrumpió (%1$d de %2$d escrituras hechas). Autentícate y reintenta; la protección puede estar quitada solo en parte.</string>
+    <string name="error_sec_partial_lock">El bloqueo puede estar aplicado a medias (%1$d de %2$d escrituras hechas). Vuelve a escanear la etiqueta para ver su estado real. No asumas que funcionó.</string>
+    <string name="error_sec_partial_other">El cambio puede estar aplicado a medias (%1$d de %2$d escrituras hechas). Vuelve a escanear la etiqueta para comprobar su estado.</string>
+    <string name="history_kind_security">Seguridad</string>
 </resources>

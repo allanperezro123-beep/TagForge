@@ -962,4 +962,25 @@
     <string name="batch_prompt_overwrite">This tag already has data. Writing replaces it.</string>
     <string name="batch_prompt_overwrite_with">This tag already contains: %1$s. Writing replaces it.</string>
     <string name="batch_prompt_confirm">Replace</string>
+
+    <!-- Security (NS) errors -->
+    <string name="error_sec_uid_mismatch">This is not the tag you confirmed. Nothing was sent to it. Present the original tag.</string>
+    <string name="error_sec_config_locked">The configuration pages are permanently locked (CFGLCK). They can no longer be changed.</string>
+    <string name="error_sec_unremovable">Configuration is locked and a password is set, so the protection can no longer be changed or removed.</string>
+    <string name="error_sec_auth_exhausted">The attempt limit was reached: this area is permanently locked, even for the correct password.</string>
+    <string name="error_sec_advanced_required">This needs Advanced mode. Turn it on in Settings.</string>
+    <string name="error_sec_unsupported_chip">Only NTAG213, NTAG215 and NTAG216 support this.</string>
+    <string name="error_sec_not_protected">This tag has no password protection.</string>
+    <string name="error_sec_password_required">This tag is protected. Enter its current password.</string>
+    <string name="error_sec_auth0_range">The protected start page must be between the first user page and the password page.</string>
+    <string name="error_sec_state_changed">The tag no longer holds what was planned. Nothing was written. Start over.</string>
+    <string name="error_sec_nothing_to_change">There is nothing to change: the tag already has this.</string>
+    <string name="error_sec_wrong_plan">That plan belongs to another operation. Nothing was sent.</string>
+    <string name="error_sec_cannot_make_read_only">This tag cannot be made read-only through the standard NDEF API.</string>
+    <string name="error_sec_not_verified">All writes went through, but reading the tag back did not show the expected result. Re-scan the tag to check its real state.</string>
+    <string name="error_sec_partial_set_password">The password was written but protection is NOT active (%1$d of %2$d writes done). Retry with the same password.</string>
+    <string name="error_sec_partial_remove">Removal was interrupted (%1$d of %2$d writes done). Authenticate and retry; the protection may be partly removed.</string>
+    <string name="error_sec_partial_lock">The lock may be partially applied (%1$d of %2$d writes done). Re-scan the tag to read its actual state. Do not assume it succeeded.</string>
+    <string name="error_sec_partial_other">The change may be partially applied (%1$d of %2$d writes done). Re-scan the tag to check its state.</string>
+    <string name="history_kind_security">Security</string>
 </resources>

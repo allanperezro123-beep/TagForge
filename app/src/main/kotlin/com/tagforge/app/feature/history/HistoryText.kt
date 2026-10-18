@@ -20,6 +20,7 @@ fun HistoryKind.labelRes(): Int = when (this) {
     HistoryKind.FORMAT -> R.string.history_kind_format
     HistoryKind.CLONE -> R.string.history_kind_clone
     HistoryKind.BATCH -> R.string.history_kind_batch
+    HistoryKind.SECURITY -> R.string.history_kind_security
 }
 
 @StringRes

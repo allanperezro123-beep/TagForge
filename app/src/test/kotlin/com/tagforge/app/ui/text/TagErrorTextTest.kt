@@ -30,6 +30,7 @@ class TagErrorTextTest {
         TagError.Nak(5),
         TagError.Malformed("bad"),
         TagError.Io("boom"),
+        TagError.Security(com.tagforge.domain.security.SecurityFailure.UidMismatch),
     )
 
     private fun stringsOf(dir: String): Map<String, String> {

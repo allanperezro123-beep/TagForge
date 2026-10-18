@@ -34,6 +34,7 @@ object TagErrorText {
         is TagError.Nak -> ErrorText(R.string.error_nak, listOf(error.code))
         is TagError.Malformed -> ErrorText(R.string.error_malformed)
         is TagError.Io -> ErrorText(R.string.error_io)
+        is TagError.Security -> SecurityErrorText.of(error.failure)
     }
 }
 
