@@ -694,4 +694,119 @@
     </plurals>
     <string name="read_task_review">Revisar y ejecutar</string>
     <string name="read_task_invalid">Esta etiqueta tiene una tarea de Tag Forge que no se puede ejecutar:</string>
+
+    <!-- Tasks: list -->
+    <string name="nav_tasks">Tareas</string>
+    <string name="tasks_title">Tareas</string>
+    <string name="tasks_new">Nueva tarea</string>
+    <string name="tasks_empty_title">Aún no hay tareas</string>
+    <string name="tasks_empty_body">Una tarea es una lista corta de cosas que hace tu teléfono al acercar una etiqueta: silenciar el timbre, abrir un enlace, iniciar un temporizador. Siempre confirmas antes de que algo se ejecute.</string>
+    <string name="tasks_empty_action">Crear una tarea</string>
+    <plurals name="tasks_actions">
+        <item quantity="one">%d acción</item>
+        <item quantity="other">%d acciones</item>
+    </plurals>
+    <string name="tasks_unnamed">Tarea sin título</string>
+    <string name="tasks_menu">Opciones de %1$s</string>
+    <string name="tasks_run">Ejecutar (pide confirmación)</string>
+    <string name="tasks_edit">Editar</string>
+    <string name="tasks_duplicate">Duplicar</string>
+    <string name="tasks_delete">Eliminar</string>
+    <string name="tasks_delete_title">¿Eliminar esta tarea?</string>
+    <string name="tasks_delete_body">«%1$s» se quitará de este teléfono. Las etiquetas que ya la contienen siguen funcionando.</string>
+    <string name="tasks_delete_confirm">Eliminar</string>
+
+    <!-- Tasks: builder -->
+    <string name="builder_title_new">Nueva tarea</string>
+    <string name="builder_title_edit">Editar tarea</string>
+    <string name="builder_name">Nombre de la tarea</string>
+    <string name="builder_name_hint">Modo noche</string>
+    <string name="builder_name_required">Ponle un nombre a la tarea para guardarla</string>
+    <string name="builder_actions_title">Acciones, en orden</string>
+    <string name="builder_empty_actions">Aún no hay acciones. Agrega lo primero que debe hacer esta tarea.</string>
+    <string name="builder_add_action">Agregar una acción</string>
+    <string name="builder_full">Una tarea admite como máximo 16 acciones</string>
+    <string name="builder_save">Guardar tarea</string>
+    <string name="builder_saved">Se guardó «%1$s»</string>
+    <string name="builder_write">Escribir en la etiqueta</string>
+    <string name="builder_blocked_empty">Agrega al menos una acción para escribir la tarea</string>
+    <string name="builder_blocked_invalid">Corrige las acciones que necesitan atención</string>
+    <string name="builder_blocked_encode">Esta tarea no se puede guardar en una etiqueta</string>
+    <string name="builder_blocked_over">La tarea es más grande que la etiqueta</string>
+    <string name="builder_action_removed">Acción eliminada</string>
+    <string name="builder_action_number">Acción %1$d</string>
+    <string name="builder_action_invalid">Necesita atención</string>
+    <string name="builder_overwrite_note">Al escribir se reemplaza lo que contiene la etiqueta, y antes te lo preguntamos.</string>
+    <string name="builder_picker_title">Agregar una acción</string>
+    <string name="builder_form_add">Agregar</string>
+    <string name="builder_form_update">Actualizar</string>
+    <string name="builder_form_cancel">Cancelar y volver</string>
+    <string name="builder_group_sound">Sonido y pantalla</string>
+    <string name="builder_group_connectivity">Conexiones</string>
+    <string name="builder_group_apps">Aplicaciones y enlaces</string>
+    <string name="builder_group_communication">Mensajes y voz</string>
+    <string name="builder_group_time">Tiempo</string>
+
+    <!-- Tasks: action kinds in the picker -->
+    <string name="action_kind_ringer">Cambiar el modo del timbre</string>
+    <string name="action_kind_volume">Ajustar un volumen</string>
+    <string name="action_kind_brightness">Ajustar el brillo</string>
+    <string name="action_kind_flashlight">Encender o apagar la linterna</string>
+    <string name="action_kind_media">Botón multimedia</string>
+    <string name="action_kind_wifi_toggle">Activar o desactivar el Wi-Fi</string>
+    <string name="action_kind_wifi_join">Conectarse a una red Wi-Fi</string>
+    <string name="action_kind_bluetooth_toggle">Activar o desactivar el Bluetooth</string>
+    <string name="action_kind_settings">Abrir una pantalla de ajustes</string>
+    <string name="action_kind_open_url">Abrir un enlace</string>
+    <string name="action_kind_launch_app">Abrir una aplicación</string>
+    <string name="action_kind_http">Enviar una petición web</string>
+    <string name="action_kind_sms">Redactar un SMS</string>
+    <string name="action_kind_dial">Abrir el marcador</string>
+    <string name="action_kind_notify">Mostrar una notificación</string>
+    <string name="action_kind_speak">Decir algo en voz alta</string>
+    <string name="action_kind_alarm">Programar una alarma</string>
+    <string name="action_kind_timer">Iniciar un temporizador</string>
+    <string name="action_kind_calendar">Crear un evento de calendario</string>
+
+    <!-- Tasks: action forms -->
+    <string name="form_state_on">Activado</string>
+    <string name="form_state_off">Desactivado</string>
+    <string name="form_state_label">Estado</string>
+    <string name="form_ringer_label">Modo del timbre</string>
+    <string name="form_stream_label">Qué volumen</string>
+    <string name="form_volume_level">Volumen: %1$d%%</string>
+    <string name="form_brightness_level">Brillo: %1$d%%</string>
+    <string name="form_settings_label">Pantalla de ajustes</string>
+    <string name="form_settings_note">Android no permite que una aplicación cambie estos interruptores. La tarea abre la pantalla y tú tocas.</string>
+    <string name="form_media_label">Botón</string>
+    <string name="form_url">Enlace</string>
+    <string name="form_url_hint">https://ejemplo.com</string>
+    <string name="form_url_note">Permitidos: http, https, tel, mailto, geo y sms. Cualquier otro se bloquea.</string>
+    <string name="form_http_url">Dirección (se recomienda https)</string>
+    <string name="form_http_method">Método</string>
+    <string name="form_http_get">GET</string>
+    <string name="form_http_post">POST (cuerpo vacío)</string>
+    <string name="form_http_note">Nunca se envían cabeceras ni cuerpo, y solo se ejecuta mientras Tag Forge está en pantalla. Con http simple se pide una segunda confirmación.</string>
+    <string name="form_package">Nombre del paquete de la aplicación</string>
+    <string name="form_package_hint">com.ejemplo.app</string>
+    <string name="form_package_note">La aplicación debe estar instalada en el teléfono que ejecute la tarea.</string>
+    <string name="form_ssid">Nombre de la red (SSID)</string>
+    <string name="form_wifi_key">Contraseña</string>
+    <string name="form_wifi_auth">Seguridad</string>
+    <string name="form_wifi_note">La contraseña se guarda en la etiqueta como datos simples: cualquiera que pueda escanearla puede leerla. Android igualmente pide que el usuario apruebe la conexión.</string>
+    <string name="form_number">Número de teléfono</string>
+    <string name="form_sms_body">Mensaje</string>
+    <string name="form_sms_note">Solo abre el mensaje. Tú pulsas enviar.</string>
+    <string name="form_dial_note">Solo abre el marcador. Tú haces la llamada.</string>
+    <string name="form_notify_title">Título</string>
+    <string name="form_notify_text">Texto (opcional)</string>
+    <string name="form_speak_text">Texto a decir</string>
+    <string name="form_alarm_hour">Hora (0 a 23)</string>
+    <string name="form_alarm_minute">Minuto (0 a 59)</string>
+    <string name="form_label">Etiqueta (opcional)</string>
+    <string name="form_timer_seconds">Duración en segundos</string>
+    <string name="form_timer_total">Equivale a %1$s</string>
+    <string name="form_event_title">Título del evento</string>
+    <string name="form_event_duration">Duración en minutos</string>
+    <string name="form_insecure_http">Esta dirección usa http simple, que no está cifrado. La tarea avisará y pedirá una segunda confirmación antes de enviarla.</string>
 </resources>

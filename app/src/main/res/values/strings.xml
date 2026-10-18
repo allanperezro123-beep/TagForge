@@ -704,4 +704,119 @@
     </plurals>
     <string name="read_task_review">Review and run</string>
     <string name="read_task_invalid">This tag holds a Tag Forge task that cannot be run:</string>
+
+    <!-- Tasks: list -->
+    <string name="nav_tasks">Tasks</string>
+    <string name="tasks_title">Tasks</string>
+    <string name="tasks_new">New task</string>
+    <string name="tasks_empty_title">No tasks yet</string>
+    <string name="tasks_empty_body">A task is a short list of things your phone does when you tap a tag: silence the ringer, open a link, start a timer. You always confirm before anything runs.</string>
+    <string name="tasks_empty_action">Create a task</string>
+    <plurals name="tasks_actions">
+        <item quantity="one">%d action</item>
+        <item quantity="other">%d actions</item>
+    </plurals>
+    <string name="tasks_unnamed">Untitled task</string>
+    <string name="tasks_menu">Options for %1$s</string>
+    <string name="tasks_run">Run (asks first)</string>
+    <string name="tasks_edit">Edit</string>
+    <string name="tasks_duplicate">Duplicate</string>
+    <string name="tasks_delete">Delete</string>
+    <string name="tasks_delete_title">Delete this task?</string>
+    <string name="tasks_delete_body">“%1$s” will be removed from this phone. Tags that already contain it keep working.</string>
+    <string name="tasks_delete_confirm">Delete</string>
+
+    <!-- Tasks: builder -->
+    <string name="builder_title_new">New task</string>
+    <string name="builder_title_edit">Edit task</string>
+    <string name="builder_name">Task name</string>
+    <string name="builder_name_hint">Night mode</string>
+    <string name="builder_name_required">Give the task a name to save it</string>
+    <string name="builder_actions_title">Actions, in order</string>
+    <string name="builder_empty_actions">No actions yet. Add the first thing this task should do.</string>
+    <string name="builder_add_action">Add an action</string>
+    <string name="builder_full">A task holds at most 16 actions</string>
+    <string name="builder_save">Save task</string>
+    <string name="builder_saved">Saved “%1$s”</string>
+    <string name="builder_write">Write to tag</string>
+    <string name="builder_blocked_empty">Add at least one action to write a task</string>
+    <string name="builder_blocked_invalid">Fix the actions that need attention</string>
+    <string name="builder_blocked_encode">This task cannot be stored on a tag</string>
+    <string name="builder_blocked_over">The task is larger than the tag</string>
+    <string name="builder_action_removed">Action removed</string>
+    <string name="builder_action_number">Action %1$d</string>
+    <string name="builder_action_invalid">Needs attention</string>
+    <string name="builder_overwrite_note">Writing replaces what the tag holds, and asks you first.</string>
+    <string name="builder_picker_title">Add an action</string>
+    <string name="builder_form_add">Add</string>
+    <string name="builder_form_update">Update</string>
+    <string name="builder_form_cancel">Cancel and go back</string>
+    <string name="builder_group_sound">Sound and screen</string>
+    <string name="builder_group_connectivity">Connections</string>
+    <string name="builder_group_apps">Apps and links</string>
+    <string name="builder_group_communication">Messages and voice</string>
+    <string name="builder_group_time">Time</string>
+
+    <!-- Tasks: action kinds in the picker -->
+    <string name="action_kind_ringer">Set the ringer mode</string>
+    <string name="action_kind_volume">Set a volume</string>
+    <string name="action_kind_brightness">Set the brightness</string>
+    <string name="action_kind_flashlight">Flashlight on or off</string>
+    <string name="action_kind_media">Media button</string>
+    <string name="action_kind_wifi_toggle">Wi-Fi on or off</string>
+    <string name="action_kind_wifi_join">Join a Wi-Fi network</string>
+    <string name="action_kind_bluetooth_toggle">Bluetooth on or off</string>
+    <string name="action_kind_settings">Open a settings screen</string>
+    <string name="action_kind_open_url">Open a link</string>
+    <string name="action_kind_launch_app">Open an app</string>
+    <string name="action_kind_http">Send a web request</string>
+    <string name="action_kind_sms">Write an SMS</string>
+    <string name="action_kind_dial">Open the dialer</string>
+    <string name="action_kind_notify">Show a notification</string>
+    <string name="action_kind_speak">Say something aloud</string>
+    <string name="action_kind_alarm">Set an alarm</string>
+    <string name="action_kind_timer">Start a timer</string>
+    <string name="action_kind_calendar">Create a calendar event</string>
+
+    <!-- Tasks: action forms -->
+    <string name="form_state_on">On</string>
+    <string name="form_state_off">Off</string>
+    <string name="form_state_label">State</string>
+    <string name="form_ringer_label">Ringer mode</string>
+    <string name="form_stream_label">Which volume</string>
+    <string name="form_volume_level">Volume: %1$d%%</string>
+    <string name="form_brightness_level">Brightness: %1$d%%</string>
+    <string name="form_settings_label">Settings screen</string>
+    <string name="form_settings_note">Android does not let an app flip these switches. The task opens the screen and you tap.</string>
+    <string name="form_media_label">Button</string>
+    <string name="form_url">Link</string>
+    <string name="form_url_hint">https://example.com</string>
+    <string name="form_url_note">Allowed: http, https, tel, mailto, geo and sms. Anything else is blocked.</string>
+    <string name="form_http_url">Address (https recommended)</string>
+    <string name="form_http_method">Method</string>
+    <string name="form_http_get">GET</string>
+    <string name="form_http_post">POST (empty body)</string>
+    <string name="form_http_note">No headers and no body are ever sent, and it only runs while Tag Forge is on screen. Plain http needs a second confirmation.</string>
+    <string name="form_package">App package name</string>
+    <string name="form_package_hint">com.example.app</string>
+    <string name="form_package_note">The app must be installed on the phone that runs the task.</string>
+    <string name="form_ssid">Network name (SSID)</string>
+    <string name="form_wifi_key">Password</string>
+    <string name="form_wifi_auth">Security</string>
+    <string name="form_wifi_note">The password is stored on the tag as plain data: anyone who can scan it can read it. Android still asks the user to approve joining.</string>
+    <string name="form_number">Phone number</string>
+    <string name="form_sms_body">Message</string>
+    <string name="form_sms_note">It only opens the message. You press send yourself.</string>
+    <string name="form_dial_note">It only opens the dialer. You place the call yourself.</string>
+    <string name="form_notify_title">Title</string>
+    <string name="form_notify_text">Text (optional)</string>
+    <string name="form_speak_text">Text to say</string>
+    <string name="form_alarm_hour">Hour (0 to 23)</string>
+    <string name="form_alarm_minute">Minute (0 to 59)</string>
+    <string name="form_label">Label (optional)</string>
+    <string name="form_timer_seconds">Duration in seconds</string>
+    <string name="form_timer_total">That is %1$s</string>
+    <string name="form_event_title">Event title</string>
+    <string name="form_event_duration">Duration in minutes</string>
+    <string name="form_insecure_http">This address uses plain http, which is not encrypted. The task will warn and ask for a second confirmation before sending it.</string>
 </resources>

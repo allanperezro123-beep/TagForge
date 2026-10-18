@@ -22,6 +22,8 @@ import com.tagforge.app.feature.more.MoreScreen
 import com.tagforge.app.feature.read.ReadRoute
 import com.tagforge.app.feature.settings.PermissionCenterRoute
 import com.tagforge.app.feature.settings.SettingsRoute
+import com.tagforge.app.feature.tasks.TaskBuilderRoute
+import com.tagforge.app.feature.tasks.TasksRoute
 import com.tagforge.app.feature.tools.CloneRoute
 import com.tagforge.app.feature.tools.DumpRoute
 import com.tagforge.app.feature.tools.TechInfoRoute
@@ -65,6 +67,15 @@ fun TagForgeNavHost(
     NavHost(navController = navController, startDestination = Route.Read, modifier = modifier) {
         composable<Route.Read> { ReadRoute() }
         composable<Route.Write> { entry -> WriteRoute(templateId = entry.toRoute<Route.Write>().templateId) }
+        composable<Route.Tasks> {
+            TasksRoute(
+                onNew = { navController.navigate(Route.TaskBuilder()) },
+                onOpen = { navController.navigate(Route.TaskBuilder(it)) },
+            )
+        }
+        composable<Route.TaskBuilder> { entry ->
+            TaskBuilderRoute(taskId = entry.toRoute<Route.TaskBuilder>().taskId, onBack = { navController.popBackStack() })
+        }
         composable<Route.Tools> {
             ToolsRoute(
                 onOpenDump = { navController.navigate(Route.Dump) },
