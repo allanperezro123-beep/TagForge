@@ -12,6 +12,7 @@ import com.tagforge.app.infrastructure.persistence.RoomExchangeStore
 import com.tagforge.app.infrastructure.persistence.RoomHistoryRepository
 import com.tagforge.app.infrastructure.persistence.RoomTaskRepository
 import com.tagforge.app.infrastructure.persistence.RoomTemplateRepository
+import com.tagforge.app.infrastructure.persistence.ShortcutNonceStore
 import com.tagforge.app.infrastructure.persistence.TagForgeDatabase
 import com.tagforge.app.infrastructure.security.KeystoreSecretStore
 import com.tagforge.app.infrastructure.tasks.AndroidDeviceFacts
@@ -77,6 +78,9 @@ class AppContainer(context: Context) {
     val applicationScope = CoroutineScope(SupervisorJob() + dispatchers.default)
 
     val settingsStore: SettingsStore = DataStoreSettingsStore(appContext.settingsDataStore)
+
+    /** The secret that lets only our own pinned shortcuts arm a write on open (exported MainActivity, W4). */
+    val shortcutNonceStore = ShortcutNonceStore(appContext.settingsDataStore)
 
     val ndefCodec: NdefCodec = DefaultNdefCodec
 

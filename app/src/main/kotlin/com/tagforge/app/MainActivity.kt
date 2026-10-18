@@ -38,7 +38,7 @@ class MainActivity : ComponentActivity() {
 
         val container = (application as TagForgeApplication).container
         openPermissionCenter.value = intent.getBooleanExtra(EXTRA_OPEN_PERMISSION_CENTER, false)
-        pendingShortcut.value = shortcutOf(intent)
+        resolveShortcut(intent)
 
         // Reader mode lives and dies with the resumed Activity (TS-01); no foreground dispatch.
         readerController = NfcReaderController(this, container.scanCoordinator, container.ndefCodec, container.dispatchers.io)
@@ -72,11 +72,21 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         if (intent.getBooleanExtra(EXTRA_OPEN_PERMISSION_CENTER, false)) openPermissionCenter.value = true
-        shortcutOf(intent)?.let { pendingShortcut.value = it }
+        resolveShortcut(intent)
     }
 
-    private fun shortcutOf(intent: Intent): ShortcutTarget? =
-        if (intent.action == Intent.ACTION_VIEW) ShortcutLinks.parse(intent.dataString) else null
+    /**
+     * The activity is exported, so a VIEW link may come from any app: it only arms a write when it carries the install's
+     * nonce (see [ShortcutLinks.resolve]); otherwise the Write review opens and the user must press Write.
+     */
+    private fun resolveShortcut(intent: Intent) {
+        if (intent.action != Intent.ACTION_VIEW) return
+        val link = intent.dataString
+        val store = (application as TagForgeApplication).container.shortcutNonceStore
+        lifecycleScope.launch {
+            ShortcutLinks.resolve(link, store.peek())?.let { pendingShortcut.value = it }
+        }
+    }
 
     companion object {
         const val EXTRA_OPEN_PERMISSION_CENTER = "com.tagforge.app.extra.OPEN_PERMISSION_CENTER"

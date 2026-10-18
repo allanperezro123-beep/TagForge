@@ -15,16 +15,17 @@ import com.tagforge.app.feature.productivity.ShortcutTarget
 enum class PinResult { REQUESTED, UNSUPPORTED }
 
 /**
- * Pins a "write this template" shortcut to the home screen (PR-03). The shortcut only carries the template id in its
- * link; opening it loads the template and waits for a tag, so nothing is written until a tag is held to the phone.
+ * Pins a "write this template" shortcut to the home screen (PR-03). The link carries the template id and this install's
+ * secret nonce (the only link that may start waiting for a tag on open; see ShortcutNonce). Nothing is written until a
+ * tag is held to the phone.
  */
 object ShortcutPinner {
 
-    fun pinTemplate(context: Context, templateId: Long, templateName: String): PinResult {
+    fun pinTemplate(context: Context, templateId: Long, templateName: String, nonce: String): PinResult {
         if (!ShortcutManagerCompat.isRequestPinShortcutSupported(context)) return PinResult.UNSUPPORTED
         val intent = Intent(
             Intent.ACTION_VIEW,
-            Uri.parse(ShortcutLinks.uri(ShortcutTarget.WriteTemplate(templateId))),
+            Uri.parse(ShortcutLinks.uri(ShortcutTarget.WriteTemplate(templateId), nonce)),
             context,
             MainActivity::class.java,
         )

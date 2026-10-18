@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tagforge.app.R
+import com.tagforge.app.di.rememberAppContainer
 import com.tagforge.app.di.tagForgeViewModel
 import com.tagforge.app.infrastructure.android.PinResult
 import com.tagforge.app.infrastructure.android.ShortcutPinner
@@ -21,6 +22,7 @@ import kotlinx.coroutines.launch
 /** Container for the template list: owns the ViewModel and the delete-with-Undo snackbar. */
 @Composable
 fun TemplatesRoute(onBack: () -> Unit, onOpen: (Long) -> Unit, onGoToWrite: () -> Unit) {
+    val container = rememberAppContainer()
     val viewModel = tagForgeViewModel { TemplatesViewModel(it.templateRepository, it.clock) }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -46,9 +48,10 @@ fun TemplatesRoute(onBack: () -> Unit, onOpen: (Long) -> Unit, onGoToWrite: () -
         onRename = viewModel::onRename,
         onDelete = viewModel::onDelete,
         onPin = { template ->
-            val result = ShortcutPinner.pinTemplate(context, template.id, template.name)
-            val message = if (result == PinResult.REQUESTED) R.string.templates_pin_requested else R.string.templates_pin_unsupported
             scope.launch {
+                val nonce = container.shortcutNonceStore.getOrCreate()
+                val result = ShortcutPinner.pinTemplate(context, template.id, template.name, nonce)
+                val message = if (result == PinResult.REQUESTED) R.string.templates_pin_requested else R.string.templates_pin_unsupported
                 snackbarHostState.currentSnackbarData?.dismiss()
                 snackbarHostState.showSnackbar(resources.getString(message))
             }
