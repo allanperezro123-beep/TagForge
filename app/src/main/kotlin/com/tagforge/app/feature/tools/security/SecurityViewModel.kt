@@ -26,7 +26,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.security.SecureRandom
 import kotlin.random.Random
+import kotlin.random.asKotlinRandom
 
 /**
  * NS-01 as a state machine: form -> read the tag -> dry-run -> typed UID -> second tap that executes. Nothing is armed to
@@ -39,7 +41,7 @@ class SecurityViewModel(
     availability: Flow<NfcAvailability>,
     settings: Flow<AppSettings>,
     private val secretStore: SecretStore,
-    private val random: Random = Random.Default,
+    internal val random: Random = SecureRandom().asKotlinRandom(),
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SecurityUiState())

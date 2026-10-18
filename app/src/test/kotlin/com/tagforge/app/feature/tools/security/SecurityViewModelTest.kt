@@ -33,6 +33,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import kotlin.random.Random
+import kotlin.random.asJavaRandom
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -500,5 +501,36 @@ class SecurityViewModelTest {
         val success = assertIs<SecuritySheet.Success>(vm.uiState.value.sheet)
         assertEquals("AB CD".hex(), success.pack)
         assertEquals(0, history.observe().first().size)
+    }
+
+    // ---- W3: the generated secrets come from a CSPRNG ------------------------------------------------------------------
+
+    private fun TestScope.productionDefaultViewModel() = SecurityViewModel(
+        coordinator = coordinator(),
+        recordHistory = RecordHistoryUseCase(history, settingsStore, clock),
+        availability = availability,
+        settings = MutableStateFlow(AppSettings()),
+        secretStore = secrets,
+    )
+
+    @Test
+    fun theDefaultRandomSourceIsACryptographicallySecureOne() = runTest {
+        val random = productionDefaultViewModel().random
+
+        assertTrue(random !== Random.Default, "kotlin Random.Default is not a CSPRNG")
+        assertIs<java.security.SecureRandom>(random.asJavaRandom())
+    }
+
+    @Test
+    fun generatedPasswordsFromTheDefaultSourceAreNeverRepeatedAcrossViewModels() = runTest {
+        val generated = (1..8).map {
+            productionDefaultViewModel().also { vm ->
+                vm.onChoose(SecurityAction.SET_PASSWORD)
+                vm.onGeneratePassword()
+            }.uiState.value.form.passwordHex
+        }
+
+        assertTrue(generated.all { it.length == 8 }, "8 hex digits each: $generated")
+        assertEquals(generated.size, generated.toSet().size, "an unseeded CSPRNG does not repeat: $generated")
     }
 }
