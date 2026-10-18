@@ -54,8 +54,8 @@ fun WriteScanSheet(
     sheet: WriteSheet,
     onDismiss: () -> Unit,
     onRetry: () -> Unit,
-    onWriteAnother: () -> Unit,
-    onSaveTemplate: () -> Unit,
+    onWriteAnother: (() -> Unit)?,
+    onSaveTemplate: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val working = sheet is WriteSheet.Working
@@ -100,8 +100,8 @@ private fun phaseTitle(phase: OperationPhase): Int = when (phase) {
 private fun SuccessContent(
     sheet: WriteSheet.Success,
     onDone: () -> Unit,
-    onWriteAnother: () -> Unit,
-    onSaveTemplate: () -> Unit,
+    onWriteAnother: (() -> Unit)?,
+    onSaveTemplate: (() -> Unit)?,
 ) {
     val reduced = rememberReducedMotion()
     val scale = remember { Animatable(if (reduced) 1f else CHECK_START_SCALE) }
@@ -120,8 +120,10 @@ private fun SuccessContent(
         stringResource(R.string.write_sheet_success_detail, sheet.report.messageSize, info.ntag?.displayName ?: "NFC"),
     )
     Button(onClick = onDone, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.write_sheet_done)) }
-    OutlinedButton(onClick = onWriteAnother, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.write_sheet_again)) }
-    TextButton(onClick = onSaveTemplate) { Text(stringResource(R.string.write_save_template)) }
+    if (onWriteAnother != null) {
+        OutlinedButton(onClick = onWriteAnother, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.write_sheet_again)) }
+    }
+    if (onSaveTemplate != null) TextButton(onClick = onSaveTemplate) { Text(stringResource(R.string.write_save_template)) }
 }
 
 @Composable
