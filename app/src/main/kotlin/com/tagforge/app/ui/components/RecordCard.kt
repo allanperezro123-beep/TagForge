@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.MaterialTheme
@@ -16,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -188,6 +191,8 @@ fun SecretValue(value: String, modifier: Modifier = Modifier) {
         text = if (revealed) value else "•".repeat(MASK_LENGTH),
         style = HexTextStyle,
         modifier = modifier
+            .heightIn(min = 48.dp)
+            .wrapContentHeight(Alignment.CenterVertically)
             .clickable(role = Role.Button) { revealed = !revealed }
             .semantics { stateDescription = hint },
     )

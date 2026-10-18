@@ -43,7 +43,8 @@ import com.tagforge.domain.ntag.Region
 
 private const val HIDDEN_PAGE = "•• •• •• ••"
 private const val BYTES_PER_LINE = 8
-private val RowHeightSingle = 32.dp
+/** Rows open a detail view when tapped, so they keep the 48 dp minimum touch target (PR-04). */
+private val RowHeightSingle = 48.dp
 private val RowHeightDouble = 56.dp
 
 /** Colour dots with names: the legend that makes the bands readable without relying on colour alone. */
