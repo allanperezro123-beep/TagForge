@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.tagforge.app.infrastructure.nfc.NfcAvailability
 import com.tagforge.domain.common.Outcome
 import com.tagforge.domain.history.RecordHistoryUseCase
-import com.tagforge.domain.ports.SecretStore
 import com.tagforge.domain.scan.ScanCoordinator
 import com.tagforge.domain.scan.ScanState
 import com.tagforge.domain.scan.TagOperation
@@ -40,7 +39,6 @@ class SecurityViewModel(
     private val recordHistory: RecordHistoryUseCase,
     availability: Flow<NfcAvailability>,
     settings: Flow<AppSettings>,
-    private val secretStore: SecretStore,
     internal val random: Random = SecureRandom().asKotlinRandom(),
 ) : ViewModel() {
 
@@ -202,10 +200,9 @@ class SecurityViewModel(
 
     private fun armExecute(action: SecurityAction) {
         val plan = confirmed ?: return
-        val form = _state.value.form
         val operation = SecurityPlans.execution(action, plan)
         rerun = { armExecute(action) }
-        runExecution(operation, action, plan, form)
+        runExecution(operation, action, plan)
     }
 
     private fun armLimitProbe() {
@@ -227,12 +224,9 @@ class SecurityViewModel(
 
     // ---- running ---------------------------------------------------------------------------------------------------
 
-    private fun <T> runExecution(operation: TagOperation<T>, action: SecurityAction, plan: ConfirmedPlan, form: SecurityForm) {
+    private fun <T> runExecution(operation: TagOperation<T>, action: SecurityAction, plan: ConfirmedPlan) {
         run(SecurityStage.EXECUTE, operation, onFailure = { scan -> recordFailure(plan, scan.tag, scan.error) }) { scan ->
             recordHistory.recordSecurity(scan.tag, SecuritySummary.of(plan.plan.operation, null), null)
-            if (action == SecurityAction.SET_PASSWORD && form.rememberInKeystore) {
-                secretStore.save(plan.plan.uid.toHex(), form.passwordHex)
-            }
             wipe()
             _state.update {
                 SecurityUiState(

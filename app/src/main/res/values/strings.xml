@@ -1031,7 +1031,6 @@
     <string name="security_form_share">Share to myself</string>
     <string name="security_form_shown_once">Save this password before you continue. Tag Forge cannot read it back from the tag: the chip always answers zeros.</string>
     <string name="security_form_stored">I stored this password safely</string>
-    <string name="security_form_remember">Remember it in the Android Keystore (optional)</string>
     <string name="security_form_auth0">First protected page: %1$d</string>
     <string name="security_form_auth0_hint">Page 4 protects all user memory.</string>
     <string name="security_form_protect_reads">Also require the password to read</string>

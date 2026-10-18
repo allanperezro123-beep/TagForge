@@ -1021,7 +1021,6 @@
     <string name="security_form_share">Compartir conmigo</string>
     <string name="security_form_shown_once">Guarda esta contraseña antes de continuar. Tag Forge no puede leerla de la etiqueta: el chip siempre responde ceros.</string>
     <string name="security_form_stored">Guardé esta contraseña en un lugar seguro</string>
-    <string name="security_form_remember">Recordarla en el Keystore de Android (opcional)</string>
     <string name="security_form_auth0">Primera página protegida: %1$d</string>
     <string name="security_form_auth0_hint">La página 4 protege toda la memoria de usuario.</string>
     <string name="security_form_protect_reads">Pedir la contraseña también para leer</string>

@@ -34,7 +34,6 @@ fun SecurityRoute(
             recordHistory = it.recordHistory,
             availability = it.nfcAvailabilityMonitor.availability,
             settings = it.settingsStore.settings,
-            secretStore = it.secretStore,
         )
     }
     val state by viewModel.uiState.collectAsStateWithLifecycle()

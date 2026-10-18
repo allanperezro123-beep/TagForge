@@ -3,7 +3,6 @@ package com.tagforge.app.feature.tools.security
 import com.tagforge.app.infrastructure.nfc.NfcAvailability
 import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.fakes.FakeNtag21x
-import com.tagforge.domain.fakes.FakeSecretStore
 import com.tagforge.domain.fakes.FakeSettingsStore
 import com.tagforge.domain.fakes.FakeTagSession
 import com.tagforge.domain.fakes.FixedClock
@@ -53,7 +52,6 @@ class SecurityViewModelTest {
     private val availability = MutableStateFlow(NfcAvailability.ENABLED)
     private val settingsStore = FakeSettingsStore()
     private val history = InMemoryHistoryRepository()
-    private val secrets = FakeSecretStore()
     private val clock = FixedClock(Instant.fromEpochMilliseconds(9_000))
     private val uid = "04 A1 B2 C3 D4 E5 F6".hex()
 
@@ -74,7 +72,6 @@ class SecurityViewModelTest {
         recordHistory = RecordHistoryUseCase(history, settingsStore, clock),
         availability = availability,
         settings = MutableStateFlow(AppSettings(advancedMode = advanced)),
-        secretStore = secrets,
         random = Random(42),
     )
 
@@ -93,9 +90,9 @@ class SecurityViewModelTest {
         advanceUntilIdle()
     }
 
-    private fun SecurityViewModel.fillSetPassword(stored: Boolean = true, remember: Boolean = false) {
+    private fun SecurityViewModel.fillSetPassword(stored: Boolean = true) {
         onChoose(SecurityAction.SET_PASSWORD)
-        onFormChange { it.copy(passwordHex = "12345678", packHex = "ABCD", storedAck = stored, rememberInKeystore = remember) }
+        onFormChange { it.copy(passwordHex = "12345678", packHex = "ABCD", storedAck = stored) }
     }
 
     private suspend fun everythingTheHistoryKept(): String = history.observe().first().joinToString { "${it.summary}|${it.uid}|${it.ndef}|${it.tagType}" }
@@ -326,46 +323,6 @@ class SecurityViewModelTest {
         assertEquals(4, repaired.page(model.cfg0)[3])
     }
 
-    // ---- opt-in Keystore ----------------------------------------------------------------------------------------------------
-
-    @Test
-    fun thePasswordIsKeptInTheKeystoreOnlyWhenOptedInAndOnlyAfterSuccess() = runTest {
-        val coordinator = coordinator()
-        val vm = viewModel(coordinator)
-        val tag = blankTag()
-        vm.fillSetPassword(remember = true)
-        vm.onNext()
-        tap(coordinator, tag)
-        vm.onTypedChange("E5F6")
-        vm.onUnderstoodChange(true)
-        vm.onConfirm()
-        tag.loseTagAfter(1)
-        tap(coordinator, tag)
-        assertEquals(emptyList(), secrets.keys, "nothing is stored for a failed run")
-
-        vm.onRetry()
-        tap(coordinator, blankTag().also { it.setPage(model.pwd, "12 34 56 78".hex()) })
-
-        assertEquals(listOf("04A1B2C3D4E5F6"), secrets.keys)
-        assertEquals("12345678", secrets.load("04A1B2C3D4E5F6"))
-    }
-
-    @Test
-    fun withoutOptInNothingIsStored() = runTest {
-        val coordinator = coordinator()
-        val vm = viewModel(coordinator)
-        val tag = blankTag()
-        vm.fillSetPassword(remember = false)
-        vm.onNext()
-        tap(coordinator, tag)
-        vm.onTypedChange("E5F6")
-        vm.onUnderstoodChange(true)
-        vm.onConfirm()
-        tap(coordinator, tag)
-
-        assertEquals(emptyList(), secrets.keys)
-    }
-
     // ---- the other operations -----------------------------------------------------------------------------------------------
 
     @Test
@@ -517,7 +474,6 @@ class SecurityViewModelTest {
         recordHistory = RecordHistoryUseCase(history, settingsStore, clock),
         availability = availability,
         settings = MutableStateFlow(AppSettings()),
-        secretStore = secrets,
     )
 
     @Test

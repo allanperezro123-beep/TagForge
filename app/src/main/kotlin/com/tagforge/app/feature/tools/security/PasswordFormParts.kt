@@ -117,7 +117,6 @@ fun PasswordFields(
         }
         Text(stringResource(R.string.security_form_shown_once), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         CheckRow(form.storedAck, { v -> onChange { it.copy(storedAck = v) } }, R.string.security_form_stored)
-        CheckRow(form.rememberInKeystore, { v -> onChange { it.copy(rememberInKeystore = v) } }, R.string.security_form_remember)
     }
 }
 

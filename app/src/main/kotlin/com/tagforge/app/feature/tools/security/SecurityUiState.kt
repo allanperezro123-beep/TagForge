@@ -33,7 +33,6 @@ data class SecurityForm(
     val protectReads: Boolean = true,
     /** "I stored it": the write button stays disabled until the shown password was saved. */
     val storedAck: Boolean = false,
-    val rememberInKeystore: Boolean = false,
     val currentPasswordHex: String = "",
     val lockConfig: Boolean = false,
     val authLimit: Int = 0,
