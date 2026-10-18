@@ -820,4 +820,44 @@
     <string name="form_event_title">Título del evento</string>
     <string name="form_event_duration">Duración en minutos</string>
     <string name="form_insecure_http">Esta dirección usa http simple, que no está cifrado. La tarea avisará y pedirá una segunda confirmación antes de enviarla.</string>
+
+    <!-- Fase 5: importar y exportar -->
+    <string name="more_import_export">Importar y exportar</string>
+    <string name="more_import_export_summary">Copia de seguridad o restauración de tus datos</string>
+    <string name="import_export_title">Importar y exportar</string>
+    <string name="import_export_intro">Guarda tu historial, tus plantillas y tus tareas en un archivo que elijas, o restáuralos desde uno. Las contraseñas de Wi-Fi nunca se exportan.</string>
+    <string name="import_export_working">Trabajando…</string>
+    <string name="import_export_result_ok">Listo</string>
+    <string name="import_export_result_failed">No se cambió nada</string>
+    <string name="import_export_export_json">Exportar copia (JSON)</string>
+    <string name="import_export_export_json_desc">Historial, plantillas y tareas, listos para importarse de nuevo.</string>
+    <string name="import_export_export_csv">Exportar historial (CSV)</string>
+    <string name="import_export_export_csv_desc">Solo el historial, para abrirlo en una hoja de cálculo.</string>
+    <string name="import_export_import">Importar copia</string>
+    <string name="import_export_import_desc">Añade lo que falta. Lo que ya tienes se omite. Un archivo con cualquier error no importa nada.</string>
+    <plurals name="import_export_exported">
+        <item quantity="one">Se exportó %d elemento.</item>
+        <item quantity="other">Se exportaron %d elementos.</item>
+    </plurals>
+    <string name="import_export_export_failed">No se pudo escribir el archivo. No se exportó nada.</string>
+    <string name="import_export_imported">Importados: %1$d. Omitidos porque ya existían: %2$d.</string>
+    <string name="import_export_storage_failed">No se pudo actualizar la base de datos. No se importó nada.</string>
+    <string name="import_export_too_large">Este archivo es demasiado grande para ser una copia de seguridad. No se importó nada.</string>
+    <string name="import_export_unreadable">No se pudo leer el archivo como texto. No se importó nada.</string>
+    <string name="import_export_rejected_not_json">Este archivo no es un JSON válido. No se importó nada.</string>
+    <string name="import_export_rejected_not_bundle">Este archivo no es una copia de seguridad de Tag Forge. No se importó nada.</string>
+    <string name="import_export_rejected_schema">Este archivo usa la versión de formato %1$d, que esta app no entiende. No se importó nada.</string>
+    <string name="import_export_rejected_too_many">La sección de %1$s tiene demasiadas entradas. No se importó nada.</string>
+    <string name="import_export_rejected_entry">Se rechazó la entrada %2$d de %1$s: %3$s. No se importó nada.</string>
+    <string name="import_export_section_history">historial</string>
+    <string name="import_export_section_templates">plantillas</string>
+    <string name="import_export_section_tasks">tareas</string>
+    <string name="import_problem_bad_structure">no tiene el formato esperado</string>
+    <string name="import_problem_unknown_kind">su tipo es desconocido</string>
+    <string name="import_problem_unknown_outcome">su resultado es desconocido</string>
+    <string name="import_problem_bad_hex">contiene datos hexadecimales no válidos</string>
+    <string name="import_problem_unreadable_ndef">los datos guardados de la etiqueta no se pueden leer</string>
+    <string name="import_problem_blocked_action">contiene una acción que no está permitida</string>
+    <string name="import_problem_invalid_value">falta un valor o está fuera de rango</string>
+    <string name="import_problem_too_long">un valor es demasiado largo</string>
 </resources>

@@ -830,4 +830,44 @@
     <string name="form_event_title">Event title</string>
     <string name="form_event_duration">Duration in minutes</string>
     <string name="form_insecure_http">This address uses plain http, which is not encrypted. The task will warn and ask for a second confirmation before sending it.</string>
+
+    <!-- Phase 5: import and export -->
+    <string name="more_import_export">Import and export</string>
+    <string name="more_import_export_summary">Back up or restore your data</string>
+    <string name="import_export_title">Import and export</string>
+    <string name="import_export_intro">Save your history, templates and tasks to a file you choose, or restore them from one. Wi-Fi passwords are never exported.</string>
+    <string name="import_export_working">Working…</string>
+    <string name="import_export_result_ok">Done</string>
+    <string name="import_export_result_failed">Nothing changed</string>
+    <string name="import_export_export_json">Export backup (JSON)</string>
+    <string name="import_export_export_json_desc">History, templates and tasks, ready to be imported again.</string>
+    <string name="import_export_export_csv">Export history (CSV)</string>
+    <string name="import_export_export_csv_desc">Only the history, to open in a spreadsheet.</string>
+    <string name="import_export_import">Import backup</string>
+    <string name="import_export_import_desc">Adds what is missing. Items you already have are skipped. A file with any error imports nothing.</string>
+    <plurals name="import_export_exported">
+        <item quantity="one">Exported %d item.</item>
+        <item quantity="other">Exported %d items.</item>
+    </plurals>
+    <string name="import_export_export_failed">The file could not be written. Nothing was exported.</string>
+    <string name="import_export_imported">Imported: %1$d. Skipped because they were already there: %2$d.</string>
+    <string name="import_export_storage_failed">The database could not be updated. Nothing was imported.</string>
+    <string name="import_export_too_large">This file is too large to be a backup. Nothing was imported.</string>
+    <string name="import_export_unreadable">The file could not be read as text. Nothing was imported.</string>
+    <string name="import_export_rejected_not_json">This is not a valid JSON file. Nothing was imported.</string>
+    <string name="import_export_rejected_not_bundle">This is not a Tag Forge backup. Nothing was imported.</string>
+    <string name="import_export_rejected_schema">This file uses format version %1$d, which this app does not understand. Nothing was imported.</string>
+    <string name="import_export_rejected_too_many">The %1$s section has too many entries. Nothing was imported.</string>
+    <string name="import_export_rejected_entry">Entry %2$d of %1$s was refused: %3$s. Nothing was imported.</string>
+    <string name="import_export_section_history">history</string>
+    <string name="import_export_section_templates">templates</string>
+    <string name="import_export_section_tasks">tasks</string>
+    <string name="import_problem_bad_structure">it is not in the expected format</string>
+    <string name="import_problem_unknown_kind">its kind is unknown</string>
+    <string name="import_problem_unknown_outcome">its result is unknown</string>
+    <string name="import_problem_bad_hex">it contains invalid hexadecimal data</string>
+    <string name="import_problem_unreadable_ndef">its saved tag data cannot be read</string>
+    <string name="import_problem_blocked_action">it contains an action that is not allowed</string>
+    <string name="import_problem_invalid_value">a value is missing or out of range</string>
+    <string name="import_problem_too_long">a value is too long</string>
 </resources>

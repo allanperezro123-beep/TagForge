@@ -11,6 +11,7 @@ import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SwapVert
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -28,6 +29,7 @@ import com.tagforge.app.R
 fun MoreScreen(
     onOpenHistory: () -> Unit,
     onOpenTemplates: () -> Unit,
+    onOpenImportExport: () -> Unit,
     onOpenPermissions: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAbout: () -> Unit,
@@ -49,6 +51,12 @@ fun MoreScreen(
                 title = stringResource(R.string.more_templates),
                 summary = stringResource(R.string.more_templates_summary),
                 onClick = onOpenTemplates,
+            )
+            MoreEntry(
+                icon = Icons.Outlined.SwapVert,
+                title = stringResource(R.string.more_import_export),
+                summary = stringResource(R.string.more_import_export_summary),
+                onClick = onOpenImportExport,
             )
             MoreEntry(
                 icon = Icons.Outlined.Security,

@@ -1,6 +1,8 @@
 package com.tagforge.app.infrastructure.persistence.dao
 
 import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Upsert
 import com.tagforge.app.infrastructure.persistence.entity.TaskEntity
@@ -17,6 +19,12 @@ interface TaskDao {
 
     @Upsert
     suspend fun upsert(entity: TaskEntity): Long
+
+    @Query("SELECT id FROM tasks")
+    suspend fun ids(): List<Long>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAll(entities: List<TaskEntity>)
 
     @Query("DELETE FROM tasks WHERE id = :id")
     suspend fun delete(id: Long)

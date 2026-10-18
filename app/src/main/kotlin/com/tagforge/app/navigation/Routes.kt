@@ -55,6 +55,10 @@ sealed interface Route {
     @Serializable
     data object PermissionCenter : Route
 
+    /** Export and import of history, templates and tasks through the system file picker. */
+    @Serializable
+    data object ImportExport : Route
+
     @Serializable
     data object About : Route
 }

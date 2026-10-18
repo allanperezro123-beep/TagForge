@@ -2,6 +2,7 @@ package com.tagforge.app.infrastructure.persistence.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.tagforge.app.infrastructure.persistence.entity.HistoryEntity
 import kotlinx.coroutines.flow.Flow
@@ -43,6 +44,13 @@ interface HistoryDao {
 
     @Insert
     suspend fun insert(entity: HistoryEntity): Long
+
+    @Query("SELECT id FROM history")
+    suspend fun ids(): List<Long>
+
+    /** Import: rows keep the ids from the file; the caller has already left out the ids that exist. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAll(entities: List<HistoryEntity>)
 
     @Query("DELETE FROM history WHERE id IN (:ids)")
     suspend fun delete(ids: List<Long>)

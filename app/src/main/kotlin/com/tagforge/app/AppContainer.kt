@@ -8,6 +8,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.tagforge.app.infrastructure.android.IntentLauncher
 import com.tagforge.app.infrastructure.nfc.NfcAvailabilityMonitor
 import com.tagforge.app.infrastructure.persistence.DataStoreSettingsStore
+import com.tagforge.app.infrastructure.persistence.RoomExchangeStore
 import com.tagforge.app.infrastructure.persistence.RoomHistoryRepository
 import com.tagforge.app.infrastructure.persistence.RoomTaskRepository
 import com.tagforge.app.infrastructure.persistence.RoomTemplateRepository
@@ -37,6 +38,7 @@ import com.tagforge.app.infrastructure.tasks.handlers.WifiToggleHandler
 import com.tagforge.domain.history.RecordHistoryUseCase
 import com.tagforge.domain.ndef.DefaultNdefCodec
 import com.tagforge.domain.ndef.NdefCodec
+import com.tagforge.domain.ports.ExchangeStore
 import com.tagforge.domain.ports.HistoryRepository
 import com.tagforge.domain.ports.SettingsStore
 import com.tagforge.domain.ports.TaskActionExecutor
@@ -85,6 +87,9 @@ class AppContainer(context: Context) {
     val templateRepository: TemplateRepository by lazy { RoomTemplateRepository(database.templateDao()) }
 
     val taskRepository: TaskRepository by lazy { RoomTaskRepository(database.taskDao()) }
+
+    /** Backup export and all-or-nothing import (HT-04). */
+    val exchangeStore: ExchangeStore by lazy { RoomExchangeStore(database) }
 
     val clock: Clock = Clock.System
 
