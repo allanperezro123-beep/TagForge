@@ -91,7 +91,15 @@ class FakeTagSession(
         return writeTlv(tag, initial?.let(codec::encode) ?: Bytes.EMPTY)
     }
 
-    override suspend fun makeReadOnly(): TagResult<Unit> = Outcome.Err(TagError.Unsupported("makeReadOnly"))
+    /** Like Android's `Ndef.makeReadOnly` on a Type 2 tag: the capability container's write access byte becomes 0Fh. */
+    override suspend fun makeReadOnly(): TagResult<Unit> {
+        val tag = ntag ?: return Outcome.Err(TagError.Unsupported("makeReadOnly"))
+        val response = when (val sent = tag.transceive(NtagCommands.write(CC_PAGE, Bytes.of(0x00, 0x00, 0x00, READ_ONLY_ACCESS)))) {
+            is Outcome.Err -> return sent
+            is Outcome.Ok -> sent.value
+        }
+        return NtagResponses.checkAck(response)
+    }
 
     override suspend fun close() {
         closed = true
@@ -144,6 +152,8 @@ class FakeTagSession(
 
     companion object {
         private const val CHUNK_PAGES = 16
+        private const val CC_PAGE = 3
+        private const val READ_ONLY_ACCESS = 0x0F
         private val DEFAULT_ATQA = Bytes.of(0x00, 0x44)
 
         /** What Android's `Ndef.getMaxSize()` reports: CC size minus Lock Control TLV minus NDEF TLV header. */

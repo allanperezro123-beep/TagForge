@@ -47,6 +47,9 @@ sealed interface SecurityFailure {
     /** AUTH0 must lie between the first user page and the PWD page, so the password page itself is protected. */
     data object Auth0OutOfRange : SecurityFailure
 
+    /** The platform says this tag cannot be made read-only through the NDEF API. */
+    data object CannotMakeReadOnly : SecurityFailure
+
     /** Nothing was asked for (no CFGLCK and no attempt limit). */
     data object NothingToChange : SecurityFailure
 

@@ -151,6 +151,23 @@ class FakeTagSessionTest {
         assertEquals(868, FakeTagSession.androidMaxSize(NtagModel.NTAG216))
     }
 
+    @Test
+    fun makeReadOnlySetsTheCapabilityContainerAndTheSessionStopsBeingWritable() = runTest {
+        val tag = FakeNtag21x(NtagModel.NTAG215)
+        val session = FakeTagSession.ntag(tag)
+
+        assertEquals(Outcome.Ok(Unit), session.makeReadOnly())
+
+        assertEquals("E1 10 3E 0F".hex(), tag.page(3))
+        assertEquals(false, session.info.ndef?.isWritable)
+        assertEquals(Outcome.Err(TagError.ReadOnly), session.writeNdef(NdefMessage(emptyList())))
+    }
+
+    @Test
+    fun makeReadOnlyIsUnsupportedWithoutAType2Chip() = runTest {
+        assertEquals(Outcome.Err(TagError.Unsupported("makeReadOnly")), FakeTagSession.withoutNtag().makeReadOnly())
+    }
+
     // ---- other fixtures -------------------------------------------------------------------------
 
     @Test

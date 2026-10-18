@@ -21,15 +21,21 @@ data class SecurityState(
     val info: TagInfo,
     val model: NtagModel,
     val config: NtagConfig,
-    /** Bytes 2-3 of page 02. */
-    val staticLock: Bytes,
+    /** Page 02 whole: BCC1, internal byte and the two static lock bytes. */
+    val page2: Bytes,
     /** Capability container, page 03. */
     val cc: Bytes,
-    /** Bytes 0-2 of the dynamic lock page (byte 3 always reads BDh). */
-    val dynamicLock: Bytes,
+    /** The dynamic lock page whole (byte 3 always reads BDh). */
+    val dynamicLockPage: Bytes,
     /** PACK answered by PWD_AUTH when the state was read with a password; null otherwise. */
     val pack: Bytes? = null,
 ) {
+    /** Bytes 2-3 of page 02. */
+    val staticLock: Bytes get() = page2.slice(2, 4)
+
+    /** Bytes 0-2 of the dynamic lock page. */
+    val dynamicLock: Bytes get() = dynamicLockPage.slice(0, 3)
+
     val isPasswordProtected: Boolean get() = config.isProtectionActive(model)
 }
 
@@ -62,7 +68,7 @@ class ReadSecurityStateUseCase(private val password: Password? = null) : TagOper
         val cfg = when (val r = fastRead(t, model.cfg0, model.cfg1)) { is Outcome.Err -> return r; is Outcome.Ok -> r.value }
         val dyn = when (val r = fastRead(t, model.dynLock, model.dynLock)) { is Outcome.Err -> return r; is Outcome.Ok -> r.value }
         val config = NtagConfig.parse(cfg) ?: return Outcome.Err(TagError.Malformed("CFG0/CFG1 answered ${cfg.size} bytes"))
-        return Outcome.Ok(SecurityState(info, model, config, head.slice(2, 4), head.slice(4, 8), dyn.slice(0, 3), pack))
+        return Outcome.Ok(SecurityState(info, model, config, head.slice(0, 4), head.slice(4, 8), dyn, pack))
     }
 
     private suspend fun authenticate(t: TagTransceiver, password: Password): TagResult<Bytes> =
