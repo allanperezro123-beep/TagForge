@@ -16,6 +16,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tagforge.app.di.rememberAppContainer
 import com.tagforge.app.di.tagForgeViewModel
 import com.tagforge.app.feature.tools.openNfcSettings
+import com.tagforge.app.ui.components.SecureWindow
 import com.tagforge.app.ui.haptics.rememberHaptics
 import com.tagforge.domain.settings.AppSettings
 
@@ -36,6 +37,7 @@ fun SecurityRoute(
             settings = it.settingsStore.settings,
         )
     }
+    SecureWindow()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val settings by container.settingsStore.settings.collectAsStateWithLifecycle(AppSettings())
     val haptics by rememberUpdatedState(rememberHaptics(settings.hapticsEnabled))
