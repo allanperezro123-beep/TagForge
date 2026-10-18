@@ -18,7 +18,7 @@ class RawConsoleUseCaseTest {
     private val model = NtagModel.NTAG215
 
     private fun authorize(tag: FakeNtag21x, frame: String, light: Boolean = false, plan: ConfirmedPlan? = null, authLimit: Int? = 0): RawCommand {
-        val result = RawCommandGuard.authorize(frame.hex(), tag.model, authLimit, advanced = true, lightweightConfirmed = light, plan = plan)
+        val result = RawCommandGuard.authorize(frame.hex(), tag.model, authLimit, advanced = true, lightweightFor = if (light) ProbedTag(tag.uid, tag.model) else null, plan = plan)
         check(result is Outcome.Ok) { "authorize refused: $result" }
         return result.value
     }
@@ -183,5 +183,48 @@ class RawConsoleUseCaseTest {
         val failure = RawConsoleUseCase(command).runOn(sessionOf(tag)).securityFailure()
 
         assertEquals(SecurityFailure.Partial(SecurityOperation.RAW_WRITE, TagError.TagLost, completedWrites = 0, totalWrites = 1), failure)
+    }
+
+    // ---- W1: the lightweight confirm belongs to the tag that was probed ---------------------------------------------------
+
+    private val otherUid = "04 11 22 33 44 55 66".hex()
+
+    @Test
+    fun aUserPageWriteClassifiedOnAnNtag215IsRefusedWhenTheTagTappedIsAnNtag213() = runTest {
+        val probed = specTag(NtagModel.NTAG215)
+        val command = authorize(probed, "A2 28 FF FF 00 00", light = true)   // page 40: a user page on a 215 ...
+        val tapped = specTag(NtagModel.NTAG213, uid = otherUid)              // ... the dynamic lock bytes of a 213
+
+        val result = send(tapped, command)
+
+        assertEquals(SecurityFailure.UidMismatch, result.securityFailure())
+        assertEquals(emptyList(), tapped.commandLog, "not a single frame reached the other tag")
+    }
+
+    @Test
+    fun aLightweightWriteIsRefusedOnAnotherTagOfTheSameModel() = runTest {
+        val probed = specTag(uid = SPEC_UID)
+        val command = authorize(probed, "A2 10 01 02 03 04", light = true)
+        val other = specTag(uid = otherUid)
+
+        assertEquals(SecurityFailure.UidMismatch, send(other, command).securityFailure())
+        assertEquals(emptyList(), other.commandLog)
+    }
+
+    @Test
+    fun aLightweightWriteIsRefusedWhenTheModelDiffersEvenWithTheSameUid() = runTest {
+        val command = authorize(specTag(NtagModel.NTAG215), "A2 28 FF FF 00 00", light = true)
+        val sameUidOn213 = specTag(NtagModel.NTAG213, uid = SPEC_UID)
+
+        assertEquals(SecurityFailure.UidMismatch, send(sameUidOn213, command).securityFailure())
+        assertEquals(emptyList(), sameUidOn213.commandLog)
+    }
+
+    @Test
+    fun aLightweightWriteStillReachesTheTagThatWasProbed() = runTest {
+        val tag = specTag()
+
+        assertEquals(RawReply.Ack, send(tag, authorize(tag, "A2 28 01 02 03 04", light = true)).value().reply)
+        assertEquals("01 02 03 04".hex(), tag.page(40))
     }
 }

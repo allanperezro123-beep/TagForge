@@ -2,7 +2,7 @@ package com.tagforge.app.feature.tools.security
 
 import com.tagforge.app.infrastructure.nfc.NfcAvailability
 import com.tagforge.domain.common.Bytes
-import com.tagforge.domain.ntag.NtagModel
+import com.tagforge.domain.security.ProbedTag
 import com.tagforge.domain.security.RawReply
 import com.tagforge.domain.security.SecurityPlan
 import com.tagforge.domain.security.UidConfirmation
@@ -25,7 +25,7 @@ sealed interface ConsolePending {
     val frame: Bytes
 
     /** A user-page write (or an unknown frame): one tap on Confirm. */
-    data class Light(override val frame: Bytes, val model: NtagModel?) : ConsolePending
+    data class Light(override val frame: Bytes, val tag: ProbedTag) : ConsolePending
 
     /** A write to a reserved page: the NS-01 dry-run and the typed UID. */
     data class Typed(override val frame: Bytes, val plan: SecurityPlan, val typed: String = "") : ConsolePending

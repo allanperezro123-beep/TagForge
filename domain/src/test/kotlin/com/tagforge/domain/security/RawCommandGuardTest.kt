@@ -115,6 +115,8 @@ class RawCommandGuardTest {
         assertEquals(com.tagforge.domain.common.Outcome.Err(RawRefusal.AdvancedRequired), refused)
     }
 
+    private val probed = ProbedTag(SPEC_UID, ntag215)
+
     @Test
     fun aUserPageWriteWaitsForTheLightweightConfirm() {
         val frame = "A2 10 01 02 03 04".hex()
@@ -123,14 +125,16 @@ class RawCommandGuardTest {
             com.tagforge.domain.common.Outcome.Err(RawRefusal.NeedsConfirmation),
             RawCommandGuard.authorize(frame, ntag215, 0, advanced = true),
         )
-        val ok = RawCommandGuard.authorize(frame, ntag215, 0, advanced = true, lightweightConfirmed = true)
-        assertEquals(frame, (ok as com.tagforge.domain.common.Outcome.Ok).value.frame)
+        val ok = RawCommandGuard.authorize(frame, ntag215, 0, advanced = true, lightweightFor = probed)
+        val command = (ok as com.tagforge.domain.common.Outcome.Ok).value
+        assertEquals(frame, command.frame)
+        assertEquals(probed, command.boundTo, "the confirm is bound to the probed tag")
     }
 
     @Test
     fun aReservedWriteIsRefusedWithoutTheTypedConfirmationAndAMismatchedPlanDoesNotCount() {
         val frame = "A2 83 04 00 00 04".hex()
-        val refused = RawCommandGuard.authorize(frame, ntag215, 0, advanced = true, lightweightConfirmed = true)
+        val refused = RawCommandGuard.authorize(frame, ntag215, 0, advanced = true, lightweightFor = probed)
         assertEquals(com.tagforge.domain.common.Outcome.Err(RawRefusal.NeedsTypedConfirmation), refused)
 
         val other = SecurityPlan(
@@ -143,7 +147,7 @@ class RawCommandGuardTest {
 
     @Test
     fun invalidFramesAreRefusedWhateverElseIsGiven() {
-        val refused = RawCommandGuard.authorize("A2 83".hex(), ntag215, 0, advanced = true, lightweightConfirmed = true)
+        val refused = RawCommandGuard.authorize("A2 83".hex(), ntag215, 0, advanced = true, lightweightFor = probed)
         assertEquals(com.tagforge.domain.common.Outcome.Err(RawRefusal.Invalid(InvalidReason.BAD_LENGTH)), refused)
     }
 }

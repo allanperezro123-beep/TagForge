@@ -84,7 +84,7 @@ class RawConsoleViewModel(
             is RawProbeResult.Refused -> finish(frame, ConsoleOutcome.Failed(refusalError(result.reason)))
             is RawProbeResult.NeedsConfirmation -> {
                 val pending = when {
-                    result.kind == RawClass.UserWrite -> ConsolePending.Light(frame, result.state?.model)
+                    result.kind == RawClass.UserWrite -> ConsolePending.Light(frame, result.tag)
                     result.state == null -> ConsolePending.Unplannable(frame)
                     else -> when (val plan = RawConsoleUseCase.plan(frame, result.state!!)) {
                         is Outcome.Ok -> ConsolePending.Typed(frame, plan.value)
@@ -100,7 +100,7 @@ class RawConsoleViewModel(
 
     fun onLightConfirm() {
         val pending = _state.value.pending as? ConsolePending.Light ?: return
-        val authorized = RawCommandGuard.authorize(pending.frame, pending.model, null, advanced = _state.value.advanced, lightweightConfirmed = true)
+        val authorized = RawCommandGuard.authorize(pending.frame, pending.tag.model, null, advanced = _state.value.advanced, lightweightFor = pending.tag)
         (authorized as? Outcome.Ok)?.let { execute(it.value) }
     }
 

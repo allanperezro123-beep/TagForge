@@ -44,8 +44,14 @@ sealed interface RawRefusal {
     data object NotReserved : RawRefusal
 }
 
-/** A frame the guard let through, with the typed confirmation it needed (if any). Only [RawCommandGuard.authorize] builds one. */
-class RawCommand internal constructor(val frame: Bytes, val plan: ConfirmedPlan?)
+/** The tag a console probe looked at: what a lightweight confirm was given for (W1). */
+data class ProbedTag(val uid: Bytes, val model: NtagModel?)
+
+/**
+ * A frame the guard let through, with the typed confirmation it needed (if any). Only [RawCommandGuard.authorize] builds one.
+ * [boundTo] is set for a lightweight-confirmed user write: it may only be sent to that very tag.
+ */
+class RawCommand internal constructor(val frame: Bytes, val plan: ConfirmedPlan?, val boundTo: ProbedTag? = null)
 
 /** Decides what a hand-written frame needs before it may reach the tag (NS-08). */
 object RawCommandGuard {
@@ -106,7 +112,7 @@ object RawCommandGuard {
         model: NtagModel?,
         authLimit: Int?,
         advanced: Boolean,
-        lightweightConfirmed: Boolean = false,
+        lightweightFor: ProbedTag? = null,
         plan: ConfirmedPlan? = null,
     ): Outcome<RawCommand, RawRefusal> {
         if (!advanced) return Outcome.Err(RawRefusal.AdvancedRequired)
@@ -114,7 +120,7 @@ object RawCommandGuard {
             is RawClass.Invalid -> Outcome.Err(RawRefusal.Invalid(kind.reason))
             RawClass.ReadClass -> Outcome.Ok(RawCommand(frame, null))
             RawClass.UserWrite ->
-                if (lightweightConfirmed) Outcome.Ok(RawCommand(frame, null)) else Outcome.Err(RawRefusal.NeedsConfirmation)
+                if (lightweightFor != null) Outcome.Ok(RawCommand(frame, null, lightweightFor)) else Outcome.Err(RawRefusal.NeedsConfirmation)
             is RawClass.Reserved ->
                 if (plan != null && plan.plan.operation == SecurityOperation.RAW_WRITE && plan.plan.commands == listOf(frame)) {
                     Outcome.Ok(RawCommand(frame, plan))

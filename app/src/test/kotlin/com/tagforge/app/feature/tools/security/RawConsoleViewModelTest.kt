@@ -241,6 +241,25 @@ class RawConsoleViewModelTest {
     }
 
     @Test
+    fun aLightweightConfirmedWriteIsNeverSentToADifferentTagOrChip() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        val probed = blankTag()
+        vm.send("A2 28 FF FF 00 00")   // page 40: a user page on the NTAG215 that was probed
+        tap(coordinator, probed)
+        assertIs<ConsolePending.Light>(vm.uiState.value.pending)
+        val ntag213 = FakeNtag21x(NtagModel.NTAG213, "04 11 22 33 44 55 66".hex())   // page 40 is its dynamic lock page
+
+        vm.onLightConfirm()
+        tap(coordinator, ntag213)
+
+        val outcome = vm.uiState.value.log.last().outcome
+        assertEquals(ConsoleOutcome.Failed(TagError.Security(SecurityFailure.UidMismatch)), outcome)
+        assertEquals(emptyList(), ntag213.commandLog, "no frame reached the NTAG213")
+        assertEquals(emptyList(), probed.writeCommands)
+    }
+
+    @Test
     fun decliningTheLightweightConfirmWritesNothing() = runTest {
         val coordinator = coordinator()
         val vm = viewModel(coordinator)

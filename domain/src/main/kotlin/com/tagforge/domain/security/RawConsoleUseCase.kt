@@ -45,6 +45,15 @@ class RawConsoleUseCase(private val command: RawCommand) : TagOperation<RawRespo
             }
         }
         phase(OperationPhase.CONNECTING)
+        command.boundTo?.let { probed ->
+            // A user-page write was classified and confirmed against ONE tag. Page 40 is user data on an NTAG215 and the
+            // dynamic lock bytes of an NTAG213: another tag must never receive the frame (W1).
+            val info = when (val identified = session.identify()) {
+                is Outcome.Err -> return identified
+                is Outcome.Ok -> identified.value
+            }
+            if (info.uid != probed.uid || info.ntag != probed.model) return Outcome.Err(TagError.Security(SecurityFailure.UidMismatch))
+        }
         val t = session.transceiver(TagTech.NFC_A) ?: return Outcome.Err(TagError.Unsupported("nfc-a"))
         return when (val sent = t.transceive(command.frame)) {
             is Outcome.Err -> sent
@@ -119,7 +128,7 @@ sealed interface RawProbeResult {
     data class Sent(val response: RawResponse) : RawProbeResult
 
     /** A frame that needs a confirmation before it may be sent. [state] is null when the tag's configuration could not be read. */
-    data class NeedsConfirmation(val frame: Bytes, val kind: RawClass, val state: SecurityState?) : RawProbeResult
+    data class NeedsConfirmation(val frame: Bytes, val kind: RawClass, val state: SecurityState?, val tag: ProbedTag) : RawProbeResult
 
     data class Refused(val reason: RawRefusal) : RawProbeResult
 }
@@ -149,7 +158,7 @@ class RawConsoleProbeUseCase(private val frame: Bytes, private val advanced: Boo
         return when (val classified = RawCommandGuard.classify(frame, model, authLimit)) {
             is RawClass.Invalid -> Outcome.Ok(RawProbeResult.Refused(RawRefusal.Invalid(classified.reason)))
             RawClass.ReadClass -> send(t)
-            else -> needsConfirmation(session, classified, model != null)
+            else -> needsConfirmation(session, classified, ProbedTag(info.uid, model))
         }
     }
 
@@ -159,12 +168,12 @@ class RawConsoleProbeUseCase(private val frame: Bytes, private val advanced: Boo
             is Outcome.Ok -> Outcome.Ok(RawProbeResult.Sent(RawResponse(frame, RawConsoleUseCase.decode(sent.value))))
         }
 
-    private suspend fun needsConfirmation(session: TagSession, kind: RawClass, ntag: Boolean): TagResult<RawProbeResult> {
-        val state = if (!ntag) null else when (val read = ReadSecurityStateUseCase().execute(session) { }) {
+    private suspend fun needsConfirmation(session: TagSession, kind: RawClass, tag: ProbedTag): TagResult<RawProbeResult> {
+        val state = if (tag.model == null) null else when (val read = ReadSecurityStateUseCase().execute(session) { }) {
             is Outcome.Ok -> read.value
             is Outcome.Err -> if (read.error == TagError.AuthRequired) null else return read
         }
-        return Outcome.Ok(RawProbeResult.NeedsConfirmation(frame, kind, state))
+        return Outcome.Ok(RawProbeResult.NeedsConfirmation(frame, kind, state, tag))
     }
 
     private companion object {
