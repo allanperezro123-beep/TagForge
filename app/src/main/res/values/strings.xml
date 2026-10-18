@@ -1058,6 +1058,8 @@
     <string name="security_unlock_limit_unknown">The attempt limit could not be read. If the tag has one, wrong attempts count toward a permanent lock.</string>
     <string name="security_unlock_understood">Understood</string>
     <string name="security_unlock_action">Unlock</string>
+    <string name="security_limit_check">Read the attempt limit</string>
+    <string name="security_limit_check_hint">Wrong passwords can lock a tag for good. Read its attempt limit before typing one.</string>
     <!-- Security sheets -->
     <string name="security_sheet_read_waiting">Hold the tag to read it</string>
     <string name="security_sheet_read_hint">Nothing is written in this step.</string>

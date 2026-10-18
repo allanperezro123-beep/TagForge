@@ -1048,6 +1048,8 @@
     <string name="security_unlock_limit_unknown">No se pudo leer el límite de intentos. Si la etiqueta tiene uno, los intentos fallidos cuentan hacia un bloqueo permanente.</string>
     <string name="security_unlock_understood">Entendido</string>
     <string name="security_unlock_action">Desbloquear</string>
+    <string name="security_limit_check">Leer el límite de intentos</string>
+    <string name="security_limit_check_hint">Una contraseña incorrecta puede bloquear una etiqueta para siempre. Lee su límite de intentos antes de escribir una.</string>
     <!-- Security sheets -->
     <string name="security_sheet_read_waiting">Acerca la etiqueta para leerla</string>
     <string name="security_sheet_read_hint">En este paso no se escribe nada.</string>

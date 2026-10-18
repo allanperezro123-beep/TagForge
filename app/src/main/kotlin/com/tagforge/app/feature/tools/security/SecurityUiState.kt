@@ -81,7 +81,18 @@ data class SecurityUiState(
     val canConfirm: Boolean
         get() = plan != null && UidConfirmation.matches(plan.uid, typed) && (!needsUnderstood || understood)
 
-    /** After "N wrong attempts lock the tag for good" the password field stays disabled until the user acknowledges it. */
+    /**
+     * A password can only be typed (and so only be tried against the tag) once its attempt limit was READ and, unless that
+     * limit is a known 0, acknowledged. An unread or unreadable limit is never taken for 0: wrong guesses may count toward
+     * a permanent lock (W2).
+     */
     val passwordFieldEnabled: Boolean
-        get() = (authLimit?.authLimit ?: 0) == 0 || limitUnderstood
+        get() = authLimit != null && (authLimit.authLimit == 0 || limitUnderstood)
+
+    /** The flow will send a password to the tag on its first tap. */
+    val willSendPassword: Boolean
+        get() = action == SecurityAction.UNLOCK || action == SecurityAction.REMOVE_PASSWORD || form.currentPasswordHex.isNotBlank()
+
+    /** "Next" is allowed: a flow that sends a password needs the attempt limit settled first. */
+    val canGoNext: Boolean get() = !willSendPassword || passwordFieldEnabled
 }

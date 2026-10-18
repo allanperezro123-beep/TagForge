@@ -69,6 +69,7 @@ fun SecurityRoute(
                 onChange = viewModel::onFormChange,
                 onGenerate = viewModel::onGeneratePassword,
                 onLimitUnderstood = viewModel::onLimitUnderstood,
+                onProbeLimit = viewModel::onProbeLimit,
                 onNext = viewModel::onNext,
                 onCopy = { copySensitive(context, it) },
                 onShare = { shareToSelf(context, it) },

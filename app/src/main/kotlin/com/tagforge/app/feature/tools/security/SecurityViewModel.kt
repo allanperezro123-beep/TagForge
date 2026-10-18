@@ -65,7 +65,7 @@ class SecurityViewModel(
     fun onChoose(action: SecurityAction) {
         wipe()
         _state.update { SecurityUiState(availability = it.availability, advanced = it.advanced, action = action, step = SecurityStep.FORM) }
-        if (action == SecurityAction.UNLOCK) armLimitProbe()
+        if (action == SecurityAction.UNLOCK || action == SecurityAction.REMOVE_PASSWORD) armLimitProbe()
     }
 
     fun onFormChange(transform: (SecurityForm) -> SecurityForm) {
@@ -78,8 +78,15 @@ class SecurityViewModel(
         onFormChange { it.copy(passwordHex = password, packHex = pack, storedAck = false) }
     }
 
+    /** Reads the tag's attempt limit (nothing is sent but reads) so a password may be typed (W2). */
+    fun onProbeLimit() {
+        val state = _state.value
+        if (state.action == null || !state.canStart || state.sheet != null) return
+        armLimitProbe()
+    }
+
     fun onLimitUnderstood() {
-        _state.update { it.copy(limitUnderstood = true) }
+        _state.update { if (it.authLimit == null) it else it.copy(limitUnderstood = true) }
     }
 
     fun onTypedChange(text: String) {
@@ -95,7 +102,7 @@ class SecurityViewModel(
         val state = _state.value
         val action = state.action ?: return
         if (!state.canStart || state.sheet != null) return
-        if (action == SecurityAction.UNLOCK && !state.passwordFieldEnabled) return
+        if (!state.canGoNext) return
         val problem = SecurityPlans.validate(action, state.form)
         if (problem != null) {
             _state.update { it.copy(problem = problem) }

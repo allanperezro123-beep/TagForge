@@ -374,6 +374,9 @@ class SecurityViewModelTest {
         val vm = viewModel(coordinator)
         val tag = protectedTag()
         vm.onChoose(SecurityAction.REMOVE_PASSWORD)
+        tap(coordinator, tag)   // the attempt limit is read first (W2) ...
+        vm.onLimitUnderstood()  // ... and, being unreadable behind the password, acknowledged
+        tag.powerCycle()
         vm.onFormChange { it.copy(currentPasswordHex = "12345678") }
         vm.onNext()
         tap(coordinator, tag)
@@ -396,6 +399,10 @@ class SecurityViewModelTest {
         val vm = viewModel(coordinator)
         val tag = protectedTag()
         vm.onChoose(SecurityAction.CONFIG_LOCK)
+        vm.onProbeLimit()
+        tap(coordinator, tag)
+        vm.onLimitUnderstood()
+        tag.powerCycle()
         vm.onFormChange { it.copy(currentPasswordHex = "12345678", lockConfig = true, authLimit = 3) }
         vm.onNext()
         tap(coordinator, tag)
@@ -532,5 +539,111 @@ class SecurityViewModelTest {
 
         assertTrue(generated.all { it.length == 8 }, "8 hex digits each: $generated")
         assertEquals(generated.size, generated.toSet().size, "an unseeded CSPRNG does not repeat: $generated")
+    }
+
+    // ---- W2: no password attempt before the attempt limit is known and acknowledged ----------------------------------------
+
+    private fun SecurityViewModel.pwAuthFrames(tag: FakeNtag21x) = tag.commandLog.count { it[0] == 0x1B }
+
+    @Test
+    fun theUnlockFieldStaysDisabledUntilTheAttemptLimitHasBeenRead() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+
+        vm.onChoose(SecurityAction.UNLOCK)
+
+        assertEquals(null, vm.uiState.value.authLimit)
+        assertFalse(vm.uiState.value.passwordFieldEnabled, "an unread limit is not a limit of 0")
+    }
+
+    @Test
+    fun unlockCannotArmAnAuthenticationWhileTheProbeIsStillOutstanding() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        val tag = protectedTag()
+        vm.onChoose(SecurityAction.UNLOCK)
+        vm.onSheetDismissed()   // walked away from the probe tap
+        vm.onFormChange { it.copy(currentPasswordHex = "00000001") }
+
+        vm.onNext()
+        tap(coordinator, tag)
+
+        assertNull(vm.uiState.value.sheet, "nothing was armed")
+        assertEquals(0, vm.pwAuthFrames(tag), "not a single wrong guess reached the tag")
+    }
+
+    @Test
+    fun anAttemptLimitThatCannotBeReadNeedsTheAcknowledgementLikeANonZeroOne() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        val tag = protectedTag()   // PROT = 1: the configuration page is behind the password
+
+        vm.onChoose(SecurityAction.UNLOCK)
+        tap(coordinator, tag)
+
+        assertEquals(com.tagforge.domain.security.AuthLimitInfo(null), vm.uiState.value.authLimit)
+        assertFalse(vm.uiState.value.passwordFieldEnabled, "unknown limit: could be 15 attempts before a permanent lock")
+        vm.onLimitUnderstood()
+        assertTrue(vm.uiState.value.passwordFieldEnabled)
+    }
+
+    @Test
+    fun aTypedCurrentPasswordIsNotSentInAnyFlowBeforeTheLimitCheck() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        val tag = protectedTag()
+        vm.fillSetPassword()
+        vm.onFormChange { it.copy(currentPasswordHex = "00000001") }
+
+        vm.onNext()
+        tap(coordinator, tag)
+
+        assertNull(vm.uiState.value.sheet)
+        assertEquals(0, vm.pwAuthFrames(tag))
+    }
+
+    @Test
+    fun afterTheLimitCheckAndTheAcknowledgementAnyFlowMayTryItsCurrentPassword() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        val tag = protectedTag()
+        vm.fillSetPassword()
+
+        vm.onProbeLimit()
+        assertEquals(SecuritySheet.Waiting(SecurityStage.READ), vm.uiState.value.sheet)
+        tap(coordinator, tag)
+        assertFalse(vm.uiState.value.passwordFieldEnabled, "unreadable limit: acknowledge first")
+        vm.onLimitUnderstood()
+        assertTrue(vm.uiState.value.passwordFieldEnabled)
+        tag.powerCycle()
+        vm.onFormChange { it.copy(currentPasswordHex = "12345678") }
+        vm.onNext()
+        tap(coordinator, tag)
+
+        assertEquals(SecurityStep.DRY_RUN, vm.uiState.value.step)
+        assertEquals(1, vm.pwAuthFrames(tag), "exactly the one typed attempt")
+    }
+
+    @Test
+    fun aFlowWithoutAPasswordNeverNeedsTheLimitCheck() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.fillSetPassword()
+
+        assertTrue(vm.uiState.value.canGoNext)
+        vm.onNext()
+        tap(coordinator, blankTag())
+
+        assertEquals(SecurityStep.DRY_RUN, vm.uiState.value.step)
+    }
+
+    @Test
+    fun acknowledgingBeforeTheLimitWasReadDoesNotEnableTheField() = runTest {
+        val vm = viewModel(coordinator())
+        vm.onChoose(SecurityAction.UNLOCK)
+
+        vm.onLimitUnderstood()
+
+        assertFalse(vm.uiState.value.passwordFieldEnabled)
     }
 }

@@ -31,6 +31,7 @@ data class SecurityFormActions(
     val onChange: ((SecurityForm) -> SecurityForm) -> Unit,
     val onGenerate: () -> Unit,
     val onLimitUnderstood: () -> Unit,
+    val onProbeLimit: () -> Unit,
     val onNext: () -> Unit,
     val onCopy: (String) -> Unit,
     val onShare: (String) -> Unit,
@@ -58,7 +59,7 @@ fun SecurityFormContent(state: SecurityUiState, actions: SecurityFormActions, mo
         )
         Button(
             onClick = actions.onNext,
-            enabled = state.canStart && state.passwordFieldEnabled,
+            enabled = state.canStart && state.canGoNext,
             modifier = Modifier.fillMaxWidth(),
         ) { Text(stringResource(if (action == SecurityAction.UNLOCK) R.string.security_unlock_action else R.string.security_form_next)) }
     }
@@ -74,6 +75,7 @@ private fun SetPasswordFields(state: SecurityUiState, actions: SecurityFormActio
 
 @Composable
 private fun CurrentPasswordField(state: SecurityUiState, actions: SecurityFormActions, @StringRes label: Int) {
+    AttemptLimitSection(state, actions)
     HexSecretField(
         value = state.form.currentPasswordHex,
         onValueChange = { v -> actions.onChange { it.copy(currentPasswordHex = v) } },
@@ -84,13 +86,28 @@ private fun CurrentPasswordField(state: SecurityUiState, actions: SecurityFormAc
     )
 }
 
+/** The attempt limit comes before any password field: read it, show it, and ask for the acknowledgement (W2). */
 @Composable
-private fun UnlockFields(state: SecurityUiState, actions: SecurityFormActions) {
+private fun AttemptLimitSection(state: SecurityUiState, actions: SecurityFormActions) {
     val read = state.authLimit
     val limit = read?.authLimit
     when {
-        read == null -> Text(stringResource(R.string.security_unlock_reading), style = MaterialTheme.typography.bodyMedium)
-        limit == null -> Text(stringResource(R.string.security_unlock_limit_unknown), color = MaterialTheme.colorScheme.error)
+        read == null -> {
+            val mandatory = state.action == SecurityAction.UNLOCK || state.action == SecurityAction.REMOVE_PASSWORD
+            Text(
+                stringResource(if (mandatory) R.string.security_unlock_reading else R.string.security_limit_check_hint),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            if (state.sheet == null) {
+                Button(onClick = actions.onProbeLimit, enabled = state.canStart) { Text(stringResource(R.string.security_limit_check)) }
+            }
+        }
+        limit == null -> {
+            Text(stringResource(R.string.security_unlock_limit_unknown), color = MaterialTheme.colorScheme.error)
+            if (!state.limitUnderstood) {
+                Button(onClick = actions.onLimitUnderstood) { Text(stringResource(R.string.security_unlock_understood)) }
+            }
+        }
         limit > 0 -> {
             Text(stringResource(R.string.security_unlock_limit, limit), color = MaterialTheme.colorScheme.error)
             if (!state.limitUnderstood) {
@@ -98,6 +115,10 @@ private fun UnlockFields(state: SecurityUiState, actions: SecurityFormActions) {
             }
         }
     }
+}
+
+@Composable
+private fun UnlockFields(state: SecurityUiState, actions: SecurityFormActions) {
     CurrentPasswordField(state, actions, R.string.security_form_current_required)
 }
 
