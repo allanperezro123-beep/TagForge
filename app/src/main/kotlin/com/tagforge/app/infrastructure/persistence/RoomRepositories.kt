@@ -14,8 +14,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 class RoomHistoryRepository(private val dao: HistoryDao) : HistoryRepository {
-    override fun observe(query: HistoryQuery): Flow<List<HistoryEntry>> =
-        dao.observe(query.limit).map { rows -> rows.map { it.toDomain() } }
+    override fun observe(query: HistoryQuery): Flow<List<HistoryEntry>> {
+        val a = query.toArgs()
+        return dao.observe(a.text, a.uid, a.allKinds, a.kinds, a.outcome, a.from, a.to, a.limit)
+            .map { rows -> rows.map { it.toDomain() } }
+    }
 
     override suspend fun add(entry: HistoryEntry): Long = dao.insert(entry.toEntity())
 

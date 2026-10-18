@@ -17,7 +17,11 @@ class InMemoryHistoryRepository : HistoryRepository {
     private var nextId = 1L
 
     override fun observe(query: HistoryQuery): Flow<List<HistoryEntry>> =
-        rows.map { all -> all.sortedWith(compareByDescending<HistoryEntry> { it.at }.thenByDescending { it.id }).take(query.limit) }
+        rows.map { all ->
+            all.filter(query::matches)
+                .sortedWith(compareByDescending<HistoryEntry> { it.at }.thenByDescending { it.id })
+                .take(query.limit)
+        }
 
     override suspend fun add(entry: HistoryEntry): Long {
         val id = if (entry.id != 0L) entry.id else nextId++

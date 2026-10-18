@@ -65,8 +65,55 @@ data class HistoryEntry(
     val ndef: Bytes?,
 )
 
-/** What to list. Search and filters arrive with Phase 5. */
-data class HistoryQuery(val limit: Int = DEFAULT_LIMIT) {
+/** Outcome filter for the history list: every entry, only the successful ones, or only the failed ones. */
+enum class OutcomeFilter { ALL, SUCCESS, FAILED }
+
+/**
+ * What to list (HT-03). Every criterion narrows the list (AND):
+ * - [text]: case-insensitive, over the summary, the tag type and the UID (separators `:`, `-` and spaces are ignored
+ *   for the UID); blank means no text filter
+ * - [kinds]: empty means every kind
+ * - [outcome], [from] and [to] (both inclusive)
+ * [limit] applies after filtering.
+ */
+data class HistoryQuery(
+    val limit: Int = DEFAULT_LIMIT,
+    val text: String = "",
+    val kinds: Set<HistoryKind> = emptySet(),
+    val outcome: OutcomeFilter = OutcomeFilter.ALL,
+    val from: Instant? = null,
+    val to: Instant? = null,
+) {
+    /** [text] trimmed; empty when there is no text filter. */
+    val textNeedle: String get() = text.trim()
+
+    /** [text] reduced to what can appear in an uppercase hex UID (no separators); used against the stored UID. */
+    val uidNeedle: String get() = textNeedle.filterNot { it == ':' || it == '-' || it.isWhitespace() }.uppercase()
+
+    /** True when something narrows the list; drives the "clear filters" affordance. */
+    val isFiltered: Boolean
+        get() = textNeedle.isNotEmpty() || kinds.isNotEmpty() || outcome != OutcomeFilter.ALL || from != null || to != null
+
+    fun matches(entry: HistoryEntry): Boolean =
+        matchesText(entry) &&
+            (kinds.isEmpty() || entry.kind in kinds) &&
+            when (outcome) {
+                OutcomeFilter.ALL -> true
+                OutcomeFilter.SUCCESS -> entry.outcome.isSuccess
+                OutcomeFilter.FAILED -> !entry.outcome.isSuccess
+            } &&
+            (from == null || entry.at >= from) &&
+            (to == null || entry.at <= to)
+
+    private fun matchesText(entry: HistoryEntry): Boolean {
+        val needle = textNeedle
+        if (needle.isEmpty()) return true
+        if (entry.summary.contains(needle, ignoreCase = true)) return true
+        if (entry.tagType?.contains(needle, ignoreCase = true) == true) return true
+        val uid = uidNeedle
+        return uid.isNotEmpty() && entry.uid?.toHex()?.contains(uid, ignoreCase = true) == true
+    }
+
     companion object {
         const val DEFAULT_LIMIT = 500
     }

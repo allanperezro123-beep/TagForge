@@ -8,6 +8,8 @@ import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.history.HistoryEntry
 import com.tagforge.domain.history.HistoryKind
 import com.tagforge.domain.history.HistoryOutcome
+import com.tagforge.domain.history.HistoryQuery
+import com.tagforge.domain.history.OutcomeFilter
 import com.tagforge.domain.ndef.spec.RecordSpec
 import com.tagforge.domain.task.RingerMode
 import com.tagforge.domain.task.Task
@@ -66,6 +68,40 @@ class DaoTest {
         assertEquals(listOf(3_000L, 2_000L, 1_000L), listed.map { it.at.toEpochMilliseconds() })
         assertEquals(HistoryOutcome.FAILED_TAGLOST, listed.first().outcome)
         assertEquals(Bytes.of(0xD0, 0, 0), listed.first().ndef)
+    }
+
+    @Test
+    fun tenEntriesWithThreeFailedWritesFilterToExactlyThree() = runBlocking {
+        repeat(6) { history.add(entry(it + 1L)) }
+        repeat(3) { history.add(entry(100L + it, HistoryKind.WRITE, HistoryOutcome.FAILED_TAGLOST)) }
+        history.add(entry(200, HistoryKind.WRITE, HistoryOutcome.SUCCESS))
+
+        val failedWrites = history.observe(
+            HistoryQuery(kinds = setOf(HistoryKind.WRITE), outcome = OutcomeFilter.FAILED),
+        ).first()
+
+        assertEquals(listOf(102L, 101L, 100L), failedWrites.map { it.at.toEpochMilliseconds() })
+        assertEquals(10, history.observe().first().size)
+    }
+
+    @Test
+    fun textSearchMatchesSummaryAndUidAndTreatsLikeWildcardsLiterally() = runBlocking {
+        history.add(entry(1_000).copy(summary = "100% sure"))
+        history.add(entry(2_000).copy(summary = "WiFi Casa", uid = Bytes.of(0x04, 0xA1, 0xB2, 0xC3)))
+
+        assertEquals(listOf(2_000L), history.observe(HistoryQuery(text = "wifi")).first().map { it.at.toEpochMilliseconds() })
+        assertEquals(2, history.observe(HistoryQuery(text = "04:a1")).first().size)
+        assertEquals(listOf(1_000L), history.observe(HistoryQuery(text = "100%")).first().map { it.at.toEpochMilliseconds() })
+        assertEquals(0, history.observe(HistoryQuery(text = "%")).first().filter { !it.summary.contains('%') }.size)
+    }
+
+    @Test
+    fun dateRangeBoundsAreInclusive() = runBlocking {
+        for (t in listOf(999L, 1_000L, 2_000L, 2_001L)) history.add(entry(t))
+        val range = history.observe(
+            HistoryQuery(from = Instant.fromEpochMilliseconds(1_000), to = Instant.fromEpochMilliseconds(2_000)),
+        ).first()
+        assertEquals(listOf(2_000L, 1_000L), range.map { it.at.toEpochMilliseconds() })
     }
 
     @Test
