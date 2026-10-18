@@ -13,6 +13,7 @@ import com.tagforge.app.infrastructure.persistence.RoomHistoryRepository
 import com.tagforge.app.infrastructure.persistence.RoomTaskRepository
 import com.tagforge.app.infrastructure.persistence.RoomTemplateRepository
 import com.tagforge.app.infrastructure.persistence.TagForgeDatabase
+import com.tagforge.app.infrastructure.security.KeystoreSecretStore
 import com.tagforge.app.infrastructure.tasks.AndroidDeviceFacts
 import com.tagforge.app.infrastructure.tasks.AndroidTaskActionExecutor
 import com.tagforge.app.infrastructure.tasks.TaskHandlers
@@ -40,6 +41,7 @@ import com.tagforge.domain.ndef.DefaultNdefCodec
 import com.tagforge.domain.ndef.NdefCodec
 import com.tagforge.domain.ports.ExchangeStore
 import com.tagforge.domain.ports.HistoryRepository
+import com.tagforge.domain.ports.SecretStore
 import com.tagforge.domain.ports.SettingsStore
 import com.tagforge.domain.ports.TaskActionExecutor
 import com.tagforge.domain.ports.TaskRepository
@@ -127,6 +129,12 @@ class AppContainer(context: Context) {
     }
 
     val recordHistory: RecordHistoryUseCase by lazy { RecordHistoryUseCase(historyRepository, settingsStore, clock) }
+
+    /** Opt-in tag passwords, sealed with an AndroidKeystore key (NS-02). */
+    val secretStore: SecretStore by lazy { KeystoreSecretStore(appContext, dispatchers.io) }
+
+    /** The raw console warning is shown once per app session (NS-08); this lives exactly as long as the process. */
+    val rawConsoleAcknowledged = kotlinx.coroutines.flow.MutableStateFlow(false)
 
     val readTagUseCase = ReadTagUseCase(ndefCodec)
     val readMemoryUseCase = ReadMemoryUseCase()

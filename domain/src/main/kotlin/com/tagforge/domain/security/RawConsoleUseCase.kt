@@ -112,3 +112,62 @@ private object NtagConfigBits {
     const val CFGLCK = 0x40
     const val AUTHLIM = 0x07
 }
+
+/** What the first tap of the console found out. */
+sealed interface RawProbeResult {
+    /** A read-class frame: already sent. */
+    data class Sent(val response: RawResponse) : RawProbeResult
+
+    /** A frame that needs a confirmation before it may be sent. [state] is null when the tag's configuration could not be read. */
+    data class NeedsConfirmation(val frame: Bytes, val kind: RawClass, val state: SecurityState?) : RawProbeResult
+
+    data class Refused(val reason: RawRefusal) : RawProbeResult
+}
+
+/**
+ * First tap of the raw console (NS-08): identify the tag, read its attempt limit, classify [frame] and send it only when it is
+ * read class. Everything else comes back for the user to confirm; nothing is written here.
+ */
+class RawConsoleProbeUseCase(private val frame: Bytes, private val advanced: Boolean) : TagOperation<RawProbeResult> {
+    override val kind: OperationKind = OperationKind.SECURITY
+
+    override suspend fun execute(session: TagSession, phase: (OperationPhase) -> Unit): TagResult<RawProbeResult> {
+        if (!advanced) return Outcome.Ok(RawProbeResult.Refused(RawRefusal.AdvancedRequired))
+        phase(OperationPhase.CONNECTING)
+        val info = when (val identified = session.identify()) {
+            is Outcome.Err -> return identified
+            is Outcome.Ok -> identified.value
+        }
+        val t = session.transceiver(TagTech.NFC_A) ?: return Outcome.Err(TagError.Unsupported("nfc-a"))
+        val model = info.ntag
+
+        phase(OperationPhase.READING)
+        val authLimit = if (model == null) null else when (val cfg1 = SecurityIo.readPages(t, model.cfg1, model.cfg1)) {
+            is Outcome.Ok -> cfg1.value[0] and AUTHLIM_MASK
+            is Outcome.Err -> if (cfg1.error == TagError.AuthRequired) null else return cfg1
+        }
+        return when (val classified = RawCommandGuard.classify(frame, model, authLimit)) {
+            is RawClass.Invalid -> Outcome.Ok(RawProbeResult.Refused(RawRefusal.Invalid(classified.reason)))
+            RawClass.ReadClass -> send(t)
+            else -> needsConfirmation(session, classified, model != null)
+        }
+    }
+
+    private suspend fun send(t: com.tagforge.domain.ports.TagTransceiver): TagResult<RawProbeResult> =
+        when (val sent = t.transceive(frame)) {
+            is Outcome.Err -> sent
+            is Outcome.Ok -> Outcome.Ok(RawProbeResult.Sent(RawResponse(frame, RawConsoleUseCase.decode(sent.value))))
+        }
+
+    private suspend fun needsConfirmation(session: TagSession, kind: RawClass, ntag: Boolean): TagResult<RawProbeResult> {
+        val state = if (!ntag) null else when (val read = ReadSecurityStateUseCase().execute(session) { }) {
+            is Outcome.Ok -> read.value
+            is Outcome.Err -> if (read.error == TagError.AuthRequired) null else return read
+        }
+        return Outcome.Ok(RawProbeResult.NeedsConfirmation(frame, kind, state))
+    }
+
+    private companion object {
+        const val AUTHLIM_MASK = 0x07
+    }
+}
