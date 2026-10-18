@@ -9,6 +9,7 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Bookmarks
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SwapVert
@@ -30,6 +31,7 @@ fun MoreScreen(
     onOpenHistory: () -> Unit,
     onOpenTemplates: () -> Unit,
     onOpenImportExport: () -> Unit,
+    onOpenBatch: () -> Unit,
     onOpenPermissions: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAbout: () -> Unit,
@@ -51,6 +53,12 @@ fun MoreScreen(
                 title = stringResource(R.string.more_templates),
                 summary = stringResource(R.string.more_templates_summary),
                 onClick = onOpenTemplates,
+            )
+            MoreEntry(
+                icon = Icons.Outlined.Layers,
+                title = stringResource(R.string.more_batch),
+                summary = stringResource(R.string.more_batch_summary),
+                onClick = onOpenBatch,
             )
             MoreEntry(
                 icon = Icons.Outlined.SwapVert,

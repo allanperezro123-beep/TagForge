@@ -59,6 +59,10 @@ sealed interface Route {
     @Serializable
     data object ImportExport : Route
 
+    /** Batch write: one template to many tags with a verified counter. */
+    @Serializable
+    data object Batch : Route
+
     @Serializable
     data object About : Route
 }

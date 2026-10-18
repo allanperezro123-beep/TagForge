@@ -19,6 +19,7 @@ import com.tagforge.app.feature.history.HistoryRoute
 import com.tagforge.app.feature.history.TagDetailRoute
 import com.tagforge.app.feature.more.AboutScreen
 import com.tagforge.app.feature.more.MoreScreen
+import com.tagforge.app.feature.productivity.BatchWriteRoute
 import com.tagforge.app.feature.productivity.ImportExportRoute
 import com.tagforge.app.feature.read.ReadRoute
 import com.tagforge.app.feature.settings.PermissionCenterRoute
@@ -92,6 +93,7 @@ fun TagForgeNavHost(
                 onOpenHistory = { navController.navigate(Route.History) },
                 onOpenTemplates = { navController.navigate(Route.Templates) },
                 onOpenImportExport = { navController.navigate(Route.ImportExport) },
+                onOpenBatch = { navController.navigate(Route.Batch) },
                 onOpenPermissions = { navController.navigate(Route.PermissionCenter) },
                 onOpenSettings = { navController.navigate(Route.Settings) },
                 onOpenAbout = { navController.navigate(Route.About) },
@@ -115,6 +117,7 @@ fun TagForgeNavHost(
             )
         }
         composable<Route.ImportExport> { ImportExportRoute(onBack = { navController.popBackStack() }) }
+        composable<Route.Batch> { BatchWriteRoute(onBack = { navController.popBackStack() }) }
         composable<Route.Settings> { SettingsRoute(onBack = { navController.popBackStack() }) }
         composable<Route.PermissionCenter> { PermissionCenterRoute(onBack = { navController.popBackStack() }) }
         composable<Route.About> {
