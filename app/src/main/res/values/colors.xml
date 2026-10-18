@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#9A4426</color>
+    <!-- Home-screen widget surface and text. Night variants in values-night; both pairs are checked by WidgetContrastTest. -->
+    <color name="widget_background">#FFF1EA</color>
+    <color name="widget_text">#3B1F14</color>
 </resources>

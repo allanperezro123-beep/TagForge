@@ -86,6 +86,19 @@
             </intent-filter>
         </activity>
 
+        <!-- Quick actions widget (PR-03): Scan and Write buttons only, no tag contents. -->
+        <receiver
+            android:name=".feature.productivity.widget.QuickScanWidgetProvider"
+            android:exported="false"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/quick_scan_widget_info" />
+        </receiver>
+
         <!-- Dump export: a temporary read grant on one cache file at a time, never a world-readable path. -->
         <provider
             android:name="androidx.core.content.FileProvider"
