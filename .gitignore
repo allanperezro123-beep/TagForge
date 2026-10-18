@@ -22,3 +22,6 @@ dist/*.apk
 .DS_Store
 Thumbs.db
 .atl/
+
+# Archived release builds (signed APK + R8 mapping)
+apks/
