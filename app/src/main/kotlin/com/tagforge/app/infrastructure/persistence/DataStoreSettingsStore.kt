@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.tagforge.domain.ntag.NtagModel
 import com.tagforge.domain.ports.SettingsStore
@@ -34,6 +35,7 @@ class DataStoreSettingsStore(private val dataStore: DataStore<Preferences>) : Se
             preferences[ADVANCED_MODE] = updated.advancedMode
             preferences[SAVE_HISTORY] = updated.saveHistory
             preferences[LAST_TARGET_MODEL] = updated.lastTargetModel.displayName
+            preferences[BATCH_NEXT_COUNTER] = updated.batchNextCounter
         }
     }
 
@@ -47,6 +49,7 @@ class DataStoreSettingsStore(private val dataStore: DataStore<Preferences>) : Se
             saveHistory = this[SAVE_HISTORY] ?: defaults.saveHistory,
             lastTargetModel = NtagModel.entries.firstOrNull { it.displayName == this[LAST_TARGET_MODEL] }
                 ?: defaults.lastTargetModel,
+            batchNextCounter = this[BATCH_NEXT_COUNTER] ?: defaults.batchNextCounter,
         )
     }
 
@@ -57,5 +60,6 @@ class DataStoreSettingsStore(private val dataStore: DataStore<Preferences>) : Se
         val ADVANCED_MODE = booleanPreferencesKey("advanced_mode")
         val SAVE_HISTORY = booleanPreferencesKey("save_history")
         val LAST_TARGET_MODEL = stringPreferencesKey("last_target_model")
+        val BATCH_NEXT_COUNTER = longPreferencesKey("batch_next_counter")
     }
 }

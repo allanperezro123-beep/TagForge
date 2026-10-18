@@ -176,6 +176,38 @@ class BatchPlanTest {
     }
 
     @Test
+    fun skippingGivesUpOnANumberAndMovesToTheNextOneWithoutCountingItAsWritten() {
+        val run = BatchRun(plan(start = 7, pad = 3, total = 4)).recordSuccess(uid(1)).recordFailure().recordSkip()
+
+        assertEquals("009", run.nextLabel)   // 008 was skipped
+        assertEquals(BatchSummary(ok = 1, failed = 1, remaining = 2, skipped = 1), run.summary)
+        assertEquals(RecordSpec.Uri("https://x.co/t/009"), run.nextRecords().single())
+    }
+
+    @Test
+    fun theNextMessageCarriesTheNextNumberAndTheAarAndIsNullWhenDone() {
+        val run = BatchRun(plan(start = 7, pad = 3, total = 2, includeAar = true)).recordSuccess(uid(1))
+
+        val message = run.nextMessage("com.tagforge.app")!!
+
+        assertEquals(RecordSpecEncoder.encode(RecordSpec.Uri("https://x.co/t/008")), message.records.first())
+        assertEquals(NdefRecord.aar("com.tagforge.app"), message.records.last())
+        assertNull(run.recordSuccess(uid(2)).nextMessage("com.tagforge.app"))
+    }
+
+    @Test
+    fun theBatchEndsWhenEveryNumberWasWrittenOrSkipped() {
+        var run = BatchRun(plan(total = 3)).recordSuccess(uid(1)).recordSkip().recordSkip()
+
+        assertTrue(run.isComplete)
+        assertEquals(0, run.summary.remaining)
+        assertEquals(1, run.summary.ok)
+        assertEquals(run, run.recordSkip())   // nothing left to skip
+        run = run.recordFailure()
+        assertTrue(run.isComplete)
+    }
+
+    @Test
     fun aRunCanResumeAtAStoredCounterWithoutTheEarlierProgress() {
         val run = BatchRun(plan(start = 42, pad = 4, total = 5))
         assertEquals("0042", run.nextLabel)

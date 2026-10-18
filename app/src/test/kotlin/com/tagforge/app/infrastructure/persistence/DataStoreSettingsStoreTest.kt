@@ -122,6 +122,19 @@ class DataStoreSettingsStoreTest {
     }
 
     @Test
+    fun theBatchCounterStartsAtOneAndSurvivesRecreatingTheStore() = runBlocking {
+        val data = InMemoryPreferences()
+        assertEquals(1L, DataStoreSettingsStore(data).settings.first().batchNextCounter)
+
+        DataStoreSettingsStore(data).update { it.copy(batchNextCounter = 9L) }
+
+        assertEquals(9L, DataStoreSettingsStore(data).settings.first().batchNextCounter)
+        // another setting changing never disturbs the counter
+        DataStoreSettingsStore(data).update { it.copy(hapticsEnabled = false) }
+        assertEquals(9L, DataStoreSettingsStore(data).settings.first().batchNextCounter)
+    }
+
+    @Test
     fun anUnknownStoredTargetChipFallsBackToNtag213() = runBlocking {
         val data = InMemoryPreferences()
         data.edit { it[stringPreferencesKey("last_target_model")] = "NTAG999" }

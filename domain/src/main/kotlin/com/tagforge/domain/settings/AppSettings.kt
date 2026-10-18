@@ -24,4 +24,6 @@ data class AppSettings(
     val advancedMode: Boolean = false,
     /** The chip the write wizard measures its size meter against when no tag has been scanned. */
     val lastTargetModel: NtagModel = NtagModel.NTAG213,
+    /** The number the next tag of a batch write gets. Advances only after a verified write; survives process death (PR-01). */
+    val batchNextCounter: Long = 1L,
 )
