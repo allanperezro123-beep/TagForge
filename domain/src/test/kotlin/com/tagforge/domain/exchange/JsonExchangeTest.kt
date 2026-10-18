@@ -86,7 +86,7 @@ class JsonExchangeTest {
     fun fiftyHistoryAndFiveTemplatesComeBackEqual() {
         val ndef = DefaultNdefCodec.encode(NdefMessage(listOf(NdefRecord.text("hi", "en"))))
         val data = ExchangeData(
-            history = (1..50).map { history(it, ndef = if (it % 2 == 0) ndef else null, kind = HistoryKind.entries[it % 6]) },
+            history = (1..50).map { history(it, ndef = if (it % 2 == 0) ndef else null, kind = HistoryKind.entries[it % HistoryKind.entries.size]) },
             templates = (1..5).map(::template),
             tasks = emptyList(),
         )
