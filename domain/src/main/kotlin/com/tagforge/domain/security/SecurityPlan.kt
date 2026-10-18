@@ -46,6 +46,9 @@ sealed interface PlanStep {
     }
 
     data object MakeReadOnly : PlanStep
+
+    /** A hand-written frame that is not a plain page write (the raw console's `A0 <page>`). */
+    data class Raw(val frame: Bytes) : PlanStep
 }
 
 /** One row of the dry-run preview. [oldHex] is null when the chip does not reveal the old content. */
@@ -79,14 +82,30 @@ data class SecurityPlan(
             when (it) {
                 is PlanStep.WritePage -> it.command
                 is PlanStep.Authenticate -> it.command
+                is PlanStep.Raw -> it.frame
                 PlanStep.MakeReadOnly -> null
             }
         }
 
-    fun dryRun(): List<DryRunLine> = steps.filterIsInstance<PlanStep.WritePage>().map { step ->
+    fun dryRun(): List<DryRunLine> = steps.mapNotNull { step ->
+        when (step) {
+            is PlanStep.WritePage -> writeLine(step)
+            is PlanStep.Raw -> DryRunLine(
+                page = step.frame.takeIf { it.size > 1 }?.get(1) ?: -1,
+                region = step.frame.takeIf { it.size > 1 }?.let { NtagMemoryMap.regionsOf(model, it[1]).firstOrNull() },
+                commandHex = step.frame.toHex(" "),
+                oldHex = null,
+                newHex = "",
+                oldHidden = true,
+            )
+            is PlanStep.Authenticate, PlanStep.MakeReadOnly -> null
+        }
+    }
+
+    private fun writeLine(step: PlanStep.WritePage): DryRunLine {
         val region = NtagMemoryMap.regionsOf(model, step.page).firstOrNull()
         val hidden = region?.hiddenByChip == true || step.old == null
-        DryRunLine(
+        return DryRunLine(
             page = step.page,
             region = region,
             commandHex = step.command.toHex(" "),

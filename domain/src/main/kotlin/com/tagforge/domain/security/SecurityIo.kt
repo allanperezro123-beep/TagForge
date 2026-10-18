@@ -64,4 +64,13 @@ internal object SecurityIo {
         }
         return if (response.isEmpty()) Outcome.Ok(Unit) else NtagResponses.checkAck(response)
     }
+
+    /** Sends [frame] as is; a lone NAK is an error, anything else (ACK, data, nothing) is accepted. */
+    suspend fun sendRaw(t: TagTransceiver, frame: Bytes): TagResult<Unit> {
+        val response = when (val sent = t.transceive(frame)) {
+            is Outcome.Err -> return sent
+            is Outcome.Ok -> sent.value
+        }
+        return NtagResponses.nakCode(response)?.let { Outcome.Err(TagError.Nak(it)) } ?: Outcome.Ok(Unit)
+    }
 }

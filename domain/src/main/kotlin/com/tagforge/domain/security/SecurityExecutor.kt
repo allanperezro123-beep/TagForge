@@ -53,6 +53,7 @@ internal object SecurityExecutor {
             val result = when (step) {
                 is PlanStep.WritePage -> SecurityIo.writePage(t, step.page, step.new)
                 is PlanStep.Authenticate -> authenticate(t, step)
+                is PlanStep.Raw -> SecurityIo.sendRaw(t, step.frame)
                 PlanStep.MakeReadOnly -> session.makeReadOnly()
             }
             if (result is Outcome.Err) return partial(plan, result.error, completed, total, step)
