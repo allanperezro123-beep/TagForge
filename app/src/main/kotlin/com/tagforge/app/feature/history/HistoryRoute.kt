@@ -15,7 +15,7 @@ import com.tagforge.app.di.tagForgeViewModel
 /** Container for the history list: owns the ViewModel and the delete-with-Undo snackbar. */
 @Composable
 fun HistoryRoute(onBack: () -> Unit, onOpen: (Long) -> Unit, onScan: () -> Unit) {
-    val viewModel = tagForgeViewModel { HistoryViewModel(it.historyRepository) }
+    val viewModel = tagForgeViewModel { HistoryViewModel(it.historyRepository, it.clock) }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val deletedMessage = stringResource(R.string.history_deleted)
@@ -40,5 +40,10 @@ fun HistoryRoute(onBack: () -> Unit, onOpen: (Long) -> Unit, onScan: () -> Unit)
         onClearConfirmed = viewModel::onClearConfirmed,
         onClearDismissed = viewModel::onClearDismissed,
         onScan = onScan,
+        onSearchChanged = viewModel::onSearchChanged,
+        onToggleKind = viewModel::onToggleKind,
+        onOutcomeChanged = viewModel::onOutcomeChanged,
+        onRangeChanged = viewModel::onRangeChanged,
+        onClearFilters = viewModel::onClearFilters,
     )
 }

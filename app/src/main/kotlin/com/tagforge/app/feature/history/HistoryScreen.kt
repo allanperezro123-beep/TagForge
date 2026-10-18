@@ -13,6 +13,7 @@ import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -38,6 +39,8 @@ import com.tagforge.app.ui.components.EmptyState
 import com.tagforge.app.ui.components.SkeletonList
 import com.tagforge.app.ui.theme.extendedColors
 import com.tagforge.domain.history.HistoryEntry
+import com.tagforge.domain.history.HistoryKind
+import com.tagforge.domain.history.OutcomeFilter
 
 private val ROW_HEIGHT = 72.dp
 
@@ -57,6 +60,11 @@ fun HistoryScreen(
     onClearConfirmed: () -> Unit,
     onClearDismissed: () -> Unit,
     onScan: () -> Unit,
+    onSearchChanged: (String) -> Unit,
+    onToggleKind: (HistoryKind) -> Unit,
+    onOutcomeChanged: (OutcomeFilter) -> Unit,
+    onRangeChanged: (DateRange) -> Unit,
+    onClearFilters: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -77,6 +85,15 @@ fun HistoryScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
+            if (!state.loading && !state.isEmpty) {
+                HistoryFilterBar(
+                    filters = state.filters,
+                    onSearchChanged = onSearchChanged,
+                    onToggleKind = onToggleKind,
+                    onOutcomeChanged = onOutcomeChanged,
+                    onRangeChanged = onRangeChanged,
+                )
+            }
             when {
                 state.loading -> SkeletonList(Modifier.padding(16.dp), rowHeight = ROW_HEIGHT)
                 state.isEmpty -> EmptyState(
@@ -84,6 +101,12 @@ fun HistoryScreen(
                     title = stringResource(R.string.history_empty_title),
                     body = stringResource(R.string.history_empty_body),
                     action = { Button(onClick = onScan) { Text(stringResource(R.string.history_empty_action)) } },
+                )
+                state.noResults -> EmptyState(
+                    icon = Icons.Outlined.SearchOff,
+                    title = stringResource(R.string.history_no_results_title),
+                    body = stringResource(R.string.history_no_results_body),
+                    action = { Button(onClick = onClearFilters) { Text(stringResource(R.string.history_no_results_action)) } },
                 )
                 else -> LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
                     items(state.entries, key = { it.id }) { entry ->

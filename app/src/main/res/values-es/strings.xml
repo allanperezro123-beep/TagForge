@@ -359,6 +359,17 @@
     <string name="history_outcome_failed_other">Falló</string>
     <string name="history_row_meta">%1$s · %2$s</string>
     <string name="history_row_description">%1$s, %2$s, %3$s, %4$s</string>
+    <string name="history_search_hint">Buscar en el historial</string>
+    <string name="history_search_clear">Borrar búsqueda</string>
+    <string name="history_filter_outcome_all">Cualquier resultado</string>
+    <string name="history_filter_outcome_failed">Fallidas</string>
+    <string name="history_filter_range_any">Cualquier fecha</string>
+    <string name="history_filter_range_day">Últimas 24 horas</string>
+    <string name="history_filter_range_week">Últimos 7 días</string>
+    <string name="history_filter_range_month">Últimos 30 días</string>
+    <string name="history_no_results_title">Sin coincidencias</string>
+    <string name="history_no_results_body">Ninguna entrada coincide con tu búsqueda o tus filtros.</string>
+    <string name="history_no_results_action">Quitar filtros</string>
     <string name="history_delete">Eliminar entrada</string>
     <string name="history_deleted">Entrada eliminada</string>
     <string name="history_clear">Borrar historial</string>
