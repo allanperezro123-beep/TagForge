@@ -32,6 +32,10 @@ import com.tagforge.app.feature.tasks.TasksRoute
 import com.tagforge.app.feature.tools.CloneRoute
 import com.tagforge.app.feature.tools.DumpRoute
 import com.tagforge.app.feature.tools.TechInfoRoute
+import com.tagforge.app.feature.tools.security.RawConsoleRoute
+import com.tagforge.app.feature.tools.security.SecurityAction
+import com.tagforge.app.feature.tools.security.SecurityRoute
+import com.tagforge.app.feature.tools.security.SignatureRoute
 import com.tagforge.app.feature.tools.ToolsRoute
 import com.tagforge.app.feature.templates.TemplatesRoute
 import com.tagforge.app.feature.write.WriteRoute
@@ -79,7 +83,9 @@ fun TagForgeNavHost(
     modifier: Modifier = Modifier,
 ) {
     NavHost(navController = navController, startDestination = Route.Read, modifier = modifier) {
-        composable<Route.Read> { ReadRoute() }
+        composable<Route.Read> {
+            ReadRoute(onOpenUnlock = { navController.navigate(Route.Security(SecurityAction.UNLOCK.name)) })
+        }
         composable<Route.Write> { entry ->
             val route = entry.toRoute<Route.Write>()
             WriteRoute(
@@ -110,11 +116,22 @@ fun TagForgeNavHost(
                 onOpenDump = { navController.navigate(Route.Dump) },
                 onOpenClone = { navController.navigate(Route.Clone) },
                 onOpenTech = { navController.navigate(Route.TechInfo) },
+                onOpenSecurity = { navController.navigate(Route.Security()) },
             )
         }
         composable<Route.Dump> { DumpRoute(onBack = { navController.popBackStack() }) }
         composable<Route.Clone> { CloneRoute(onBack = { navController.popBackStack() }) }
         composable<Route.TechInfo> { TechInfoRoute(onBack = { navController.popBackStack() }) }
+        composable<Route.Security> { entry ->
+            SecurityRoute(
+                initialAction = entry.toRoute<Route.Security>().action?.let { name -> SecurityAction.entries.firstOrNull { it.name == name } },
+                onBack = { navController.popBackStack() },
+                onOpenSignature = { navController.navigate(Route.Signature) },
+                onOpenConsole = { navController.navigate(Route.RawConsole) },
+            )
+        }
+        composable<Route.Signature> { SignatureRoute(onBack = { navController.popBackStack() }) }
+        composable<Route.RawConsole> { RawConsoleRoute(onBack = { navController.popBackStack() }) }
         composable<Route.More> {
             MoreScreen(
                 onOpenHistory = { navController.navigate(Route.History) },

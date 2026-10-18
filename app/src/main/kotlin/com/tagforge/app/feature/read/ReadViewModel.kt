@@ -95,7 +95,7 @@ class ReadViewModel(
     }
 
     fun onUnlockClicked() {
-        eventChannel.trySend(ReadEvent.UnlockUnavailable)
+        eventChannel.trySend(ReadEvent.OpenUnlock)
     }
 
     override fun onCleared() {

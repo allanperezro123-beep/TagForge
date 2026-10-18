@@ -26,7 +26,7 @@ import com.tagforge.domain.settings.AppSettings
  * snackbar, and hands plain state and lambdas to [ReadScreen].
  */
 @Composable
-fun ReadRoute() {
+fun ReadRoute(onOpenUnlock: () -> Unit = {}) {
     val container = rememberAppContainer()
     val viewModel = tagForgeViewModel {
         ReadViewModel(
@@ -41,8 +41,8 @@ fun ReadRoute() {
     val haptics = rememberHaptics(settings.hapticsEnabled)
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
-    val unlockMessage = stringResource(R.string.read_unlock_unavailable)
     val currentHaptics by rememberUpdatedState(haptics)
+    val currentOpenUnlock by rememberUpdatedState(onOpenUnlock)
 
     LifecycleStartEffect(viewModel) {
         viewModel.onVisible()
@@ -55,7 +55,7 @@ fun ReadRoute() {
                 ReadEvent.TagDetected -> currentHaptics.tick()
                 ReadEvent.Succeeded -> currentHaptics.confirm()
                 ReadEvent.Failed -> currentHaptics.reject()
-                ReadEvent.UnlockUnavailable -> snackbarHostState.showSnackbar(unlockMessage)
+                ReadEvent.OpenUnlock -> currentOpenUnlock()
                 is ReadEvent.OpenTaskRunner -> context.startActivity(TaskRunnerActivity.forTagMessage(context, event.ndef.toByteArray()))
             }
         }

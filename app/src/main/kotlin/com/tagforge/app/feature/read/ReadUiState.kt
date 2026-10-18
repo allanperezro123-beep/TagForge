@@ -41,7 +41,8 @@ sealed interface ReadEvent {
     data object TagDetected : ReadEvent
     data object Succeeded : ReadEvent
     data object Failed : ReadEvent
-    data object UnlockUnavailable : ReadEvent
+    /** The user pressed Unlock on a protected tag: open the security screen on the Unlock action (TS-06). */
+    data object OpenUnlock : ReadEvent
 
     /** The user pressed Run on a task card: open the task runner (confirmation sheet) with these NDEF bytes. */
     data class OpenTaskRunner(val ndef: Bytes) : ReadEvent

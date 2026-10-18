@@ -325,11 +325,11 @@ class ReadViewModelTest {
     }
 
     @Test
-    fun unlockIsAStubThatSaysSo() = runTest {
+    fun unlockOpensTheSecurityScreenForTheProtectedTag() = runTest {
         val vm = viewModel()
         vm.events.test {
             vm.onUnlockClicked()
-            assertEquals(ReadEvent.UnlockUnavailable, awaitItem())
+            assertEquals(ReadEvent.OpenUnlock, awaitItem())
         }
     }
 

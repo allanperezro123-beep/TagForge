@@ -18,7 +18,7 @@ import com.tagforge.domain.settings.AppSettings
 
 /** Container of the Tools tab: owns the ViewModel, haptics and the NFC settings intent. */
 @Composable
-fun ToolsRoute(onOpenDump: () -> Unit, onOpenClone: () -> Unit, onOpenTech: () -> Unit) {
+fun ToolsRoute(onOpenDump: () -> Unit, onOpenClone: () -> Unit, onOpenTech: () -> Unit, onOpenSecurity: () -> Unit) {
     val container = rememberAppContainer()
     val viewModel = tagForgeViewModel {
         ToolsViewModel(
@@ -56,6 +56,7 @@ fun ToolsRoute(onOpenDump: () -> Unit, onOpenClone: () -> Unit, onOpenTech: () -
             onDump = onOpenDump,
             onClone = onOpenClone,
             onTech = onOpenTech,
+            onSecurity = onOpenSecurity,
             onConfirm = viewModel::onConfirm,
             onCancelConfirm = viewModel::onCancelConfirm,
             onSheetDismissed = viewModel::onSheetDismissed,

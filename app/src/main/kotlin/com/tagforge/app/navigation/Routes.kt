@@ -34,6 +34,18 @@ sealed interface Route {
     @Serializable
     data object TechInfo : Route
 
+    /** Password protection and permanent locks. [action] is a SecurityAction name to open straight on (Unlock from Read). */
+    @Serializable
+    data class Security(val action: String? = null) : Route
+
+    /** READ_SIG: the 32-byte signature of an NTAG, always shown as not verified. */
+    @Serializable
+    data object Signature : Route
+
+    /** Raw command console. Only reachable while Advanced mode is on. */
+    @Serializable
+    data object RawConsole : Route
+
     /** Saved tasks: list, run with confirmation, write to a tag. */
     @Serializable
     data object Tasks : Route

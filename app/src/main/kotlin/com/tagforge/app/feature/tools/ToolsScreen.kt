@@ -11,6 +11,7 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.DeleteForever
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.Sensors
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,6 +44,7 @@ data class ToolsActions(
     val onDump: () -> Unit,
     val onClone: () -> Unit,
     val onTech: () -> Unit,
+    val onSecurity: () -> Unit,
     val onConfirm: () -> Unit,
     val onCancelConfirm: () -> Unit,
     val onSheetDismissed: () -> Unit,
@@ -69,6 +71,9 @@ fun ToolsScreen(state: ToolsUiState, actions: ToolsActions, modifier: Modifier =
             ToolEntry(Icons.Outlined.Memory, R.string.tools_dump, R.string.tools_dump_summary, true, onClick = actions.onDump)
             ToolEntry(Icons.Outlined.ContentCopy, R.string.tools_clone, R.string.tools_clone_summary, true, onClick = actions.onClone)
             ToolEntry(Icons.Outlined.Sensors, R.string.tools_tech, R.string.tools_tech_summary, true, onClick = actions.onTech)
+
+            SectionHeader(R.string.tools_section_protect)
+            ToolEntry(Icons.Outlined.Lock, R.string.tools_security, R.string.tools_security_summary, true, destructive = true, onClick = actions.onSecurity)
         }
     }
 
