@@ -861,6 +861,16 @@
     <string name="import_problem_invalid_value">falta un valor o está fuera de rango</string>
     <string name="import_problem_too_long">un valor es demasiado largo</string>
 
+    <!-- Accessibility announcements -->
+    <plurals name="announce_tag_read">
+        <item quantity="one">Etiqueta leída: %1$s, %2$d registro</item>
+        <item quantity="other">Etiqueta leída: %1$s, %2$d registros</item>
+    </plurals>
+    <plurals name="announce_tag_read_unknown">
+        <item quantity="one">Etiqueta leída: %1$d registro</item>
+        <item quantity="other">Etiqueta leída: %1$d registros</item>
+    </plurals>
+
     <!-- Shortcuts and widget -->
     <string name="shortcut_scan_short">Leer</string>
     <string name="shortcut_scan_long">Leer una etiqueta</string>

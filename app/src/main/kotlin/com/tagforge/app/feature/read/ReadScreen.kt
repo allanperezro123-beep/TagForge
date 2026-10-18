@@ -35,7 +35,12 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import com.tagforge.app.R
+import com.tagforge.app.ui.a11y.Announcer
+import com.tagforge.app.ui.a11y.text
 import com.tagforge.app.infrastructure.nfc.NfcAvailability
 import com.tagforge.app.ui.components.NfcStatusBanner
 import com.tagforge.app.ui.components.RadarPulse
@@ -74,6 +79,14 @@ fun ReadScreen(
                 ReadUiState.Waiting -> Listening(fast = false)
                 is ReadUiState.Reading -> Listening(fast = true)
                 is ReadUiState.Success -> Column(Modifier.fillMaxSize()) {
+                    // Visible and spoken: the polite live region makes TalkBack say it as soon as the tag is read.
+                    Text(
+                        Announcer.tagRead(state.scan.readout.info, state.scan.readout.parsed.size).text(),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .semantics { liveRegion = LiveRegionMode.Polite },
+                    )
                     Text(
                         stringResource(R.string.scan_next_hint),
                         style = MaterialTheme.typography.bodySmall,

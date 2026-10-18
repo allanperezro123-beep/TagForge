@@ -871,6 +871,16 @@
     <string name="import_problem_invalid_value">a value is missing or out of range</string>
     <string name="import_problem_too_long">a value is too long</string>
 
+    <!-- Accessibility announcements -->
+    <plurals name="announce_tag_read">
+        <item quantity="one">Tag read: %1$s, %2$d record</item>
+        <item quantity="other">Tag read: %1$s, %2$d records</item>
+    </plurals>
+    <plurals name="announce_tag_read_unknown">
+        <item quantity="one">Tag read: %1$d record</item>
+        <item quantity="other">Tag read: %1$d records</item>
+    </plurals>
+
     <!-- Shortcuts and widget -->
     <string name="shortcut_scan_short">Scan</string>
     <string name="shortcut_scan_long">Scan a tag</string>
