@@ -51,6 +51,8 @@ class WriteViewModel(
     private val appPackage: String,
     availability: Flow<NfcAvailability>,
     initialTemplateId: Long? = null,
+    /** Records decoded from a QR code; opens the wizard at the review step so they can be edited before writing. */
+    initialRecords: List<RecordSpec> = emptyList(),
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(derive(WriteUiState(analysis = WriteDraft().analyse(0, appPackage))))
@@ -71,6 +73,7 @@ class WriteViewModel(
             val remembered = settings.settings.first().lastTargetModel
             mutate { if (it.target is WriteTarget.Chip) it.copy(target = WriteTarget.Chip(remembered)) else it }
         }
+        if (initialRecords.isNotEmpty()) mutate { it.copy(records = initialRecords, step = WriteStep.REVIEW) }
         if (initialTemplateId != null) {
             viewModelScope.launch {
                 val template = templates.get(initialTemplateId) ?: return@launch

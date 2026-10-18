@@ -79,6 +79,7 @@ class WriteViewModelTest {
     private fun TestScope.viewModel(
         coordinator: ScanCoordinator = coordinator(),
         templateId: Long? = null,
+        initialRecords: List<RecordSpec> = emptyList(),
     ) = WriteViewModel(
         coordinator = coordinator,
         settings = settings,
@@ -88,6 +89,7 @@ class WriteViewModelTest {
         appPackage = "com.tagforge.app",
         availability = availability,
         initialTemplateId = templateId,
+        initialRecords = initialRecords,
     )
 
     private fun WriteViewModel.addRecord(spec: RecordSpec) {
@@ -392,6 +394,32 @@ class WriteViewModelTest {
 
         assertEquals(records, vm.uiState.value.records)
         assertEquals(WriteStep.REVIEW, vm.uiState.value.step)
+    }
+
+    // ---- QR hand-off (PR-02) ------------------------------------------------------------------------------------------
+
+    @Test
+    fun startingFromAQrPrefillsTheDecodedRecordAtTheReview() = runTest {
+        val wifi = RecordSpec.Wifi("Home", "pass1234")
+        val vm = viewModel(initialRecords = listOf(wifi))
+        runCurrent()
+
+        assertEquals(listOf<RecordSpec>(wifi), vm.uiState.value.records)
+        assertEquals(WriteStep.REVIEW, vm.uiState.value.step)
+    }
+
+    @Test
+    fun aSingleValidRecordOffersAQrPayloadButSeveralOrInvalidOnesDoNot() = runTest {
+        val vm = viewModel()
+        vm.addRecord(uri)
+        assertEquals("https://example.com", vm.uiState.value.qrPayload)
+
+        vm.addRecord(RecordSpec.Text("second"))
+        assertEquals(null, vm.uiState.value.qrPayload)
+
+        val invalid = viewModel(initialRecords = listOf(RecordSpec.Uri("")))
+        runCurrent()
+        assertEquals(null, invalid.uiState.value.qrPayload)
     }
 
     @Test

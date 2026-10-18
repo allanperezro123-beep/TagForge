@@ -871,6 +871,28 @@
     <string name="import_problem_invalid_value">a value is missing or out of range</string>
     <string name="import_problem_too_long">a value is too long</string>
 
+    <!-- QR codes -->
+    <string name="more_qr">QR codes</string>
+    <string name="more_qr_summary">Show a tag as a QR code or read one from a picture</string>
+    <string name="write_show_qr">Show as QR code</string>
+    <string name="qr_title">QR codes</string>
+    <string name="qr_generated_title">QR code for your tag</string>
+    <string name="qr_code_description">QR code with the content of your tag</string>
+    <string name="qr_privacy">Anyone who scans this code can read what is in it, including a Wi-Fi password.</string>
+    <string name="qr_generation_failed">This content is too long to fit in a QR code.</string>
+    <string name="qr_read_title">Read a QR code</string>
+    <string name="qr_read_intro">Choose a picture that contains a QR code, or paste its text. The app never uses the camera.</string>
+    <string name="qr_choose_image">Choose a picture</string>
+    <string name="qr_paste_label">QR code text</string>
+    <string name="qr_paste_read">Read pasted text</string>
+    <string name="qr_reading">Reading the picture…</string>
+    <string name="qr_not_found">No QR code was found in that picture. Try a sharper, closer picture or paste the text instead.</string>
+    <string name="qr_unreadable">That picture could not be opened.</string>
+    <string name="qr_result_title">QR code found</string>
+    <string name="qr_result_kind">Type: %1$s</string>
+    <string name="qr_result_wifi">Wi-Fi network: %1$s</string>
+    <string name="qr_use">Use in Write</string>
+
     <!-- Batch write -->
     <string name="more_batch">Batch write</string>
     <string name="more_batch_summary">Write one template to many tags with a counter</string>

@@ -10,9 +10,13 @@ sealed interface Route {
     @Serializable
     data object Read : Route
 
-    /** [templateId] opens the wizard prefilled from a saved template. */
+    /** [templateId] opens the wizard prefilled from a saved template; [qrText] prefills it from a decoded QR code. */
     @Serializable
-    data class Write(val templateId: Long? = null) : Route
+    data class Write(val templateId: Long? = null, val qrText: String? = null) : Route
+
+    /** A QR code for the wizard message ([payload]) and a way to read one from a picture or pasted text. */
+    @Serializable
+    data class Qr(val payload: String? = null) : Route
 
     /** Safe tools hub: erase, format, memory dump, clone and technology info. */
     @Serializable

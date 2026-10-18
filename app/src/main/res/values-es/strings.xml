@@ -861,6 +861,28 @@
     <string name="import_problem_invalid_value">falta un valor o está fuera de rango</string>
     <string name="import_problem_too_long">un valor es demasiado largo</string>
 
+    <!-- QR codes -->
+    <string name="more_qr">Códigos QR</string>
+    <string name="more_qr_summary">Muestra una etiqueta como código QR o lee uno desde una imagen</string>
+    <string name="write_show_qr">Mostrar como código QR</string>
+    <string name="qr_title">Códigos QR</string>
+    <string name="qr_generated_title">Código QR de tu etiqueta</string>
+    <string name="qr_code_description">Código QR con el contenido de tu etiqueta</string>
+    <string name="qr_privacy">Cualquiera que escanee este código puede leer lo que contiene, incluida la contraseña de una red Wi-Fi.</string>
+    <string name="qr_generation_failed">Este contenido es demasiado largo para un código QR.</string>
+    <string name="qr_read_title">Leer un código QR</string>
+    <string name="qr_read_intro">Elige una imagen que contenga un código QR o pega su texto. La app nunca usa la cámara.</string>
+    <string name="qr_choose_image">Elegir una imagen</string>
+    <string name="qr_paste_label">Texto del código QR</string>
+    <string name="qr_paste_read">Leer el texto pegado</string>
+    <string name="qr_reading">Leyendo la imagen…</string>
+    <string name="qr_not_found">No se encontró ningún código QR en esa imagen. Prueba con una imagen más nítida y cercana o pega el texto.</string>
+    <string name="qr_unreadable">No se pudo abrir esa imagen.</string>
+    <string name="qr_result_title">Código QR encontrado</string>
+    <string name="qr_result_kind">Tipo: %1$s</string>
+    <string name="qr_result_wifi">Red Wi-Fi: %1$s</string>
+    <string name="qr_use">Usar en Escribir</string>
+
     <!-- Batch write -->
     <string name="more_batch">Escritura en lote</string>
     <string name="more_batch_summary">Escribe una plantilla en muchas etiquetas con un contador</string>

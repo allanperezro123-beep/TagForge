@@ -25,6 +25,7 @@ data class WriteActions(
     val onTargetSelected: (WriteTarget) -> Unit,
     val onWrite: () -> Unit,
     val onSaveTemplate: () -> Unit,
+    val onShowQr: (String) -> Unit,
     val onOverwriteDecision: (Boolean) -> Unit,
     val onRetry: () -> Unit,
     val onWriteAnother: () -> Unit,

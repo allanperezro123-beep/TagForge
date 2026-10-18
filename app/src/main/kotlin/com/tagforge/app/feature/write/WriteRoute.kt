@@ -30,6 +30,7 @@ import com.tagforge.app.R
 import com.tagforge.app.di.rememberAppContainer
 import com.tagforge.app.di.tagForgeViewModel
 import com.tagforge.app.ui.haptics.rememberHaptics
+import com.tagforge.domain.exchange.QrPayloadMapper
 import com.tagforge.domain.settings.AppSettings
 import kotlinx.coroutines.launch
 
@@ -38,7 +39,12 @@ import kotlinx.coroutines.launch
  * lambdas to [WizardScreen]. [templateId] opens the wizard prefilled from a saved template.
  */
 @Composable
-fun WriteRoute(templateId: Long? = null, onBack: (() -> Unit)? = null) {
+fun WriteRoute(
+    templateId: Long? = null,
+    qrText: String? = null,
+    onShowQr: (String) -> Unit = {},
+    onBack: (() -> Unit)? = null,
+) {
     val container = rememberAppContainer()
     val viewModel = tagForgeViewModel {
         WriteViewModel(
@@ -50,6 +56,7 @@ fun WriteRoute(templateId: Long? = null, onBack: (() -> Unit)? = null) {
             appPackage = BuildConfig.APPLICATION_ID,
             availability = it.nfcAvailabilityMonitor.availability,
             initialTemplateId = templateId,
+            initialRecords = qrText?.let { text -> listOf(QrPayloadMapper.fromQr(text)) }.orEmpty(),
         )
     }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -104,6 +111,7 @@ fun WriteRoute(templateId: Long? = null, onBack: (() -> Unit)? = null) {
         onTargetSelected = viewModel::onTargetSelected,
         onWrite = viewModel::onWrite,
         onSaveTemplate = { showTemplateDialog = true },
+        onShowQr = onShowQr,
         onOverwriteDecision = viewModel::onOverwriteDecision,
         onRetry = viewModel::onRetry,
         onWriteAnother = viewModel::onWriteAnother,

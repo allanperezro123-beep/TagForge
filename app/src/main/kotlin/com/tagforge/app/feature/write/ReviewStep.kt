@@ -17,6 +17,7 @@ import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.QrCode2
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -90,6 +91,13 @@ fun ReviewStep(
         MessageBytes(state.messageHex)
 
         WriteButton(state, actions.onWrite)
+
+        state.qrPayload?.let { payload ->
+            OutlinedButton(onClick = { actions.onShowQr(payload) }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Outlined.QrCode2, contentDescription = null)
+                Text(stringResource(R.string.write_show_qr), modifier = Modifier.padding(start = 8.dp))
+            }
+        }
 
         TextButton(
             onClick = actions.onSaveTemplate,

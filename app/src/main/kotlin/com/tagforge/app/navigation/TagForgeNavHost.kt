@@ -21,6 +21,7 @@ import com.tagforge.app.feature.more.AboutScreen
 import com.tagforge.app.feature.more.MoreScreen
 import com.tagforge.app.feature.productivity.BatchWriteRoute
 import com.tagforge.app.feature.productivity.ImportExportRoute
+import com.tagforge.app.feature.productivity.QrRoute
 import com.tagforge.app.feature.read.ReadRoute
 import com.tagforge.app.feature.settings.PermissionCenterRoute
 import com.tagforge.app.feature.settings.SettingsRoute
@@ -68,7 +69,21 @@ fun TagForgeNavHost(
 ) {
     NavHost(navController = navController, startDestination = Route.Read, modifier = modifier) {
         composable<Route.Read> { ReadRoute() }
-        composable<Route.Write> { entry -> WriteRoute(templateId = entry.toRoute<Route.Write>().templateId) }
+        composable<Route.Write> { entry ->
+            val route = entry.toRoute<Route.Write>()
+            WriteRoute(
+                templateId = route.templateId,
+                qrText = route.qrText,
+                onShowQr = { navController.navigate(Route.Qr(it)) },
+            )
+        }
+        composable<Route.Qr> { entry ->
+            QrRoute(
+                payload = entry.toRoute<Route.Qr>().payload,
+                onBack = { navController.popBackStack() },
+                onOpenWrite = { navController.navigate(Route.Write(qrText = it)) },
+            )
+        }
         composable<Route.Tasks> {
             TasksRoute(
                 onNew = { navController.navigate(Route.TaskBuilder()) },
@@ -94,6 +109,7 @@ fun TagForgeNavHost(
                 onOpenTemplates = { navController.navigate(Route.Templates) },
                 onOpenImportExport = { navController.navigate(Route.ImportExport) },
                 onOpenBatch = { navController.navigate(Route.Batch) },
+                onOpenQr = { navController.navigate(Route.Qr()) },
                 onOpenPermissions = { navController.navigate(Route.PermissionCenter) },
                 onOpenSettings = { navController.navigate(Route.Settings) },
                 onOpenAbout = { navController.navigate(Route.About) },

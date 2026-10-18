@@ -1,6 +1,7 @@
 package com.tagforge.app.feature.write
 
 import com.tagforge.app.infrastructure.nfc.NfcAvailability
+import com.tagforge.domain.exchange.QrPayloadMapper
 import com.tagforge.domain.ndef.NdefMessage
 import com.tagforge.domain.ndef.ParsedRecord
 import com.tagforge.domain.ndef.spec.FieldError
@@ -86,4 +87,7 @@ data class WriteUiState(
     val canWrite: Boolean = false,
 ) {
     val message: NdefMessage? get() = analysis.message
+
+    /** The text of a QR code for this message, only when it is one valid record a QR can carry. */
+    val qrPayload: String? get() = if (analysis.invalid.isEmpty()) QrPayloadMapper.forMessage(records) else null
 }

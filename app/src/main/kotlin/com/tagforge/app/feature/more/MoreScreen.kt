@@ -10,6 +10,7 @@ import androidx.compose.material.icons.outlined.Bookmarks
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Layers
+import androidx.compose.material.icons.outlined.QrCode2
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SwapVert
@@ -32,6 +33,7 @@ fun MoreScreen(
     onOpenTemplates: () -> Unit,
     onOpenImportExport: () -> Unit,
     onOpenBatch: () -> Unit,
+    onOpenQr: () -> Unit,
     onOpenPermissions: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAbout: () -> Unit,
@@ -59,6 +61,12 @@ fun MoreScreen(
                 title = stringResource(R.string.more_batch),
                 summary = stringResource(R.string.more_batch_summary),
                 onClick = onOpenBatch,
+            )
+            MoreEntry(
+                icon = Icons.Outlined.QrCode2,
+                title = stringResource(R.string.more_qr),
+                summary = stringResource(R.string.more_qr_summary),
+                onClick = onOpenQr,
             )
             MoreEntry(
                 icon = Icons.Outlined.SwapVert,
