@@ -88,26 +88,18 @@ android {
 
 // RB-02: packaging a release without the keystore must fail loudly, never produce an unsigned or debug-signed APK.
 tasks.matching { it.name == "assembleRelease" || it.name == "packageRelease" || it.name == "bundleRelease" }.configureEach {
+    // Plain values, not script properties: the configuration cache cannot serialize references to the script object.
+    val signingReady = hasReleaseSigning
+    val keystorePath = keystorePropertiesFile.path
     doFirst {
-        if (!hasReleaseSigning) {
+        if (!signingReady) {
             throw GradleException(
-                "Cannot build a release: ${keystorePropertiesFile.path} is missing or incomplete. " +
+                "Cannot build a release: $keystorePath is missing or incomplete (keystore.properties). " +
                     "Copy keystore.properties.example to keystore.properties, fill in storeFile, storePassword, keyAlias and keyPassword, " +
                     "and create the keystore as described in dist/RELEASE.md. The debug key is never used for a release.",
             )
         }
     }
-}
-
-// RB-03: keep the signed APK and its R8 mapping together under apks/ (git-ignored).
-tasks.register<Copy>("archiveRelease") {
-    group = "distribution"
-    description = "Copies the signed release APK and its R8 mapping to apks/ (needs keystore.properties)."
-    dependsOn("assembleRelease")
-    val name = "tagforge-p6-1.0.0"
-    from(layout.buildDirectory.file("outputs/apk/release/app-release.apk")) { rename { "$name.apk" } }
-    from(layout.buildDirectory.file("outputs/mapping/release/mapping.txt")) { rename { "$name-mapping.txt" } }
-    into(rootProject.layout.projectDirectory.dir("apks"))
 }
 
 // RB-04: the unit tests audit the MERGED release manifest, not the source one.
@@ -120,6 +112,19 @@ class ReleaseManifestArgument(
 androidComponents {
     onVariants(selector().withBuildType("release")) { variant ->
         val merged = variant.artifacts.get(SingleArtifact.MERGED_MANIFEST)
+        // RB-03: the signed APK and its R8 mapping travel together under apks/ (git-ignored). The APK artifact comes from
+        // the package task, which refuses to run without keystore.properties.
+        val archiveName = "tagforge-p6-1.0.0"
+        tasks.register<Copy>("archiveRelease") {
+            group = "distribution"
+            description = "Copies the signed release APK and its R8 mapping to apks/ (needs keystore.properties)."
+            from(variant.artifacts.get(SingleArtifact.APK)) {
+                include("*.apk")
+                rename { "$archiveName.apk" }
+            }
+            from(variant.artifacts.get(SingleArtifact.OBFUSCATION_MAPPING_FILE)) { rename { "$archiveName-mapping.txt" } }
+            into(rootProject.layout.projectDirectory.dir("apks"))
+        }
         tasks.withType<Test>().configureEach {
             jvmArgumentProviders.add(ReleaseManifestArgument(merged))
         }
