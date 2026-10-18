@@ -25,8 +25,35 @@ class FakeNtag21x(
 
     private val pages: Array<ByteArray> = blankPages(model, uid)
 
-    /** Set by tests that simulate a successful PWD_AUTH (the command itself arrives in Phase 6). */
+    /** True after a successful PWD_AUTH (tests may also set it directly); cleared by [powerCycle]. */
     var authenticated: Boolean = false
+
+    /** Negative PWD_AUTH attempts counted since the last success (only counted while AUTHLIM > 0). */
+    var authFailures: Int = 0
+        private set
+
+    /** What READ_SIG returns; the real value is an ECC signature of the UID (32 bytes). */
+    var signature: Bytes = Bytes.copyOf(ByteArray(NtagCommands.SIGNATURE_SIZE) { (0xA0 + it).toByte() })
+
+    /** What READ_CNT returns (3 bytes). */
+    var nfcCounter: Bytes = Bytes.of(0x00, 0x00, 0x00)
+
+    /** CFGLCK only takes effect after a power cycle (datasheet 8.5.7): this latch is what actually blocks CFG writes. */
+    private var cfgLockLatched: Boolean = (pages[model.cfg1][0].toInt() and CFGLCK_BIT) != 0
+
+    private val log = mutableListOf<Bytes>()
+
+    /** Every command that reached the tag, in order, including refused ones. */
+    val commandLog: List<Bytes> get() = log.toList()
+
+    /** Only the WRITE (A2) commands of [commandLog]. */
+    val writeCommands: List<Bytes> get() = log.filter { it[0] == NtagCommands.WRITE }
+
+    /** The field drops and returns: authentication is forgotten and a pending CFGLCK becomes active. */
+    fun powerCycle() {
+        authenticated = false
+        cfgLockLatched = (pages[model.cfg1][0].toInt() and CFGLCK_BIT) != 0
+    }
 
     /** Simulates tags that NAK GET_VERSION (e.g. Ultralight look-alikes). */
     var getVersionNaks: Boolean = false
@@ -86,16 +113,50 @@ class FakeNtag21x(
             return Outcome.Err(it)
         }
         if (command.isEmpty()) return Outcome.Ok(NAK_INVALID_ARGUMENT)
+        log += command
         return Outcome.Ok(
             when (command[0]) {
                 NtagCommands.GET_VERSION -> getVersion()
                 NtagCommands.READ -> read(command)
                 NtagCommands.FAST_READ -> fastRead(command)
                 NtagCommands.WRITE -> write(command)
+                NtagCommands.PWD_AUTH -> pwdAuth(command)
+                NtagCommands.READ_SIG -> readSig(command)
+                NtagCommands.READ_CNT -> readCnt(command)
                 else -> NAK_INVALID_ARGUMENT
             },
         )
     }
+
+    // ---- password, signature, counter (datasheet 8.8, 10.5-10.7) --------------------------------------------
+
+    private val authLimit: Int get() = pages[model.cfg1][0].toInt() and AUTHLIM_MASK
+
+    /** PWD_AUTH: PACK on success; NAK 0h on a wrong password; NAK 4h forever once AUTHLIM negative attempts were counted. */
+    private fun pwdAuth(command: Bytes): Bytes {
+        if (command.size != 1 + NtagCommands.PASSWORD_SIZE) return NAK_INVALID_ARGUMENT
+        val limit = authLimit
+        if (limit > 0 && authFailures >= limit) return NAK_COUNTER_OVERFLOW
+        if (command.slice(1) != Bytes.copyOf(pages[model.pwd])) {
+            if (limit > 0) authFailures++
+            return NAK_INVALID_ARGUMENT
+        }
+        authFailures = 0
+        authenticated = true
+        return Bytes.copyOf(pages[model.pack]).slice(0, NtagCommands.PACK_SIZE)
+    }
+
+    private fun readSig(command: Bytes): Bytes = if (command == NtagCommands.readSig()) signature else NAK_INVALID_ARGUMENT
+
+    private fun readCnt(command: Bytes): Bytes {
+        if (command != NtagCommands.readCnt()) return NAK_INVALID_ARGUMENT
+        val passwordProtected = (pages[model.cfg1][0].toInt() and NFC_CNT_PWD_PROT_BIT) != 0
+        return if (passwordProtected && !authenticated) NAK_INVALID_ARGUMENT else nfcCounter
+    }
+
+    /** PWD and PACK are write-only: reads answer 00 bytes whatever is stored (datasheet 8.8.1). */
+    private fun readable(page: Int): Bytes =
+        if (page == model.pwd || page == model.pack) Bytes.of(0, 0, 0, 0) else page(page)
 
     // ---- protection state ---------------------------------------------------------------------
 
@@ -124,7 +185,7 @@ class FakeNtag21x(
         val out = ArrayList<Bytes>(4)
         var p = start
         repeat(4) {
-            out += page(p)
+            out += readable(p)
             p++
             if (p >= wrapAt) p = 0
         }
@@ -138,7 +199,7 @@ class FakeNtag21x(
         if (start > end || end > model.lastPage) return NAK_INVALID_ARGUMENT
         val limit = readLimit()
         if (limit != null && end >= limit) return NAK_INVALID_ARGUMENT
-        return Bytes.concat((start..end).map(::page))
+        return Bytes.concat((start..end).map(::readable))
     }
 
     private fun write(command: Bytes): Bytes {
@@ -147,6 +208,8 @@ class FakeNtag21x(
         if (target < FIRST_WRITABLE_PAGE || target > model.lastPage) return NAK_INVALID_ARGUMENT
         val limit = writeLimit()
         if (limit != null && target >= limit) return NAK_INVALID_ARGUMENT
+
+        if (cfgLockLatched && (target == model.cfg0 || target == model.cfg1)) return NAK_INVALID_ARGUMENT
 
         val data = command.slice(2).toByteArray()
         when {
@@ -226,6 +289,10 @@ class FakeNtag21x(
 
         private val ACK = Bytes.of(0x0A)
         private val NAK_INVALID_ARGUMENT = Bytes.of(0x00)
+        private val NAK_COUNTER_OVERFLOW = Bytes.of(0x04)
+        private const val AUTHLIM_MASK = 0x07
+        private const val CFGLCK_BIT = 0x40
+        private const val NFC_CNT_PWD_PROT_BIT = 0x08
         private const val FIRST_WRITABLE_PAGE = 2
         private const val STATIC_LOCK_PAGE = 2
         private const val CC_PAGE = 3
