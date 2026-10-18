@@ -37,7 +37,11 @@ data class SecurityForm(
     val lockConfig: Boolean = false,
     val authLimit: Int = 0,
     val lockScope: LockScope = LockScope.NDEF_READ_ONLY,
-)
+) {
+    /** The typed secrets never reach a log or a crash report (S7). */
+    override fun toString(): String =
+        "SecurityForm(auth0=$auth0, protectReads=$protectReads, storedAck=$storedAck, lockConfig=$lockConfig, authLimit=$authLimit, lockScope=$lockScope, secrets=****)"
+}
 
 sealed interface SecuritySheet {
     data class Waiting(val stage: SecurityStage) : SecuritySheet

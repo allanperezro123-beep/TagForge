@@ -602,4 +602,14 @@ class SecurityViewModelTest {
 
         assertFalse(vm.uiState.value.passwordFieldEnabled)
     }
+
+    @Test
+    fun theFormAndTheStateThatHoldsItNeverPrintThePasswordOrThePack() = runTest {
+        val form = SecurityForm(passwordHex = "12345678", packHex = "ABCD", currentPasswordHex = "9ABCDEF0")
+        val state = SecurityUiState(form = form)
+
+        for (text in listOf(form.toString(), state.toString())) {
+            assertFalse("12345678" in text || "ABCD" in text.uppercase() || "9ABCDEF0" in text.uppercase(), text)
+        }
+    }
 }

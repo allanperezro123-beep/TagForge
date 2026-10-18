@@ -38,17 +38,25 @@ sealed interface PlanStep {
     /** [old] is null when the chip never reveals it (PWD, PACK) or the page was not read. */
     data class WritePage(val page: Int, val old: Bytes?, val new: Bytes) : PlanStep {
         val command: Bytes get() = NtagCommands.write(page, new)
+
+        /** The new content of a PWD or PACK page is a secret: it never reaches a log or a crash report (S7). */
+        override fun toString(): String = "WritePage(page=$page, old=${if (old == null) "null" else "****"}, new=****)"
     }
 
     /** PWD_AUTH with [password]; used first by plans that need an authenticated session. */
     data class Authenticate(val password: Bytes) : PlanStep {
         val command: Bytes get() = NtagCommands.pwdAuth(password)
+
+        override fun toString(): String = "Authenticate(password=****)"
     }
 
     data object MakeReadOnly : PlanStep
 
     /** A hand-written frame that is not a plain page write (the raw console's `A0 <page>`). */
-    data class Raw(val frame: Bytes) : PlanStep
+    data class Raw(val frame: Bytes) : PlanStep {
+        /** A raw frame may be a PWD_AUTH or a write to the PWD page. */
+        override fun toString(): String = "Raw(frame=****)"
+    }
 }
 
 /** One row of the dry-run preview. [oldHex] is null when the chip does not reveal the old content. */

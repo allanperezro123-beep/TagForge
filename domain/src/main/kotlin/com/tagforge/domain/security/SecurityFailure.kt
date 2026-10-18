@@ -6,13 +6,17 @@ import com.tagforge.domain.tag.TagError
 /** What to prove by reading the tag after a plan ran. Page contents of PWD and PACK are never read back (the chip hides them). */
 sealed interface Check {
     /** The page now holds exactly [expected]. */
-    data class PageEquals(val page: Int, val expected: Bytes) : Check
+    data class PageEquals(val page: Int, val expected: Bytes) : Check {
+        override fun toString(): String = "PageEquals(page=$page, expected=****)"
+    }
 
     /** Every bit of [bits] is set in the page (lock bits are OR-ed, so equality would be wrong). */
     data class PageHasBits(val page: Int, val bits: Bytes) : Check
 
     /** PWD_AUTH with [password] succeeds and answers [pack]. Proves the password, since PWD itself reads as 00. */
-    data class AuthWorks(val password: Bytes, val pack: Bytes) : Check
+    data class AuthWorks(val password: Bytes, val pack: Bytes) : Check {
+        override fun toString(): String = "AuthWorks(password=****, pack=****)"
+    }
 
     /** The platform reports the NDEF area as no longer writable. */
     data object NdefReadOnly : Check
