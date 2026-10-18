@@ -86,6 +86,18 @@
             </intent-filter>
         </activity>
 
+        <!--
+            The task runner as started by this app (W5): same screen, but NOT exported, so the saved-task id and raw NDEF
+            bytes it accepts can only come from our own Read tab and Tasks list. The exported entry above ignores them.
+        -->
+        <activity
+            android:name=".feature.taskrunner.InternalTaskRunnerActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/Theme.TagForge.Translucent" />
+
         <!-- Quick actions widget (PR-03): Scan and Write buttons only, no tag contents. -->
         <receiver
             android:name=".feature.productivity.widget.QuickScanWidgetProvider"

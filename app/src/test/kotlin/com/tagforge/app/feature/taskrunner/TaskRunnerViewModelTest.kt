@@ -63,7 +63,7 @@ class TaskRunnerViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     private fun viewModel(taskExecutor: TaskActionExecutor = executor) =
-        TaskRunnerViewModel(taskExecutor, repository, clock, isForeground = { foreground })
+        TaskRunnerViewModel(taskExecutor, repository, clock, isForeground = { foreground }, runGuardMillis = 0)
 
     private fun messageBytes(vararg actions: TaskAction, name: String? = null): Bytes {
         val message = (TaskMessageBuilder.build(TaskPayload(name, actions.toList()), "com.tagforge.app") as Outcome.Ok).value
@@ -464,5 +464,51 @@ class TaskRunnerViewModelTest {
             gate.await()
             return ActionOutcome.Done()
         }
+    }
+
+    // ---- W5: the Run button stays disabled just after the sheet content changed --------------------------------------------
+
+    private fun productionViewModel() = TaskRunnerViewModel(executor, repository, clock, isForeground = { foreground })
+
+    @Test
+    fun runIsIgnoredUntilTheSheetHasBeenOnScreenFor600Ms() = runTest {
+        val vm = productionViewModel()
+        vm.onNdefBytes(messageBytes(ringer))
+
+        assertFalse(vm.confirming().canRun, "the button is disabled right after the sheet appears")
+        vm.onRun()
+        assertEquals(0, executor.executeCalls)
+        advanceTimeBy(599)
+        runCurrent()
+        assertFalse(vm.confirming().canRun)
+        vm.onRun()
+        assertEquals(0, executor.executeCalls)
+
+        advanceTimeBy(1)
+        runCurrent()
+        assertTrue(vm.confirming().canRun)
+        vm.onRun()
+        assertEquals(listOf<TaskAction>(ringer), executor.executed)
+    }
+
+    @Test
+    fun aTaskSwappedInByANewIntentRestartsTheWaitSoTheOldSheetCannotBePressed() = runTest {
+        val vm = productionViewModel()
+        vm.onNdefBytes(messageBytes(ringer))
+        advanceTimeBy(500)
+        runCurrent()
+
+        vm.onNdefBytes(messageBytes(url))
+        advanceTimeBy(500)
+        runCurrent()
+
+        assertFalse(vm.confirming().canRun, "1000 ms after the first sheet but only 500 ms after the swap")
+        vm.onRun()
+        assertEquals(0, executor.executeCalls)
+        advanceTimeBy(100)
+        runCurrent()
+        assertTrue(vm.confirming().canRun)
+        vm.onRun()
+        assertEquals(listOf<TaskAction>(url), executor.executed)
     }
 }

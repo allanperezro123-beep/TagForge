@@ -47,4 +47,18 @@ class ManifestTaskRunnerTest {
         assertEquals(1, Regex("android.nfc.action.NDEF_DISCOVERED").findAll(manifest.replace(Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL), "")).count())
         assertFalse("android.nfc.action.TECH_DISCOVERED" in manifest, "everything else is handled by reader mode in the foreground")
     }
+
+    /** The in-app entry that is allowed to carry the saved-task id and raw NDEF bytes (W5). */
+    private val internalRunner: String = manifest
+        .replace(Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL), "")
+        .substringAfter("""android:name=".feature.taskrunner.InternalTaskRunnerActivity"""")
+        .substringBefore("/>")
+
+    @Test
+    fun theEntryThatTrustsInternalExtrasIsNotExportedAndHasNoIntentFilter() {
+        assertTrue("""android:exported="false"""" in internalRunner)
+        assertFalse("intent-filter" in internalRunner)
+        assertTrue("""android:launchMode="singleTop"""" in internalRunner)
+        assertFalse("showWhenLocked" in internalRunner)
+    }
 }

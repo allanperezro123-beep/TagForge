@@ -28,9 +28,13 @@ import java.util.concurrent.atomic.AtomicBoolean
  * the confirmation sheet over whatever was underneath. It never shows over the lock screen and never auto-runs.
  *
  * Other entries: the Read tab hands it the bytes of a task it just read ([EXTRA_NDEF_BYTES]) and the task list asks
- * to run a saved task ([EXTRA_TASK_ID]); both end up on the same confirmation sheet.
+ * to run a saved task ([EXTRA_TASK_ID]); both end up on the same confirmation sheet. They go through the NON-exported
+ * [InternalTaskRunnerActivity]: this exported entry ignores those extras, because any app can send them (W5).
  */
-class TaskRunnerActivity : ComponentActivity() {
+open class TaskRunnerActivity : ComponentActivity() {
+
+    /** True only for [InternalTaskRunnerActivity], which no other app can start (W5). */
+    protected open val trustedEntry: Boolean = false
 
     /** True between onStart and onStop: HttpRequest only runs while the runner is on screen (TK-08). */
     private val onScreen = AtomicBoolean(false)
@@ -87,16 +91,20 @@ class TaskRunnerActivity : ComponentActivity() {
     }
 
     private fun handle(intent: Intent) {
-        val taskId = intent.getLongExtra(EXTRA_TASK_ID, NO_TASK)
-        if (taskId != NO_TASK) {
-            viewModel.onTaskId(taskId)
-            return
+        val systemTag = IntentCompat.getParcelableArrayExtra(intent, NfcAdapter.EXTRA_NDEF_MESSAGES, NdefMessage::class.java)
+            ?.firstOrNull()
+            ?.let { (it as? NdefMessage)?.toByteArray() }
+        val request = TaskRunnerEntry.resolve(
+            trusted = trustedEntry,
+            action = intent.action,
+            taskId = intent.getLongExtra(EXTRA_TASK_ID, NO_TASK),
+            extraBytes = intent.getByteArrayExtra(EXTRA_NDEF_BYTES),
+            systemTagBytes = systemTag,
+        )
+        when (request) {
+            is EntryRequest.SavedTask -> viewModel.onTaskId(request.id)
+            is EntryRequest.Ndef -> viewModel.onNdefBytes(request.bytes?.let(Bytes::copyOf) ?: Bytes.EMPTY)
         }
-        val bytes = intent.getByteArrayExtra(EXTRA_NDEF_BYTES)
-            ?: IntentCompat.getParcelableArrayExtra(intent, NfcAdapter.EXTRA_NDEF_MESSAGES, NdefMessage::class.java)
-                ?.firstOrNull()
-                ?.let { (it as NdefMessage).toByteArray() }
-        viewModel.onNdefBytes(bytes?.let(Bytes::copyOf) ?: Bytes.EMPTY)
     }
 
     private fun openPermissionCenter() {
@@ -110,14 +118,14 @@ class TaskRunnerActivity : ComponentActivity() {
     companion object {
         const val EXTRA_TASK_ID = "com.tagforge.app.extra.TASK_ID"
         const val EXTRA_NDEF_BYTES = "com.tagforge.app.extra.NDEF_BYTES"
-        private const val NO_TASK = -1L
+        private const val NO_TASK = TaskRunnerEntry.NO_TASK
 
         /** Run a saved task, still behind the confirmation sheet. */
         fun forSavedTask(context: Context, taskId: Long): Intent =
-            Intent(context, TaskRunnerActivity::class.java).putExtra(EXTRA_TASK_ID, taskId)
+            Intent(context, InternalTaskRunnerActivity::class.java).putExtra(EXTRA_TASK_ID, taskId)
 
         /** Run a task the Read tab just read from a tag: [ndef] is the raw NDEF message. */
         fun forTagMessage(context: Context, ndef: ByteArray): Intent =
-            Intent(context, TaskRunnerActivity::class.java).putExtra(EXTRA_NDEF_BYTES, ndef)
+            Intent(context, InternalTaskRunnerActivity::class.java).putExtra(EXTRA_NDEF_BYTES, ndef)
     }
 }

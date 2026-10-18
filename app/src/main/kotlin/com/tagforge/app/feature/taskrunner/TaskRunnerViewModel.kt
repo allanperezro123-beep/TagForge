@@ -51,8 +51,9 @@ sealed interface TaskRunnerUiState {
      * The confirmation sheet. [armed] is true once the user pressed Run on a task with an unencrypted HTTP request:
      * the second press is the one that runs it (TK-08).
      */
-    data class Confirming(val plan: TaskPlan, val armed: Boolean = false) : TaskRunnerUiState {
-        val canRun: Boolean get() = plan.items.any { !it.isBlocked }
+    data class Confirming(val plan: TaskPlan, val armed: Boolean = false, val settled: Boolean = true) : TaskRunnerUiState {
+        /** [settled] turns true a moment after the sheet appeared, so a sheet swapped in under the finger cannot be pressed. */
+        val canRun: Boolean get() = settled && plan.items.any { !it.isBlocked }
         val anyNeedsGrant: Boolean get() = plan.items.any { it.capability is Capability.NeedsGrant }
     }
 
@@ -80,6 +81,7 @@ class TaskRunnerViewModel(
     private val clock: Clock,
     private val isForeground: () -> Boolean,
     private val autoCloseMillis: Long = AUTO_CLOSE_MILLIS,
+    private val runGuardMillis: Long = RUN_GUARD_MILLIS,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<TaskRunnerUiState>(TaskRunnerUiState.Idle)
@@ -90,6 +92,7 @@ class TaskRunnerViewModel(
 
     private var runJob: Job? = null
     private var closeJob: Job? = null
+    private var guardJob: Job? = null
     private var savedTaskId: Long? = null
 
     /** A scanned or re-scanned tag (cold start or `onNewIntent`). Replaces whatever is pending, but never a run in progress. */
@@ -159,11 +162,19 @@ class TaskRunnerViewModel(
     }
 
     private fun confirm(payload: TaskPayload) {
-        show(TaskRunnerUiState.Confirming(TaskPlanner.plan(payload, executor::capability)))
+        val locked = runGuardMillis > 0
+        show(TaskRunnerUiState.Confirming(TaskPlanner.plan(payload, executor::capability), settled = !locked))
+        if (locked) {
+            guardJob = viewModelScope.launch {
+                delay(runGuardMillis)
+                _uiState.update { if (it is TaskRunnerUiState.Confirming) it.copy(settled = true) else it }
+            }
+        }
     }
 
     private fun show(state: TaskRunnerUiState) {
         closeJob?.cancel()
+        guardJob?.cancel()
         _uiState.value = state
     }
 
@@ -194,5 +205,11 @@ class TaskRunnerViewModel(
     companion object {
         /** How long a fully successful summary stays before the runner closes by itself (design sec. 8). */
         const val AUTO_CLOSE_MILLIS = 1_500L
+
+        /**
+         * How long a freshly shown (or swapped) confirmation sheet ignores Run (W5): another app that can replace the
+         * pending task must not get a tap that was meant for the previous sheet.
+         */
+        const val RUN_GUARD_MILLIS = 600L
     }
 }
