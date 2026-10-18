@@ -22,12 +22,19 @@ import com.tagforge.domain.task.HttpMethod
 import com.tagforge.domain.task.JoinAuth
 import com.tagforge.domain.task.SkipReason
 import com.tagforge.domain.task.TaskAction
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
 import java.net.URL
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 /** A fallback that actually opened is "needs your tap"; one that could not open is a failure, never a fake success. */
 private fun LaunchResult.asFallback(reason: FallbackReason): ActionOutcome = when (this) {
@@ -143,14 +150,34 @@ class BluetoothToggleHandler(private val launcher: IntentLauncher) : ActionHandl
  * after the sheet's extra warning and second tap), at most 10 s in total, redirects are not followed, and the body is
  * never read or logged. The runner guarantees it is in the foreground ([com.tagforge.domain.task.RunTaskUseCase]).
  */
-class HttpRequestHandler(private val io: CoroutineDispatcher) : ActionHandler<TaskAction.HttpRequest> {
+class HttpRequestHandler(
+    private val io: CoroutineDispatcher,
+    private val deadlineMillis: Long = DEADLINE_MILLIS,
+) : ActionHandler<TaskAction.HttpRequest> {
 
+    /**
+     * The 10 s limit is a deadline over the whole request (DNS, connect, every read), not a per-read timeout: a server that
+     * answers a byte at a time never trips a read timeout. The blocking call runs detached so the deadline holds even while
+     * it is stuck (for example in name resolution); on expiry the connection is torn down.
+     */
     override suspend fun execute(action: TaskAction.HttpRequest): ActionOutcome {
         if (ActionValidator.check(action) is ActionCheck.Blocked) return ActionOutcome.Skipped(SkipReason.BLOCKED)
-        return withContext(io) { request(action) }
+        val connection = AtomicReference<HttpURLConnection?>()
+        val expired = AtomicBoolean(false)
+        val result = CompletableDeferred<ActionOutcome>()
+        val worker = CoroutineScope(io + SupervisorJob()).launch { result.complete(request(action, connection, expired)) }
+        return try {
+            withTimeout(deadlineMillis) { result.await() }
+        } catch (_: TimeoutCancellationException) {
+            ActionOutcome.Failed(FailReason.TIMEOUT)
+        } finally {
+            expired.set(true)
+            connection.get()?.disconnect()
+            worker.cancel()
+        }
     }
 
-    private fun request(action: TaskAction.HttpRequest): ActionOutcome {
+    private fun request(action: TaskAction.HttpRequest, shared: AtomicReference<HttpURLConnection?>, expired: AtomicBoolean): ActionOutcome {
         var connection: HttpURLConnection? = null
         return try {
             connection = (URL(action.url).openConnection() as HttpURLConnection).apply {
@@ -164,6 +191,8 @@ class HttpRequestHandler(private val io: CoroutineDispatcher) : ActionHandler<Ta
                     setFixedLengthStreamingMode(0)
                 }
             }
+            shared.set(connection)
+            if (expired.get()) return ActionOutcome.Failed(FailReason.TIMEOUT)
             val code = connection.responseCode
             if (code in SUCCESS_RANGE) ActionOutcome.Done(code.toString()) else ActionOutcome.Failed(FailReason.HTTP_STATUS, code.toString())
         } catch (_: SocketTimeoutException) {
@@ -177,9 +206,12 @@ class HttpRequestHandler(private val io: CoroutineDispatcher) : ActionHandler<Ta
         }
     }
 
-    private companion object {
-        /** Connect and read each get 5 s, so the whole request is bounded by 10 s (TK-08). */
+    companion object {
+        /** Safety nets under the overall deadline; the deadline itself is what bounds the task (TK-08). */
         const val TIMEOUT_MILLIS = 5_000
+
+        /** The whole request, from the first DNS lookup to the last byte, is over after this long (TK-08). */
+        const val DEADLINE_MILLIS = 10_000L
         val SUCCESS_RANGE = 200..399
     }
 }
