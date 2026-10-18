@@ -1,5 +1,6 @@
 package com.tagforge.app.infrastructure.tasks.handlers
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.net.wifi.WifiConfiguration
@@ -7,6 +8,7 @@ import android.net.wifi.WifiManager
 import android.net.wifi.WifiNetworkSuggestion
 import android.os.Build
 import android.provider.Settings
+import androidx.annotation.RequiresApi
 import com.tagforge.app.infrastructure.android.IntentLauncher
 import com.tagforge.app.infrastructure.android.LaunchResult
 import com.tagforge.app.infrastructure.android.SystemIntents
@@ -68,6 +70,8 @@ class WifiJoinHandler(
     private val apiLevel: Int,
 ) : ActionHandler<TaskAction.WifiJoin> {
 
+    // Lint cannot see that the injected apiLevel (Build.VERSION.SDK_INT in production) guards each branch.
+    @SuppressLint("NewApi")
     override suspend fun execute(action: TaskAction.WifiJoin): ActionOutcome {
         if (ActionValidator.check(action) is ActionCheck.Blocked) return ActionOutcome.Skipped(SkipReason.BLOCKED)
         return when {
@@ -77,6 +81,7 @@ class WifiJoinHandler(
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     private fun suggestion(action: TaskAction.WifiJoin): WifiNetworkSuggestion {
         val builder = WifiNetworkSuggestion.Builder().setSsid(action.ssid)
         when (action.auth) {
@@ -87,12 +92,14 @@ class WifiJoinHandler(
         return builder.build()
     }
 
+    @RequiresApi(Build.VERSION_CODES.R)
     private fun addNetworkScreen(action: TaskAction.WifiJoin): ActionOutcome {
         val intent = Intent(Settings.ACTION_WIFI_ADD_NETWORKS)
             .putParcelableArrayListExtra(Settings.EXTRA_WIFI_NETWORK_LIST, arrayListOf(suggestion(action)))
         return launcher.launch(intent).asFallback(FallbackReason.WIFI_ADD_NETWORK_SCREEN)
     }
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     private fun suggest(action: TaskAction.WifiJoin): ActionOutcome {
         val wifi = context.applicationContext.getSystemService(WifiManager::class.java)
         return try {
