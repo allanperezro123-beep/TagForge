@@ -26,6 +26,22 @@ class RecordHistoryUseCase(
     suspend fun recordWrite(info: TagInfo?, message: NdefMessage?, error: TagError?) =
         record(HistoryKind.WRITE, info, message, error)
 
+    /** An NS operation (password, lock, configuration). [summary] comes from SecuritySummary and never holds a secret. */
+    suspend fun recordSecurity(info: TagInfo?, summary: String, error: TagError?) {
+        if (!settings.settings.first().saveHistory) return
+        repository.add(
+            HistoryEntry(
+                at = clock.now(),
+                kind = HistoryKind.SECURITY,
+                outcome = HistoryOutcome.of(error),
+                uid = info?.uid,
+                tagType = info?.let { it.ntag?.displayName ?: it.family.code },
+                summary = summary,
+                ndef = null,
+            ),
+        )
+    }
+
     suspend fun record(kind: HistoryKind, info: TagInfo?, message: NdefMessage?, error: TagError?) {
         if (!settings.settings.first().saveHistory) return
         val safe = message?.takeUnless { it.isEmpty }?.let(HistorySummarizer::redact)

@@ -13,6 +13,7 @@ enum class HistoryKind(val code: String) {
     FORMAT("format"),
     CLONE("clone"),
     BATCH("batch"),
+    SECURITY("security"),
     ;
 
     companion object {
