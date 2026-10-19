@@ -133,4 +133,21 @@ class TagInfoExtractorTest {
     fun unexpectedExceptionsBecomeIoNeverACrash() {
         assertEquals(TagError.Io("IllegalStateException: boom"), TagErrorMapper.map(IllegalStateException("boom")))
     }
+
+    @Test
+    fun type2ChipsAndIso15693FamiliesAreRecognisedAndNamed() {
+        assertEquals(TagFamily.ULTRALIGHT, TagInfoExtractor.familyFor(setOf(TagTech.NFC_A), null, type2 = com.tagforge.domain.type2.Type2Chip.ULTRALIGHT_EV1_21))
+        assertEquals(TagFamily.NTAG21X, TagInfoExtractor.familyFor(setOf(TagTech.NFC_A), null, type2 = com.tagforge.domain.type2.Type2Chip.NTAG212))
+        assertEquals(TagFamily.ISO15693, TagInfoExtractor.familyFor(setOf(TagTech.NFC_V), null))
+    }
+
+    @Test
+    fun anIso15693ManufacturerIsReadFromItsOwnUidLayout() {
+        val icode = com.tagforge.domain.tag.TagInfo(com.tagforge.domain.fakes.FakeIso15693.ICODE_UID, setOf(TagTech.NFC_V), TagFamily.ISO15693)
+        assertEquals("NXP", TagInfoExtractor.manufacturerFor(icode))
+        val st = icode.copy(uid = com.tagforge.domain.fakes.FakeIso15693.ST_UID)
+        assertEquals("STMicroelectronics", TagInfoExtractor.manufacturerFor(st))
+        val nfcA = com.tagforge.domain.tag.TagInfo(Bytes.of(0x04, 1, 2, 3, 4, 5, 6), setOf(TagTech.NFC_A), TagFamily.NTAG21X)
+        assertEquals("NXP", TagInfoExtractor.manufacturerFor(nfcA))
+    }
 }

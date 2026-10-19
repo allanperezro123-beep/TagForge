@@ -66,6 +66,7 @@ fun DetailKey.labelRes(): Int = when (this) {
     DetailKey.PROTOCOL_INFO -> R.string.tech_protocol_info
     DetailKey.SYSTEM_CODE -> R.string.tech_system_code
     DetailKey.MANUFACTURER -> R.string.tech_manufacturer
+    DetailKey.PMM -> R.string.tech_pmm
     DetailKey.DSF_ID -> R.string.tech_dsf_id
     DetailKey.RESPONSE_FLAGS -> R.string.tech_response_flags
     DetailKey.AFI -> R.string.tech_afi

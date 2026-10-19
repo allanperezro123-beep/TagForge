@@ -14,12 +14,17 @@ object DumpFormats {
         val info = report.info
         val dump = report.dump
         appendLine("# Tag Forge memory dump")
-        appendLine("# UID ${info.uid.toHex(":")}")
-        appendLine("# Chip ${dump.model?.displayName ?: info.family.code}")
+        appendLine("# UID ${info.displayUid.toHex(":")}")
+        appendLine("# Chip ${info.chipName ?: info.family.code}")
         dump.unreadable?.let { appendLine("# Unreadable pages ${it.first}-${it.last}") }
-        for (page in dump.pages.indices) appendLine(MemoryDump.formatRow(page, dump.displayBytes(page)))
+        if (dump.unreadableBlocks.isNotEmpty()) appendLine("# Locked blocks (no public key opens them) ${dump.unreadableBlocks.sorted().joinToString(",")}")
+        for (page in dump.pages.indices) {
+            appendLine(
+                if (page in dump.unreadableBlocks) MemoryDump.formatLockedRow(page, dump.pages[page].size) else MemoryDump.formatRow(page, dump.displayBytes(page)),
+            )
+        }
     }
 
-    /** The pages back to back, exactly as read (hidden pages as the zeros the chip returned). */
+    /** The pages back to back, exactly as read (hidden pages and locked blocks as zeros). */
     fun toBinary(dump: MemoryDump): Bytes = Bytes.concat(dump.pages.indices.map(dump::displayBytes))
 }

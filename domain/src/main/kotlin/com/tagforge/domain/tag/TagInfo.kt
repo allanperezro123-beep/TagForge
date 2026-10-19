@@ -1,6 +1,7 @@
 package com.tagforge.domain.tag
 
 import com.tagforge.domain.common.Bytes
+import com.tagforge.domain.iso15693.Iso15693
 import com.tagforge.domain.ntag.NtagModel
 import com.tagforge.domain.type2.Type2Chip
 import com.tagforge.domain.type2.Type2Layout
@@ -46,6 +47,9 @@ data class TagInfo(
 ) {
     /** The page layout of whichever Type 2 chip this is (NTAG21x or [type2]); null for anything else. */
     val layout: Type2Layout? get() = ntag ?: type2
+
+    /** The UID as people write it: ISO 15693 UIDs arrive least significant byte first from Android and are shown reversed. */
+    val displayUid: Bytes get() = if (family == TagFamily.ISO15693 && uid.size == Iso15693.UID_SIZE) Iso15693.displayUid(uid) else uid
 
     /** "NTAG215", "MIFARE Ultralight C", ... when the chip is known, else null. */
     val chipName: String? get() = layout?.displayName

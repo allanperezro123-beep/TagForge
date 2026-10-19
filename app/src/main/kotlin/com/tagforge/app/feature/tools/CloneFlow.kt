@@ -136,14 +136,25 @@ private fun TargetStep(state: CloneUiState, actions: CloneActions) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(stringResource(R.string.clone_source_label), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val chip = source.chip ?: stringResource(R.string.clone_classic_chip)
             Text(
-                stringResource(R.string.clone_source_summary, source.chip ?: stringResource(R.string.common_unknown), source.messageSize),
+                if (source.classicBlocks != null) {
+                    stringResource(R.string.clone_source_summary_classic, chip, source.classicBlocks)
+                } else {
+                    stringResource(R.string.clone_source_summary, source.chip ?: stringResource(R.string.common_unknown), source.messageSize)
+                },
                 style = MaterialTheme.typography.titleMedium,
             )
             if (source.summary.isNotEmpty()) Text(source.summary, style = MaterialTheme.typography.bodyMedium)
             Text(source.uid.toHex(":"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
-                stringResource(if (source.withUserPages) R.string.clone_mode_pages else R.string.clone_mode_message),
+                stringResource(
+                    when {
+                        source.classicBlocks != null -> R.string.clone_mode_classic
+                        source.withUserPages -> R.string.clone_mode_pages
+                        else -> R.string.clone_mode_message
+                    },
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -182,11 +193,15 @@ private fun CloneSheet.toUi(): ToolSheetUi = when (this) {
     )
     is CloneSheet.Success -> ToolSheetUi.Success(
         title = stringResource(R.string.clone_sheet_success),
-        detail = stringResource(
-            R.string.clone_sheet_success_detail,
-            report.messageSize,
-            report.target.chipName ?: stringResource(R.string.common_unknown),
-        ),
+        detail = if (report.classicBlocksCopied > 0) {
+            stringResource(R.string.clone_sheet_success_classic, report.classicBlocksCopied, report.classicSectorsSkipped.size)
+        } else {
+            stringResource(
+                R.string.clone_sheet_success_detail,
+                report.messageSize,
+                report.target.chipName ?: stringResource(R.string.common_unknown),
+            )
+        },
         extraLabel = stringResource(R.string.clone_sheet_again),
     )
     is CloneSheet.Failure -> {

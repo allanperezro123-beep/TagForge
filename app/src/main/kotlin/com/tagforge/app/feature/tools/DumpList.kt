@@ -43,6 +43,9 @@ import com.tagforge.domain.ntag.Region
 
 private const val HIDDEN_PAGE = "•• •• •• ••"
 private const val BYTES_PER_LINE = 8
+
+/** Up to a 4-byte page fits one line next to its ASCII and role; bigger blocks use the stacked 8-byte lines. */
+private const val SINGLE_LINE_BYTES = 8
 /** Rows open a detail view when tapped, so they keep the 48 dp minimum touch target (PR-04). */
 private val RowHeightSingle = 48.dp
 private val RowHeightDouble = 56.dp
@@ -88,7 +91,7 @@ fun LayoutToggle(layout: DumpLayout, onChange: (DumpLayout) -> Unit, modifier: M
 fun DumpRowItem(row: DumpRow, layout: DumpLayout, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val band = row.primaryRegion?.bandColor() ?: Color.Transparent
     val regionName = row.primaryRegion?.let { stringResource(it.labelRes()) }
-    val hex = row.bytes.toHex(" ")
+    val hex = if (row.unreadable) "??" else row.bytes.toHex(" ")
     val description = if (row.hiddenByChip) {
         stringResource(R.string.dump_row_description_hidden, row.startPage, regionName ?: "")
     } else {
@@ -106,7 +109,7 @@ fun DumpRowItem(row: DumpRow, layout: DumpLayout, onClick: () -> Unit, modifier:
     ) {
         Box(Modifier.width(4.dp).fillMaxHeight().background(band))
         Text("%02X".format(row.startPage), style = HexTextStyle, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(28.dp))
-        if (layout == DumpLayout.PAGE_PER_ROW) {
+        if (layout == DumpLayout.PAGE_PER_ROW && row.bytes.size <= SINGLE_LINE_BYTES) {
             Text(
                 if (row.hiddenByChip) HIDDEN_PAGE else hex,
                 style = HexTextStyle,
@@ -128,7 +131,10 @@ private fun SixteenByteLines(row: DumpRow) {
     Column(Modifier.padding(vertical = 4.dp)) {
         for (start in 0 until bytes.size step BYTES_PER_LINE) {
             val line: Bytes = bytes.slice(start, minOf(start + BYTES_PER_LINE, bytes.size))
-            Text(line.toHex(" "), style = HexTextStyle, color = MaterialTheme.colorScheme.onSurface)
+            Text(if (row.unreadable) List(line.size) { "??" }.joinToString(" ") else line.toHex(" "), style = HexTextStyle, color = MaterialTheme.colorScheme.onSurface)
+        }
+        if (row.unreadable) {
+            Text(stringResource(R.string.dump_locked_note_short), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
         }
         if (row.hiddenByChip) {
             Text(stringResource(R.string.dump_hidden_note_short), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -155,9 +161,10 @@ fun PageExplanationSheet(row: DumpRow, onDismiss: () -> Unit) {
                 val regions = row.regions[index]
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     if (row.pages.size > 1) Text(stringResource(R.string.dump_sheet_page, page), style = MaterialTheme.typography.titleSmall)
-                    val pageBytes = row.bytes.slice(index * 4, index * 4 + 4)
+                    val pageSize = row.bytes.size / row.pages.size
+                    val pageBytes = row.bytes.slice(index * pageSize, (index + 1) * pageSize)
                     val hidden = regions.any { it.hiddenByChip }
-                    Text(if (hidden) HIDDEN_PAGE else pageBytes.toHex(" "), style = HexTextStyle)
+                    Text(if (hidden) HIDDEN_PAGE else if (row.unreadable) stringResource(R.string.dump_locked_note) else pageBytes.toHex(" "), style = HexTextStyle)
                     regions.forEach { region ->
                         Text(stringResource(region.labelRes()), style = MaterialTheme.typography.titleSmall, color = region.bandColor())
                         Text(stringResource(region.explanationRes()), style = MaterialTheme.typography.bodyMedium)

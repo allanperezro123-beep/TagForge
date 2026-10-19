@@ -176,6 +176,7 @@ class CloneViewModel(
             messageSize = DefaultNdefCodec.encode(source.message).size,
             summary = HistorySummarizer.summarize(source.message),
             withUserPages = source.userPages != null,
+            classicBlocks = source.classic?.dataBlocks?.size,
         )
         _state.update { it.copy(step = CloneStep.TARGET, source = summary, sheet = null) }
         eventChannel.trySend(CloneEvent.SourceCaptured)

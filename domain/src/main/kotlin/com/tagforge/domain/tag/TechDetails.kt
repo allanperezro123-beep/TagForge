@@ -64,7 +64,7 @@ data class ClassicDetails(val type: ClassicType, val sectorCount: Int, val block
 enum class DetailKey {
     ATQA, SAK,
     APPLICATION_DATA, PROTOCOL_INFO,
-    SYSTEM_CODE, MANUFACTURER,
+    SYSTEM_CODE, MANUFACTURER, PMM,
     DSF_ID, RESPONSE_FLAGS, AFI, BLOCK_COUNT, BLOCK_SIZE,
     HISTORICAL_BYTES, HI_LAYER_RESPONSE, EXTENDED_LENGTH, TIMEOUT_MS,
     ULTRALIGHT_TYPE, PAGES,
@@ -103,7 +103,7 @@ data class TechDetails(
             add(TechSection(TagTech.NFC_B, listOf(entry(DetailKey.APPLICATION_DATA, it.applicationData.toHex(" ")), entry(DetailKey.PROTOCOL_INFO, it.protocolInfo.toHex(" ")))))
         }
         if (TagTech.NFC_F in info.techs) nfcF?.let {
-            add(TechSection(TagTech.NFC_F, listOf(entry(DetailKey.SYSTEM_CODE, it.systemCode.toHex(" ")), entry(DetailKey.MANUFACTURER, it.manufacturer.toHex(" ")))))
+            add(TechSection(TagTech.NFC_F, listOf(entry(DetailKey.SYSTEM_CODE, it.systemCode.toHex(" ")), entry(DetailKey.PMM, it.manufacturer.toHex(" ")))))
         }
         if (TagTech.NFC_V in info.techs) nfcV?.let {
             add(

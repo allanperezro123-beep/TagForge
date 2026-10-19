@@ -80,7 +80,7 @@ class TechDetailsTest {
         val tag = info(setOf(TagTech.NFC_B, TagTech.NFC_F, TagTech.NFC_V), details)
 
         assertEquals(mapOf(DetailKey.APPLICATION_DATA to TechValue.Text("AA BB CC DD"), DetailKey.PROTOCOL_INFO to TechValue.Text("81 71 71")), details.entries(tag, TagTech.NFC_B))
-        assertEquals(mapOf(DetailKey.SYSTEM_CODE to TechValue.Text("88 B4"), DetailKey.MANUFACTURER to TechValue.Text("01 02 03 04 05 06 07 08")), details.entries(tag, TagTech.NFC_F))
+        assertEquals(mapOf(DetailKey.SYSTEM_CODE to TechValue.Text("88 B4"), DetailKey.PMM to TechValue.Text("01 02 03 04 05 06 07 08")), details.entries(tag, TagTech.NFC_F))
         assertEquals(mapOf(DetailKey.DSF_ID to TechValue.Text("0x0A"), DetailKey.RESPONSE_FLAGS to TechValue.Text("0x00")), details.entries(tag, TagTech.NFC_V))
     }
 

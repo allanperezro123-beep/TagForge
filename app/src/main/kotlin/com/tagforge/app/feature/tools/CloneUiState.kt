@@ -17,6 +17,8 @@ data class CloneSourceSummary(
     /** One-line description of the message (values only, WiFi keys never included). */
     val summary: String,
     val withUserPages: Boolean,
+    /** MIFARE Classic: how many data blocks the public keys could read; null for every other tag. */
+    val classicBlocks: Int? = null,
 )
 
 sealed interface CloneSheet {

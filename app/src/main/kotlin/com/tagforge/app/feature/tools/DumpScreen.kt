@@ -124,8 +124,8 @@ private fun ResultList(state: DumpUiState, report: DumpReport, actions: DumpActi
                 Text(
                     stringResource(
                         R.string.dump_header,
-                        report.dump.model?.displayName ?: stringResource(R.string.common_unknown),
-                        report.info.uid.toHex(":"),
+                        report.info.chipName ?: stringResource(R.string.common_unknown),
+                        report.info.displayUid.toHex(":"),
                     ),
                     style = MaterialTheme.typography.titleSmall,
                 )

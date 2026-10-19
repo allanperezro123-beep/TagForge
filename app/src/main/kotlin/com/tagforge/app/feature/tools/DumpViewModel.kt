@@ -4,7 +4,6 @@ import androidx.lifecycle.viewModelScope
 import com.tagforge.app.infrastructure.nfc.NfcAvailability
 import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.ntag.MemoryDump
-import com.tagforge.domain.ntag.NtagMemoryMap
 import com.tagforge.domain.ntag.Region
 import com.tagforge.domain.scan.ScanCoordinator
 import com.tagforge.domain.tools.DumpMemoryUseCase
@@ -28,6 +27,8 @@ data class DumpRow(
     val bytes: Bytes,
     val regions: List<List<Region>>,
     val hiddenByChip: Boolean,
+    /** True when a page of this row could not be read (a MIFARE Classic sector no public key opens). */
+    val unreadable: Boolean = false,
 ) {
     val startPage: Int get() = pages.first()
     val primaryRegion: Region? get() = regions.firstOrNull()?.firstOrNull()
@@ -35,15 +36,22 @@ data class DumpRow(
 
 /** Pure row building for the dump view. */
 object DumpRows {
-    fun build(dump: MemoryDump, layout: DumpLayout): List<DumpRow> =
-        dump.pages.indices.chunked(layout.pagesPerRow).map { pages ->
+    /** Blocks of 16 bytes (MIFARE Classic, 15693 with big blocks) always get a row of their own: four of them would not fit a line. */
+    private const val WIDE_BLOCK_BYTES = 16
+
+    fun build(dump: MemoryDump, layout: DumpLayout): List<DumpRow> {
+        val annotations = dump.annotations
+        val perRow = if ((dump.pages.firstOrNull()?.size ?: 0) >= WIDE_BLOCK_BYTES) 1 else layout.pagesPerRow
+        return dump.pages.indices.chunked(perRow).map { pages ->
             DumpRow(
                 pages = pages,
                 bytes = Bytes.concat(pages.map(dump::displayBytes)),
-                regions = pages.map { page -> dump.model?.let { NtagMemoryMap.regionsOf(it, page) }.orEmpty() },
+                regions = pages.map { page -> annotations.getOrNull(page)?.regions.orEmpty() },
                 hiddenByChip = pages.any(dump::isHiddenByChip),
+                unreadable = pages.any { it in dump.unreadableBlocks },
             )
         }
+    }
 }
 
 data class DumpUiState(

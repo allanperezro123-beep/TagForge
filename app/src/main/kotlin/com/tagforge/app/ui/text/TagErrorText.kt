@@ -25,6 +25,11 @@ object TagErrorText {
         is TagError.Unsupported -> when (error.what) {
             TagError.Unsupported.MIFARE_CLASSIC -> ErrorText(R.string.error_unsupported_classic)
             TagError.Unsupported.USER_PAGES_MODEL -> ErrorText(R.string.error_unsupported_pages_model)
+            TagError.Unsupported.INFO_ONLY -> ErrorText(R.string.error_unsupported_info_only)
+            TagError.Unsupported.NEEDS_AUTHENTICATION -> ErrorText(R.string.error_unsupported_needs_auth)
+            TagError.Unsupported.CLASSIC_TRAILER, TagError.Unsupported.CLASSIC_MANUFACTURER_BLOCK ->
+                ErrorText(R.string.error_unsupported_classic_trailer)
+            TagError.Unsupported.FORMAT -> ErrorText(R.string.error_unsupported_format)
             else -> ErrorText(R.string.error_unsupported, listOf(error.what))
         }
         TagError.SameTag -> ErrorText(R.string.error_same_tag)

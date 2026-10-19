@@ -31,7 +31,11 @@ import com.tagforge.app.ui.components.EmptyState
 import com.tagforge.app.ui.components.HexRowUi
 import com.tagforge.app.ui.components.HexViewer
 import com.tagforge.app.ui.components.RecordCard
-import com.tagforge.domain.iso15693.Iso15693
+import com.tagforge.domain.capability.AccessChannel
+import com.tagforge.domain.capability.Support
+import com.tagforge.domain.capability.TagCapabilities
+import com.tagforge.domain.capability.ToolOperation
+import com.tagforge.domain.capability.UnsupportedReason
 import com.tagforge.domain.ntag.MemoryDump
 import com.tagforge.domain.read.ReadNotice
 import com.tagforge.domain.read.TagScan
@@ -74,15 +78,21 @@ private fun RecordsTab(scan: TagScan) {
     val readout = scan.readout
     if (readout.parsed.isEmpty()) {
         val notice = readout.notice
+        val capabilities = TagCapabilities.of(readout.info)
+        // A tag whose raw memory lives in another tool (never mixed into this scan) gets a pointer to it.
+        val dumpInTools = capabilities.isSupported(ToolOperation.DUMP) && !capabilities.readIncludesDump
         EmptyState(
             icon = Icons.Outlined.Inbox,
             title = stringResource(R.string.read_empty_tag_title),
             body = stringResource(
                 when (notice) {
                     is ReadNotice.NdefUnreadable -> R.string.read_notice_ndef_unreadable
-                    ReadNotice.NotNdef -> R.string.read_notice_not_ndef
-                    is ReadNotice.UnsupportedFamily ->
-                        if (notice.family == TagFamily.MIFARE_CLASSIC) R.string.read_notice_unsupported_classic else R.string.read_notice_unsupported_family
+                    ReadNotice.NotNdef -> if (dumpInTools) R.string.read_notice_not_ndef_dump else R.string.read_notice_not_ndef
+                    is ReadNotice.UnsupportedFamily -> when (notice.family) {
+                        TagFamily.MIFARE_CLASSIC -> R.string.read_notice_unsupported_classic
+                        TagFamily.ISO14443_4, TagFamily.DESFIRE -> R.string.read_notice_needs_auth
+                        else -> R.string.read_notice_unsupported_family
+                    }
                     null -> R.string.read_empty_tag_body
                 },
             ),
@@ -109,12 +119,17 @@ private fun RecordsTab(scan: TagScan) {
 private fun InfoTab(scan: TagScan) {
     val info = scan.readout.info
     val rows = tagInfoRows(info, scan.readout.message != null)
+    val capabilities = capabilityRows(info)
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         itemsIndexed(rows) { _, (label, value) -> InfoRow(label, value) }
+        item {
+            Text(stringResource(R.string.cap_title), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+        }
+        itemsIndexed(capabilities) { _, (label, value) -> InfoRow(label, value) }
     }
 }
 
@@ -161,7 +176,7 @@ internal fun tagInfoRows(info: TagInfo, hasMessage: Boolean): List<Pair<String, 
     }
 
     return buildList {
-        add(stringResource(R.string.info_uid) to (if (info.family == TagFamily.ISO15693) Iso15693.displayUid(info.uid) else info.uid).toHex(":"))
+        add(uidLabel(info) to info.displayUid.toHex(":"))
         add(stringResource(R.string.info_manufacturer) to (TagInfoExtractor.manufacturerFor(info) ?: unknown))
         add(stringResource(R.string.info_type) to type)
         add(stringResource(R.string.info_technologies) to info.techs.joinToString(", ") { techLabel(it) })
@@ -206,10 +221,13 @@ internal fun techLabel(tech: TagTech): String = when (tech) {
 private fun HexTab(scan: TagScan) {
     val dump = scan.dump
     if (dump == null) {
+        val capabilities = TagCapabilities.of(scan.readout.info)
+        // dump == null with no error means "not attempted": it would need another technology, so it lives in Tools.
+        val inTools = scan.dumpError == null && capabilities.isSupported(ToolOperation.DUMP) && !capabilities.readIncludesDump
         EmptyState(
             icon = Icons.Outlined.Inbox,
             title = stringResource(R.string.read_tab_hex),
-            body = stringResource(R.string.hex_unavailable),
+            body = stringResource(if (inTools) R.string.hex_use_tools else R.string.hex_unavailable),
         )
         return
     }
@@ -221,3 +239,51 @@ private fun HexTab(scan: TagScan) {
 }
 
 private fun MemoryDump.toRows(): List<HexRowUi> = pages.mapIndexed { page, bytes -> HexRowUi(page, bytes) }
+
+/** FeliCa calls the identifier IDm and a type B card PUPI; everything else says UID. */
+@Composable
+private fun uidLabel(info: TagInfo): String = stringResource(
+    when {
+        TagTech.NFC_F in info.techs && info.family == TagFamily.FELICA -> R.string.info_idm
+        info.techs.contains(TagTech.NFC_B) && !info.techs.contains(TagTech.NFC_A) -> R.string.info_pupi
+        else -> R.string.info_uid
+    },
+)
+
+/** The capability matrix as rows: per operation, "Available (how)" or the reason it is not. */
+@Composable
+private fun capabilityRows(info: TagInfo): List<Pair<String, String>> {
+    val capabilities = TagCapabilities.of(info)
+    return ToolOperation.entries.map { operation ->
+        val label = stringResource(operation.labelRes())
+        val value = when (val support = capabilities[operation]) {
+            is Support.Available -> stringResource(
+                when (support.channel) {
+                    AccessChannel.RAW_NFC_A -> R.string.cap_via_nfca
+                    AccessChannel.RAW_NFC_V -> R.string.cap_via_nfcv
+                    AccessChannel.CLASSIC_KEYS -> R.string.cap_via_classic
+                    AccessChannel.PLATFORM_NDEF -> R.string.cap_via_platform
+                },
+            )
+            is Support.Unavailable -> stringResource(
+                when (support.reason) {
+                    UnsupportedReason.CLASSIC_NEEDS_NXP_CHIP -> R.string.cap_reason_classic_nxp
+                    UnsupportedReason.INFO_ONLY -> R.string.cap_reason_info_only
+                    UnsupportedReason.NO_NDEF -> R.string.cap_reason_no_ndef
+                    UnsupportedReason.NEEDS_AUTHENTICATION -> R.string.cap_reason_needs_auth
+                    UnsupportedReason.NOT_FORMATABLE -> R.string.cap_reason_not_formatable
+                },
+            )
+        }
+        label to value
+    }
+}
+
+private fun ToolOperation.labelRes(): Int = when (this) {
+    ToolOperation.READ_NDEF -> R.string.cap_read_ndef
+    ToolOperation.DUMP -> R.string.cap_dump
+    ToolOperation.WRITE_NDEF -> R.string.cap_write
+    ToolOperation.ERASE -> R.string.cap_erase
+    ToolOperation.FORMAT -> R.string.cap_format
+    ToolOperation.CLONE -> R.string.cap_clone
+}

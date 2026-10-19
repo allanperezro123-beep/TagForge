@@ -74,6 +74,13 @@ fun ToolsScreen(state: ToolsUiState, actions: ToolsActions, modifier: Modifier =
 
             SectionHeader(R.string.tools_section_protect)
             ToolEntry(Icons.Outlined.Lock, R.string.tools_security, R.string.tools_security_summary, true, destructive = true, onClick = actions.onSecurity)
+
+            Text(
+                stringResource(R.string.tools_families_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
+            )
         }
     }
 
