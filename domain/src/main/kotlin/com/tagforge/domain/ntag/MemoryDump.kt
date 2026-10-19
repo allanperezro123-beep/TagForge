@@ -15,9 +15,12 @@ data class MemoryDump(
     val chip: Type2Chip? = null,
     /** Roles of the blocks of tags that are not Type 2 (ISO 15693, MIFARE Classic); wins over [model] / [chip]. */
     val customAnnotations: List<PageAnnotation>? = null,
+    /** Blocks no public key could read (MIFARE Classic): their bytes in [pages] are zero fillers and are shown as `??`. */
+    val unreadableBlocks: Set<Int> = emptySet(),
 ) {
     /** One `PP: HH HH HH HH |aaaa|` line per page. */
-    val rows: List<String> get() = pages.mapIndexed { page, data -> formatRow(page, data) }
+    val rows: List<String>
+        get() = pages.mapIndexed { page, data -> if (page in unreadableBlocks) formatLockedRow(page, data.size) else formatRow(page, data) }
 
     /** The role of every dumped page; empty for tags that are not NTAG21x. */
     val annotations: List<PageAnnotation>
@@ -36,6 +39,8 @@ data class MemoryDump(
         private const val FIRST_PRINTABLE = 0x20
         private const val LAST_PRINTABLE = 0x7E
         
+        fun formatLockedRow(page: Int, size: Int): String = "%02X: %s |%s|".format(page, List(size) { "??" }.joinToString(" "), "?".repeat(size))
+
         fun formatRow(page: Int, data: Bytes): String {
             val ascii = buildString {
                 for (i in 0 until data.size) {

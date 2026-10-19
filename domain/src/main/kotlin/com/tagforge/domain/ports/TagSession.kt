@@ -36,6 +36,9 @@ interface TagSession {
     /** Null when the technology is not present on this tag. */
     fun transceiver(tech: TagTech): TagTransceiver?
 
+    /** Block access to a MIFARE Classic card; null when the phone or the tag has no `MifareClassic` technology. */
+    fun classic(): ClassicChannel? = null
+
     /** Ok(null) = formatted but empty; Err(NotNdef) = no NDEF; Err(Malformed) = unparsable NDEF; Err(AuthRequired) = protected. */
     suspend fun readNdef(): TagResult<NdefMessage?>
 
@@ -46,4 +49,20 @@ interface TagSession {
     suspend fun makeReadOnly(): TagResult<Unit>
 
     suspend fun close()
+}
+
+/**
+ * Authenticated block access to a MIFARE Classic card, as `android.nfc.tech.MifareClassic` offers it. Domain code never
+ * receives this raw: [com.tagforge.domain.classic.SafeClassic] wraps it so a sector trailer can not be written.
+ */
+interface ClassicChannel {
+    val layout: com.tagforge.domain.classic.ClassicLayout
+
+    /** Ok(true) = authenticated; Ok(false) = wrong key (the adapter re-selects the card so the next try works). */
+    suspend fun authenticate(sector: Int, key: Bytes, type: com.tagforge.domain.classic.ClassicKeyType): TagResult<Boolean>
+
+    suspend fun readBlock(block: Int): TagResult<Bytes>
+
+    /** Writes one 16-byte block of the authenticated sector. Reachable only through the trailer guard. */
+    suspend fun writeBlock(block: Int, data: Bytes): TagResult<Unit>
 }

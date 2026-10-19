@@ -27,6 +27,12 @@ sealed interface TagError {
             /** ISO-DEP cards need authentication to read memory; Tag Forge never authenticates. */
             const val NEEDS_AUTHENTICATION = "needs-authentication"
 
+            /** MIFARE Classic: a sector trailer holds the keys and access bits; Tag Forge never writes one. */
+            const val CLASSIC_TRAILER = "classic-trailer"
+
+            /** MIFARE Classic: block 0 is the manufacturer block. */
+            const val CLASSIC_MANUFACTURER_BLOCK = "classic-block0"
+
             /** The tag cannot be formatted for NDEF with the platform APIs. */
             const val FORMAT = "format"
         }

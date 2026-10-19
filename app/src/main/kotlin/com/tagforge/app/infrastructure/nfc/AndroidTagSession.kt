@@ -3,6 +3,7 @@ package com.tagforge.app.infrastructure.nfc
 import android.nfc.Tag
 import android.nfc.tech.Ndef
 import android.nfc.tech.NdefFormatable
+import android.nfc.tech.MifareClassic
 import android.nfc.tech.NfcA
 import android.nfc.tech.NfcV
 import com.tagforge.domain.common.Bytes
@@ -13,6 +14,7 @@ import com.tagforge.domain.ndef.NdefMessage
 import com.tagforge.domain.ndef.Tnf
 import com.tagforge.domain.ntag.NtagCommands
 import com.tagforge.domain.ntag.NtagResponses
+import com.tagforge.domain.ports.ClassicChannel
 import com.tagforge.domain.ports.TagSession
 import com.tagforge.domain.ports.TagTransceiver
 import com.tagforge.domain.tag.TagError
@@ -48,6 +50,12 @@ class AndroidTagSession(
         NfcV.get(tag)?.let { AndroidNfcVTransceiver(it, io, beforeConnect = ::closeNdefQuietly) }
     }
 
+    private val classicChannel: AndroidClassicChannel? by lazy {
+        MifareClassic.get(tag)?.let { AndroidClassicChannel(it, io, beforeConnect = ::closeNdefQuietly) }
+    }
+
+    override fun classic(): ClassicChannel? = classicChannel
+
     /**
      * `Ndef.get` returns a NEW object every time and `isConnected` is per object, so the instance that was connected
      * must be remembered: closing a fresh one would silently do nothing and leave the Ndef technology active.
@@ -69,6 +77,7 @@ class AndroidTagSession(
     private fun closeRawChannels() {
         nfcATransceiver?.close()
         nfcVTransceiver?.close()
+        classicChannel?.close()
     }
 
     private fun closeFormatableQuietly() {

@@ -5,6 +5,8 @@ import com.tagforge.domain.capability.Support
 import com.tagforge.domain.capability.TagCapabilities
 import com.tagforge.domain.capability.ToolOperation
 import com.tagforge.domain.capability.refusal
+import com.tagforge.domain.classic.ClassicReader
+import com.tagforge.domain.classic.SafeClassic
 import com.tagforge.domain.common.Outcome
 import com.tagforge.domain.common.TagResult
 import com.tagforge.domain.ntag.MemoryDump
@@ -34,6 +36,9 @@ class DumpMemoryUseCase(
 
     override val kind: OperationKind = OperationKind.MEMORY_DUMP
 
+    /** A MIFARE Classic card with private keys can cost one failed authentication per key and sector. */
+    override val timeoutMs: Long = DUMP_TIMEOUT_MS
+
     override suspend fun execute(session: TagSession, phase: (OperationPhase) -> Unit): TagResult<DumpReport> {
         phase(OperationPhase.CONNECTING)
         val info = when (val identified = session.identify()) {
@@ -44,9 +49,20 @@ class DumpMemoryUseCase(
         capabilities.refusal(ToolOperation.DUMP)?.let { return Outcome.Err(it) }
         val channel = (capabilities[ToolOperation.DUMP] as Support.Available).channel
         if (channel == AccessChannel.RAW_NFC_V) return dumpIso15693(session, info, phase)
+        if (channel == AccessChannel.CLASSIC_KEYS) return dumpClassic(session, info, phase)
         return when (val read = readMemory.execute(session) { reported -> if (reported != OperationPhase.CONNECTING) phase(reported) }) {
             is Outcome.Err -> read
             is Outcome.Ok -> Outcome.Ok(DumpReport(session.info, read.value))
+        }
+    }
+
+    /** MIFARE Classic: authenticate each sector with the public keys only and read it. Never writes. */
+    private suspend fun dumpClassic(session: TagSession, info: TagInfo, phase: (OperationPhase) -> Unit): TagResult<DumpReport> {
+        val classic = SafeClassic.of(session) ?: return Outcome.Err(TagError.Unsupported(TagError.Unsupported.MIFARE_CLASSIC))
+        phase(OperationPhase.READING)
+        return when (val image = ClassicReader.read(classic)) {
+            is Outcome.Err -> image
+            is Outcome.Ok -> Outcome.Ok(DumpReport(info, image.value.toMemoryDump()))
         }
     }
 
@@ -62,5 +78,9 @@ class DumpMemoryUseCase(
             is Outcome.Err -> read
             is Outcome.Ok -> Outcome.Ok(DumpReport(completed, read.value))
         }
+    }
+
+    private companion object {
+        const val DUMP_TIMEOUT_MS = 60_000L
     }
 }

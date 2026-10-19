@@ -1,8 +1,11 @@
 package com.tagforge.domain.tools
 
+import com.tagforge.domain.capability.AccessChannel
+import com.tagforge.domain.capability.Support
 import com.tagforge.domain.capability.TagCapabilities
 import com.tagforge.domain.capability.ToolOperation
 import com.tagforge.domain.capability.refusal
+import com.tagforge.domain.classic.ClassicImage
 import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.common.Outcome
 import com.tagforge.domain.common.TagResult
@@ -29,7 +32,13 @@ import com.tagforge.domain.write.WriteNdefUseCase
  * What the first tap of a clone captured. [userPages] (the user memory, page 04 onwards) is present only when the
  * user asked to copy raw pages; the NDEF [message] is always there.
  */
-class CloneSource(val info: TagInfo, val message: NdefMessage, val userPages: Bytes?)
+class CloneSource(
+    val info: TagInfo,
+    val message: NdefMessage,
+    val userPages: Bytes?,
+    /** MIFARE Classic: the data blocks the public keys could read; [message] is blank for such a source. */
+    val classic: ClassicImage? = null,
+)
 
 /** A verified clone. The two tags are never UID-identical: only the content was copied. */
 data class CloneReport(
@@ -37,6 +46,9 @@ data class CloneReport(
     val target: TagInfo,
     val messageSize: Int,
     val copiedUserPages: Boolean,
+    /** MIFARE Classic: data blocks copied, and the sectors the destination would not open with a public key. */
+    val classicBlocksCopied: Int = 0,
+    val classicSectorsSkipped: List<Int> = emptyList(),
 )
 
 /**
@@ -65,7 +77,11 @@ class CloneTagUseCase {
                 is Outcome.Err -> return identified
                 is Outcome.Ok -> identified.value
             }
-            TagCapabilities.of(info).refusal(ToolOperation.CLONE)?.let { return Outcome.Err(it) }
+            val capabilities = TagCapabilities.of(info)
+            capabilities.refusal(ToolOperation.CLONE)?.let { return Outcome.Err(it) }
+            if ((capabilities[ToolOperation.CLONE] as Support.Available).channel == AccessChannel.CLASSIC_KEYS) {
+                return ClassicCloner.readSource(session, info, phase)
+            }
 
             phase(OperationPhase.READING)
             val message = when (val read = Type2Ndef.read(session)) {
@@ -102,6 +118,10 @@ class CloneTagUseCase {
                 is Outcome.Ok -> identified.value
             }
             if (info.uid == source.info.uid) return Outcome.Err(TagError.SameTag)
+            source.classic?.let { image ->
+                TagCapabilities.of(info).refusal(ToolOperation.CLONE)?.let { return Outcome.Err(it) }
+                return ClassicCloner.writeTarget(session, source, image, confirmOverwrite, phase)
+            }
 
             return if (source.userPages != null) copyPages(session, info, source.userPages, phase) else copyMessage(session, phase)
         }
