@@ -18,6 +18,7 @@ import com.tagforge.domain.tag.TagInfo
 import com.tagforge.domain.tag.TagTech
 import com.tagforge.domain.write.OverwriteGuard
 import com.tagforge.domain.write.Type2Io
+import com.tagforge.domain.write.Type2Ndef
 import com.tagforge.domain.write.Type2WritePlanner
 import com.tagforge.domain.write.WriteNdefUseCase
 
@@ -66,7 +67,7 @@ class CloneTagUseCase {
             }
 
             phase(OperationPhase.READING)
-            val message = when (val read = session.readNdef()) {
+            val message = when (val read = Type2Ndef.read(session)) {
                 is Outcome.Ok -> read.value ?: return Outcome.Err(TagError.NotNdef)
                 is Outcome.Err -> return if (read.error is TagError.Nak) Outcome.Err(TagError.AuthRequired) else read
             }

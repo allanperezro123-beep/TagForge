@@ -103,7 +103,7 @@ class WriteNdefUseCase(
     }
 
     private suspend fun verify(session: TagSession, expected: Bytes): TagResult<WriteReport> {
-        val actual = when (val read = session.readNdef()) {
+        val actual = when (val read = Type2Ndef.read(session, codec)) {
             is Outcome.Ok -> read.value
             is Outcome.Err -> return when (read.error) {
                 is TagError.Malformed, TagError.NotNdef -> Outcome.Err(TagError.VerifyMismatch(expected, null))

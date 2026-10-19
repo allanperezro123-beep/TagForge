@@ -10,6 +10,7 @@ import com.tagforge.domain.ndef.DefaultNdefCodec
 import com.tagforge.domain.ndef.NdefMessage
 import com.tagforge.domain.ndef.NdefRecord
 import com.tagforge.domain.ndef.Type2Tlv
+import com.tagforge.domain.ntag.NtagCommands
 import com.tagforge.domain.ntag.NtagModel
 import com.tagforge.domain.ports.TagSession
 import com.tagforge.domain.ports.TagTransceiver
@@ -159,20 +160,32 @@ class WriteNdefUseCaseTest {
 
     // ---- verification -------------------------------------------------------------------------------------
 
-    /** Behaves like [inner] until the first page write, then answers every NDEF read with [afterWrite]. */
+    /**
+     * Behaves like [inner] until the first page write, then answers every raw read from [afterWrite] (an NTAG21x is
+     * verified over raw NfcA, so this is where a corrupted or vanished read-back has to be injected).
+     */
     private class ReadBackOverride(
-        private val inner: FakeTagSession,
+        private val inner: TagSession,
         private val tag: FakeNtag21x,
-        private val afterWrite: TagResult<NdefMessage?>,
+        private val afterWrite: suspend (Bytes) -> TagResult<Bytes>,
     ) : TagSession by inner {
-        override suspend fun readNdef(): TagResult<NdefMessage?> = if (tag.writeCount == 0) inner.readNdef() else afterWrite
+        override fun transceiver(tech: TagTech): TagTransceiver? = inner.transceiver(tech)?.let { real ->
+            object : TagTransceiver by real {
+                override suspend fun transceive(command: Bytes): TagResult<Bytes> =
+                    if (tag.writeCount > 0 && command[0] == NtagCommands.FAST_READ) afterWrite(command) else real.transceive(command)
+            }
+        }
+    }
+
+    private fun shadowHolding(message: NdefMessage?): FakeNtag21x = FakeNtag21x(NtagModel.NTAG213).also { shadow ->
+        if (message != null) seedWith(shadow, message)
     }
 
     @Test
     fun aMismatchOnReadBackIsReportedAsVerifyMismatch() {
         val tag = ntag()
         val corrupted = NdefMessage(listOf(NdefRecord.text("corrupted")))
-        val session = ReadBackOverride(FakeTagSession.ntag(tag), tag, Outcome.Ok(corrupted))
+        val session = ReadBackOverride(FakeTagSession.ntag(tag), tag, shadowHolding(corrupted)::transceive)
 
         val result = write(uriMessage, session)
 
@@ -186,7 +199,7 @@ class WriteNdefUseCaseTest {
     @Test
     fun anEmptyReadBackAfterWritingIsAMismatchWithNoActualBytes() {
         val tag = ntag()
-        val session = ReadBackOverride(FakeTagSession.ntag(tag), tag, Outcome.Ok(null))
+        val session = ReadBackOverride(FakeTagSession.ntag(tag), tag, shadowHolding(null)::transceive)
 
         val error = (write(uriMessage, session) as Outcome.Err).error
 
@@ -196,7 +209,7 @@ class WriteNdefUseCaseTest {
     @Test
     fun aTagLostDuringTheReadBackIsATagLostFailureNotAMismatch() {
         val tag = ntag()
-        val session = ReadBackOverride(FakeTagSession.ntag(tag), tag, Outcome.Err(TagError.TagLost))
+        val session = ReadBackOverride(FakeTagSession.ntag(tag), tag) { Outcome.Err(TagError.TagLost) }
         assertEquals(Outcome.Err(TagError.TagLost), write(uriMessage, session))
     }
 
@@ -377,10 +390,8 @@ class WriteNdefUseCaseTest {
     @Test
     fun anEmptyWriteResponseCannotHideAWriteThatDidNotLand() {
         val tag = ntag()
-        val session = object : TagSession by AckSwallowingSession(FakeTagSession.ntag(tag)) {
-            // reads after the writes keep seeing the old (empty) tag, as if the writes had been dropped
-            override suspend fun readNdef(): TagResult<NdefMessage?> = Outcome.Ok(null)
-        }
+        // reads after the writes keep seeing the old (empty) tag, as if the writes had been dropped
+        val session = ReadBackOverride(AckSwallowingSession(FakeTagSession.ntag(tag)), tag, shadowHolding(null)::transceive)
         assertIs<TagError.VerifyMismatch>((write(uriMessage, session) as Outcome.Err).error)
     }
 

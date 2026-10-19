@@ -16,7 +16,7 @@ internal object OverwriteGuard {
      * [confirmOverwrite] receives the existing message, or null when the tag holds data that cannot be parsed.
      */
     suspend fun check(session: TagSession, confirmOverwrite: suspend (existing: NdefMessage?) -> Boolean): Outcome.Err<TagError>? =
-        when (val read = session.readNdef()) {
+        when (val read = Type2Ndef.read(session)) {
             is Outcome.Ok -> {
                 val existing = read.value
                 if (existing == null || confirmOverwrite(existing)) null else Outcome.Err(TagError.Cancelled)
