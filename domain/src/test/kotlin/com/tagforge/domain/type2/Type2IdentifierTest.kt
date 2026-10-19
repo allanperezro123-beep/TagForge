@@ -83,4 +83,26 @@ class Type2IdentifierTest {
         val result = Type2Identifier.identify(FakeNtag21x(NtagModel.NTAG215), UltralightType.ULTRALIGHT)
         assertEquals(Outcome.Ok(Type2Identity.Ntag(NtagModel.NTAG215)), result)
     }
+
+    @Test
+    fun anNtagWhoseGetVersionFailedOnceIsNotMistakenForAPlainUltralight() = runTest {
+        val tag = FakeNtag21x(NtagModel.NTAG215)
+        tag.failNext(TagError.Io("transient"))
+        // Android calls every NTAG "Ultralight"; the capability container (496 bytes) proves it is a bigger chip.
+        val result = Type2Identifier.identify(tag, UltralightType.ULTRALIGHT)
+        assertEquals(Outcome.Ok(Type2Identity.Ntag(NtagModel.NTAG215)), result)
+    }
+
+    @Test
+    fun aBiggerUnknownChipThatNeverAnswersGetVersionIsReportedUnknownNotUltralight() = runTest {
+        // NTAG203-like: no GET_VERSION, capability container E1 10 12 00 (144 bytes) on a chip Android calls Ultralight.
+        val tag = FakeType2Chip(Type2Chip.ULTRALIGHT).also { it.setPage(3, Bytes.of(0xE1, 0x10, 0x12, 0x00)) }
+        assertEquals(Outcome.Ok(null), Type2Identifier.identify(tag, UltralightType.ULTRALIGHT))
+    }
+
+    @Test
+    fun aFormattedPlainUltralightKeepsItsIdentityWhenTheCapabilityContainerFits() = runTest {
+        val tag = FakeType2Chip(Type2Chip.ULTRALIGHT).also { it.setPage(3, Bytes.of(0xE1, 0x10, 0x06, 0x00)) }
+        assertEquals(Outcome.Ok(Type2Identity.Other(Type2Chip.ULTRALIGHT)), Type2Identifier.identify(tag, UltralightType.ULTRALIGHT))
+    }
 }

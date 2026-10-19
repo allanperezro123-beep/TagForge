@@ -36,6 +36,10 @@ object Type2Identifier {
     private const val SUBTYPE_INDEX = 3
     private const val PRODUCT_INDEX = 2
     private const val SIZE_INDEX = 6
+    private const val CC_PAGE = 3
+    private const val CC_MAGIC = 0xE1
+    private const val CC_READ_SIZE = 16
+    private const val CC_SIZE_UNIT = 8
 
     suspend fun identify(transceiver: TagTransceiver, androidUltralightType: UltralightType? = null): TagResult<Type2Identity?> {
         val answered = transceiver.transceive(NtagCommands.getVersion())
@@ -55,8 +59,25 @@ object Type2Identifier {
         // The refused command (NAK, silence or a dropped link) may have left the tag deselected: start clean.
         return when (val back = transceiver.reconnect()) {
             is Outcome.Err -> back
-            is Outcome.Ok -> Outcome.Ok(fallback(androidUltralightType))
+            is Outcome.Ok -> confirmFallback(transceiver, androidUltralightType)
         }
+    }
+
+    /**
+     * Android's Ultralight type is only a guess for a chip that did not answer GET_VERSION: an NTAG whose command failed
+     * once, or an NTAG203, are also "Ultralight" to Android. The capability container tells them apart: one that
+     * advertises more NDEF memory than the guessed chip has means a bigger chip. A transient failure is retried once.
+     */
+    private suspend fun confirmFallback(transceiver: TagTransceiver, type: UltralightType): TagResult<Type2Identity?> {
+        val guess = fallback(type) as? Type2Identity.Other ?: return Outcome.Ok(null)
+        val cc = when (val read = transceiver.transceive(NtagCommands.read(CC_PAGE))) {
+            is Outcome.Ok -> read.value
+            is Outcome.Err -> return if (read.error == TagError.TagLost || read.error == TagError.Cancelled || read.error == TagError.Timeout) read else Outcome.Ok(guess)
+        }
+        val advertised = if (cc.size == CC_READ_SIZE && cc[0] == CC_MAGIC) cc[2] * CC_SIZE_UNIT else 0
+        if (advertised <= guess.chip.ccNdefSize) return Outcome.Ok(guess)
+        val retry = transceiver.transceive(NtagCommands.getVersion())
+        return Outcome.Ok((retry as? Outcome.Ok)?.let { parseVersion(it.value) })
     }
 
     /** Maps a GET_VERSION answer; null for a NAK, a short answer or a chip this app does not know. */
