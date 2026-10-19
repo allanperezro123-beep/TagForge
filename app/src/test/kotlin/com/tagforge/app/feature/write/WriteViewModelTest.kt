@@ -25,6 +25,8 @@ import com.tagforge.domain.ndef.spec.SpecField
 import com.tagforge.domain.ntag.NtagModel
 import com.tagforge.domain.scan.OperationPhase
 import com.tagforge.domain.ports.TagSession
+import com.tagforge.domain.ports.TagTransceiver
+import com.tagforge.domain.tag.TagTech
 import com.tagforge.domain.scan.ScanCoordinator
 import com.tagforge.domain.tag.TagError
 import com.tagforge.domain.template.Template
@@ -770,11 +772,15 @@ class WriteViewModelTest {
         assertEquals(0, tag.writeCount)
     }
 
-    /** A session whose NDEF read blocks until the test opens the gate, freezing the operation mid-flight. */
+    /** A session whose raw tag I/O blocks until the test opens the gate, freezing the operation mid-flight. */
     private class GatedSession(private val inner: FakeTagSession, val gate: CompletableDeferred<Unit>) : TagSession by inner {
-        override suspend fun readNdef(): TagResult<NdefMessage?> {
-            gate.await()
-            return inner.readNdef()
+        override fun transceiver(tech: TagTech): TagTransceiver? = inner.transceiver(tech)?.let { real ->
+            object : TagTransceiver by real {
+                override suspend fun transceive(command: Bytes): TagResult<Bytes> {
+                    gate.await()
+                    return real.transceive(command)
+                }
+            }
         }
     }
 
