@@ -53,7 +53,7 @@ class DataStoreSettingsStoreTest {
         assertEquals(ThemeMode.SYSTEM, settings.themeMode)
         assertEquals(true, settings.hapticsEnabled)
         assertEquals(false, settings.advancedMode)
-        assertEquals(true, settings.dynamicColor)
+        assertEquals(false, settings.dynamicColor)
         assertEquals(AppSettings(), settings)
     }
 
@@ -75,11 +75,11 @@ class DataStoreSettingsStoreTest {
     fun aNewStoreOverTheSameDataSeesThePreviousValues() = runBlocking {
         val data = InMemoryPreferences()
         DataStoreSettingsStore(data).update {
-            it.copy(themeMode = ThemeMode.LIGHT, dynamicColor = false, hapticsEnabled = false, advancedMode = true)
+            it.copy(themeMode = ThemeMode.LIGHT, dynamicColor = true, hapticsEnabled = false, advancedMode = true)
         }
 
         assertEquals(
-            AppSettings(themeMode = ThemeMode.LIGHT, dynamicColor = false, hapticsEnabled = false, advancedMode = true),
+            AppSettings(themeMode = ThemeMode.LIGHT, dynamicColor = true, hapticsEnabled = false, advancedMode = true),
             DataStoreSettingsStore(data).settings.first(),
         )
     }

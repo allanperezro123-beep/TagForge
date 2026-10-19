@@ -17,13 +17,13 @@ import androidx.core.view.WindowCompat
 import com.tagforge.domain.settings.ThemeMode
 
 /**
- * Material 3 theme. Dynamic colour is used on API 31+ when [dynamicColor] is on; otherwise the forge palette.
- * [themeMode] overrides the system dark setting and applies immediately.
+ * Material 3 theme. The Tag Forge brand palette is the default; dynamic colour (Material You) is an opt-in used only on
+ * API 31+ when [dynamicColor] is on. [themeMode] overrides the system dark setting and applies immediately.
  */
 @Composable
 fun TagForgeTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val dark = when (themeMode) {

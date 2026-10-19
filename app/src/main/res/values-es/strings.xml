@@ -137,8 +137,8 @@
     <string name="settings_theme_system">Predeterminado del sistema</string>
     <string name="settings_theme_light">Claro</string>
     <string name="settings_theme_dark">Oscuro</string>
-    <string name="settings_dynamic_color">Color dinámico</string>
-    <string name="settings_dynamic_color_desc">Usa los colores de tu fondo de pantalla (Android 12 y posterior).</string>
+    <string name="settings_dynamic_color">Colores del sistema (Material You)</string>
+    <string name="settings_dynamic_color_desc">Usa los colores de tu fondo de pantalla en lugar de la paleta de Tag Forge (Android 12 y posterior).</string>
     <string name="settings_haptics">Respuesta háptica</string>
     <string name="settings_haptics_desc">Vibra cuando se detecta una etiqueta o termina una acción.</string>
     <string name="settings_advanced">Modo avanzado</string>

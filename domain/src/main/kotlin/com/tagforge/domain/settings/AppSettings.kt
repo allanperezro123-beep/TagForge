@@ -16,7 +16,8 @@ enum class ThemeMode(val code: String) {
 /** New fields MUST carry a default so existing stores keep working. */
 data class AppSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val dynamicColor: Boolean = true,
+    /** Material You wallpaper colours. Off by default: the Tag Forge brand palette is the look; this is an opt-in. */
+    val dynamicColor: Boolean = false,
     val hapticsEnabled: Boolean = true,
     /** Keep a history of reads and writes (HT-01). Turning it off stops new entries; existing ones stay until cleared. */
     val saveHistory: Boolean = true,

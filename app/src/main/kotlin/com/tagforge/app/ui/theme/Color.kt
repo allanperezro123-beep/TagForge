@@ -23,37 +23,41 @@ data class PaletteSpec(
 )
 
 /**
- * The "forge" palette: mineral, no pure black or white. Used below API 31 and whenever dynamic colour is off.
- * Every text pair is checked at 4.5:1 by ContrastTest.
+ * The Tag Forge brand palette (branding/palette.md): flat, calm blue-slate with a cyan accent, tonal surfaces and no pure
+ * black. It is the default look; dynamic colour (Material You) is an opt-in on API 31+. Every text pair is checked at 4.5:1
+ * by ContrastTest and BrandPaletteContrastTest, and every role is pinned to the palette table by BrandPaletteRolesTest.
+ *
+ * Not in palette.md, so derived here: surfaceDim/surfaceBright (one tonal step beyond the container ramp) and the
+ * semantic success/warning pair (the brand has no green/amber; both stay text-safe on every surface).
  */
 object ForgePalette {
     val light = PaletteSpec(
-        primary = 0xFF9A4426, onPrimary = 0xFFFBFBFA, primaryContainer = 0xFFFFDBCE, onPrimaryContainer = 0xFF3A0F02,
-        secondary = 0xFF4A5859, onSecondary = 0xFFFBFBFA, secondaryContainer = 0xFFD9E4E5, onSecondaryContainer = 0xFF0F1D1E,
-        tertiary = 0xFF4E6150, onTertiary = 0xFFFBFBFA, tertiaryContainer = 0xFFD0E8D0, onTertiaryContainer = 0xFF0B200E,
-        error = 0xFFB3261E, onError = 0xFFFBFBFA, errorContainer = 0xFFF9DEDC, onErrorContainer = 0xFF410E0B,
-        background = 0xFFFBFBFA, onBackground = 0xFF1C1B19,
-        surface = 0xFFFBFBFA, onSurface = 0xFF1C1B19, surfaceVariant = 0xFFEDE0DA, onSurfaceVariant = 0xFF55433C,
-        surfaceDim = 0xFFDCDCD9, surfaceBright = 0xFFFBFBFA,
-        surfaceContainerLowest = 0xFFFDFDFC, surfaceContainerLow = 0xFFF8F8F6, surfaceContainer = 0xFFF5F5F3,
-        surfaceContainerHigh = 0xFFEFEFEC, surfaceContainerHighest = 0xFFE9E9E6,
-        outline = 0xFF7A685F, outlineVariant = 0xFFD8C2BA,
-        inverseSurface = 0xFF302F2D, inverseOnSurface = 0xFFF3F1EE, inversePrimary = 0xFFFFB59A,
+        primary = 0xFF1D55D0, onPrimary = 0xFFFFFFFF, primaryContainer = 0xFFD5E4FE, onPrimaryContainer = 0xFF001454,
+        secondary = 0xFF526072, onSecondary = 0xFFFFFFFF, secondaryContainer = 0xFFD4E4FA, onSecondaryContainer = 0xFF101C2C,
+        tertiary = 0xFF027080, onTertiary = 0xFFFFFFFF, tertiaryContainer = 0xFFB6F2FE, onTertiaryContainer = 0xFF011F25,
+        error = 0xFFB3261E, onError = 0xFFFFFFFF, errorContainer = 0xFFF9DEDC, onErrorContainer = 0xFF410E0B,
+        background = 0xFFF6F9FF, onBackground = 0xFF181B20,
+        surface = 0xFFF6F9FF, onSurface = 0xFF181B20, surfaceVariant = 0xFFDCE3EF, onSurfaceVariant = 0xFF414851,
+        surfaceDim = 0xFFD6DAE1, surfaceBright = 0xFFF6F9FF,
+        surfaceContainerLowest = 0xFFFFFFFF, surfaceContainerLow = 0xFFEFF4FA, surfaceContainer = 0xFFEAEEF5,
+        surfaceContainerHigh = 0xFFE4E9EF, surfaceContainerHighest = 0xFFDEE2E9,
+        outline = 0xFF717882, outlineVariant = 0xFFBFC7D3,
+        inverseSurface = 0xFF2D3135, inverseOnSurface = 0xFFEDF1F7, inversePrimary = 0xFFAAC8FF,
         success = 0xFF2E6B3A, warning = 0xFF7A5A00,
     )
 
     val dark = PaletteSpec(
-        primary = 0xFFFFB59A, onPrimary = 0xFF5A1B05, primaryContainer = 0xFF7A2E14, onPrimaryContainer = 0xFFFFDBCE,
-        secondary = 0xFFB1C3C4, onSecondary = 0xFF1C2B2C, secondaryContainer = 0xFF334243, onSecondaryContainer = 0xFFCDE0E0,
-        tertiary = 0xFFB5CCB5, onTertiary = 0xFF213523, tertiaryContainer = 0xFF364B38, onTertiaryContainer = 0xFFD1E8D1,
+        primary = 0xFF6F9EFE, onPrimary = 0xFF001454, primaryContainer = 0xFF234387, onPrimaryContainer = 0xFFD5E4FE,
+        secondary = 0xFFB8C7DD, onSecondary = 0xFF253142, secondaryContainer = 0xFF3A4859, onSecondaryContainer = 0xFFD4E4FA,
+        tertiary = 0xFF58D6EE, onTertiary = 0xFF00363E, tertiaryContainer = 0xFF004E5A, onTertiaryContainer = 0xFF9FEEFF,
         error = 0xFFF2B8B5, onError = 0xFF601410, errorContainer = 0xFF8C1D18, onErrorContainer = 0xFFF9DEDC,
-        background = 0xFF121211, onBackground = 0xFFE8E6E3,
-        surface = 0xFF121211, onSurface = 0xFFE8E6E3, surfaceVariant = 0xFF53433C, onSurfaceVariant = 0xFFD8C2BA,
-        surfaceDim = 0xFF121211, surfaceBright = 0xFF383836,
-        surfaceContainerLowest = 0xFF0E0E0D, surfaceContainerLow = 0xFF141413, surfaceContainer = 0xFF161615,
-        surfaceContainerHigh = 0xFF1F1F1D, surfaceContainerHighest = 0xFF292927,
-        outline = 0xFFA08D85, outlineVariant = 0xFF53433C,
-        inverseSurface = 0xFFE8E6E3, inverseOnSurface = 0xFF30302E, inversePrimary = 0xFF9A4426,
+        background = 0xFF0E1622, onBackground = 0xFFDEE2E9,
+        surface = 0xFF0E1622, onSurface = 0xFFDEE2E9, surfaceVariant = 0xFF3F4854, onSurfaceVariant = 0xFFBFC7D3,
+        surfaceDim = 0xFF0E1622, surfaceBright = 0xFF333A46,
+        surfaceContainerLowest = 0xFF080E19, surfaceContainerLow = 0xFF141B26, surfaceContainer = 0xFF19202B,
+        surfaceContainerHigh = 0xFF212934, surfaceContainerHighest = 0xFF29303C,
+        outline = 0xFF8A929C, outlineVariant = 0xFF3F4854,
+        inverseSurface = 0xFFDEE2E9, inverseOnSurface = 0xFF2D3135, inversePrimary = 0xFF1D55D0,
         success = 0xFF9BD5A0, warning = 0xFFF1C24A,
     )
 }
@@ -77,6 +81,8 @@ fun PaletteSpec.toLightColorScheme(): ColorScheme = lightColorScheme(
     outline = Color(outline), outlineVariant = Color(outlineVariant),
     inverseSurface = Color(inverseSurface), inverseOnSurface = Color(inverseOnSurface),
     inversePrimary = Color(inversePrimary),
+    // Flat cards: elevation is the tonal surfaceContainer ramp, never a blue wash.
+    surfaceTint = Color.Transparent,
 )
 
 fun PaletteSpec.toDarkColorScheme(): ColorScheme = darkColorScheme(
@@ -98,6 +104,8 @@ fun PaletteSpec.toDarkColorScheme(): ColorScheme = darkColorScheme(
     outline = Color(outline), outlineVariant = Color(outlineVariant),
     inverseSurface = Color(inverseSurface), inverseOnSurface = Color(inverseOnSurface),
     inversePrimary = Color(inversePrimary),
+    // Flat cards: elevation is the tonal surfaceContainer ramp, never a blue wash.
+    surfaceTint = Color.Transparent,
 )
 
 /** WCAG 2.x relative luminance and contrast ratio. */

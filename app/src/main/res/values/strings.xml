@@ -137,8 +137,8 @@
     <string name="settings_theme_system">System default</string>
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
-    <string name="settings_dynamic_color">Dynamic color</string>
-    <string name="settings_dynamic_color_desc">Use the colors of your wallpaper (Android 12 and later).</string>
+    <string name="settings_dynamic_color">System colors (Material You)</string>
+    <string name="settings_dynamic_color_desc">Use the colors of your wallpaper instead of the Tag Forge palette (Android 12 and later).</string>
     <string name="settings_haptics">Haptic feedback</string>
     <string name="settings_haptics_desc">Vibrate when a tag is detected or an action finishes.</string>
     <string name="settings_advanced">Advanced mode</string>

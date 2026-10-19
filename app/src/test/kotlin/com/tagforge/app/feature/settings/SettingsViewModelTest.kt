@@ -82,11 +82,11 @@ class SettingsViewModelTest {
     fun dynamicColorToggleIsPersisted() = runTest {
         val vm = SettingsViewModel(store)
         vm.uiState.test {
-            assertTrue(awaitItem().settings.dynamicColor)
-            vm.onDynamicColorChanged(false)
             assertFalse(awaitItem().settings.dynamicColor)
+            vm.onDynamicColorChanged(true)
+            assertTrue(awaitItem().settings.dynamicColor)
         }
-        assertEquals(AppSettings(dynamicColor = false), store.current)
+        assertEquals(AppSettings(dynamicColor = true), store.current)
     }
 
     @Test

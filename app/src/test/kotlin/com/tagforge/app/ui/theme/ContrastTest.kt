@@ -4,7 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** AS-03 / PR-04: every text-on-background pair of the forge palette meets WCAG AA (4.5:1) in light and dark. */
+/** AS-03 / PR-04: every text-on-background pair of the brand palette meets WCAG AA (4.5:1) in light and dark. Outline is a 3:1 UI colour, checked in BrandPaletteContrastTest. */
 class ContrastTest {
 
     private data class Pair(val name: String, val background: Long, val foreground: Long)
@@ -28,7 +28,6 @@ class ContrastTest {
         Pair("inverseSurface/inversePrimary", p.inverseSurface, p.inversePrimary),
         Pair("surface/primary (text button)", p.surface, p.primary),
         Pair("surface/error (error text)", p.surface, p.error),
-        Pair("surface/outline", p.surface, p.outline),
         Pair("surface/success", p.surface, p.success),
         Pair("surface/warning", p.surface, p.warning),
         Pair("surfaceContainer/success", p.surfaceContainer, p.success),
@@ -52,10 +51,10 @@ class ContrastTest {
     @Test
     fun contrastMathMatchesKnownReferenceValues() {
         assertEquals(21.0, ColorMath.contrastRatio(0xFF000000, 0xFFFFFFFF), 0.001)
-        assertEquals(1.0, ColorMath.contrastRatio(0xFF9A4426, 0xFF9A4426), 0.001)
-        // Design table values (spec: primary light 6.3, dark surface text 15.1)
-        assertEquals(6.28, ColorMath.contrastRatio(ForgePalette.light.primary, ForgePalette.light.onPrimary), 0.02)
-        assertEquals(15.05, ColorMath.contrastRatio(ForgePalette.dark.surface, ForgePalette.dark.onSurface), 0.02)
+        assertEquals(1.0, ColorMath.contrastRatio(0xFF1D55D0, 0xFF1D55D0), 0.001)
+        // Brand palette table values (branding/palette.md: onPrimary on primary 6.44, dark onSurface on surface 13.97)
+        assertEquals(6.44, ColorMath.contrastRatio(ForgePalette.light.primary, ForgePalette.light.onPrimary), 0.02)
+        assertEquals(13.97, ColorMath.contrastRatio(ForgePalette.dark.surface, ForgePalette.dark.onSurface), 0.02)
     }
 
     @Test
