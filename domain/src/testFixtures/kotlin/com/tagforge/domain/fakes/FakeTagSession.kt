@@ -176,10 +176,13 @@ class FakeTagSession(
             return FakeTagSession(info, tag)
         }
 
-        /** A tag with no Type 2 chip behind it (e.g. a MIFARE Classic card). */
+        /**
+         * A tag with no Type 2 chip behind it. The default is what a phone WITHOUT the NXP controller reports for a
+         * MIFARE Classic card: plain NfcA, no `MifareClassic` technology.
+         */
         fun withoutNtag(
             family: TagFamily = TagFamily.MIFARE_CLASSIC,
-            techs: Set<TagTech> = setOf(TagTech.NFC_A, TagTech.MIFARE_CLASSIC),
+            techs: Set<TagTech> = setOf(TagTech.NFC_A),
         ): FakeTagSession = FakeTagSession(
             TagInfo(Bytes.of(0xDE, 0xAD, 0xBE, 0xEF), techs, family, null, Bytes.of(0x00, 0x04), 0x08, null, null),
         )

@@ -1,5 +1,8 @@
 package com.tagforge.domain.read
 
+import com.tagforge.domain.capability.TagCapabilities
+import com.tagforge.domain.capability.ToolOperation
+import com.tagforge.domain.capability.refusal
 import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.common.Outcome
 import com.tagforge.domain.common.TagResult
@@ -53,8 +56,10 @@ class ReadTagUseCase(private val codec: NdefCodec = DefaultNdefCodec) : TagOpera
         }
 
         phase(OperationPhase.READING)
-        if (info.family == TagFamily.MIFARE_CLASSIC && TagTech.NDEF !in info.techs) {
-            return Outcome.Ok(readout(info, null, ReadNotice.UnsupportedFamily(info.family)))
+        when (val refusal = TagCapabilities.of(info).refusal(ToolOperation.READ_NDEF)) {
+            null -> Unit
+            TagError.NotNdef -> return Outcome.Ok(readout(info, null, ReadNotice.NotNdef))
+            else -> if (refusal is TagError.Unsupported) return Outcome.Ok(readout(info, null, ReadNotice.UnsupportedFamily(info.family)))
         }
 
         // A Type 2 chip is read over the same raw NfcA channel the dump uses; only other tags go through the platform.

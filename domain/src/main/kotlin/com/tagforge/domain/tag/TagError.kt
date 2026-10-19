@@ -20,6 +20,15 @@ sealed interface TagError {
 
             /** Copying raw user pages only works between chips of the same model. */
             const val USER_PAGES_MODEL = "user-pages-model"
+
+            /** A tag family Tag Forge can identify but not read or write (FeliCa, NfcB, unknown NfcA). */
+            const val INFO_ONLY = "info-only"
+
+            /** ISO-DEP cards need authentication to read memory; Tag Forge never authenticates. */
+            const val NEEDS_AUTHENTICATION = "needs-authentication"
+
+            /** The tag cannot be formatted for NDEF with the platform APIs. */
+            const val FORMAT = "format"
         }
     }
     data class CapacityExceeded(val required: Int, val available: Int) : TagError

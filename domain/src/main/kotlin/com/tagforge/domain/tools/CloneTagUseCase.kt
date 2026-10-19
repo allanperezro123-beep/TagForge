@@ -1,5 +1,8 @@
 package com.tagforge.domain.tools
 
+import com.tagforge.domain.capability.TagCapabilities
+import com.tagforge.domain.capability.ToolOperation
+import com.tagforge.domain.capability.refusal
 import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.common.Outcome
 import com.tagforge.domain.common.TagResult
@@ -62,9 +65,7 @@ class CloneTagUseCase {
                 is Outcome.Err -> return identified
                 is Outcome.Ok -> identified.value
             }
-            if (info.family == TagFamily.MIFARE_CLASSIC && TagTech.NDEF !in info.techs) {
-                return Outcome.Err(TagError.Unsupported(TagError.Unsupported.MIFARE_CLASSIC))
-            }
+            TagCapabilities.of(info).refusal(ToolOperation.CLONE)?.let { return Outcome.Err(it) }
 
             phase(OperationPhase.READING)
             val message = when (val read = Type2Ndef.read(session)) {

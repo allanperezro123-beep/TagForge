@@ -1,5 +1,8 @@
 package com.tagforge.domain.write
 
+import com.tagforge.domain.capability.TagCapabilities
+import com.tagforge.domain.capability.ToolOperation
+import com.tagforge.domain.capability.refusal
 import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.common.Outcome
 import com.tagforge.domain.common.TagResult
@@ -50,6 +53,7 @@ class WriteNdefUseCase(
             is Outcome.Err -> return identified
             is Outcome.Ok -> identified.value
         }
+        TagCapabilities.of(info).refusal(ToolOperation.WRITE_NDEF)?.let { return Outcome.Err(it) }
         if (info.ndef?.isWritable == false) return Outcome.Err(TagError.ReadOnly)
 
         val expected = codec.encode(message)

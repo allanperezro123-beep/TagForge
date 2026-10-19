@@ -1,5 +1,7 @@
 package com.tagforge.domain.capability
 
+import com.tagforge.domain.tag.TagError
+
 /** What a user can ask of a tag. Every screen routes through [TagCapabilities] instead of testing tag families itself. */
 enum class ToolOperation { READ_NDEF, DUMP, WRITE_NDEF, ERASE, FORMAT, CLONE }
 
@@ -44,4 +46,17 @@ class Capabilities(private val byOperation: Map<ToolOperation, Support>) {
     val readIncludesDump: Boolean
         get() = (get(ToolOperation.DUMP) as? Support.Available)?.channel == AccessChannel.RAW_NFC_A &&
             (get(ToolOperation.READ_NDEF) as? Support.Available)?.channel == AccessChannel.RAW_NFC_A
+}
+
+/**
+ * The typed error an operation returns before touching the tag, or null when the tag supports it. Use cases call this
+ * right after identifying, so an unsupported tag is refused with zero writes and a reason the UI can explain.
+ */
+fun Capabilities.refusal(operation: ToolOperation): TagError? = when (reasonFor(operation)) {
+    null -> null
+    UnsupportedReason.CLASSIC_NEEDS_NXP_CHIP -> TagError.Unsupported(TagError.Unsupported.MIFARE_CLASSIC)
+    UnsupportedReason.INFO_ONLY -> TagError.Unsupported(TagError.Unsupported.INFO_ONLY)
+    UnsupportedReason.NO_NDEF -> TagError.NotNdef
+    UnsupportedReason.NEEDS_AUTHENTICATION -> TagError.Unsupported(TagError.Unsupported.NEEDS_AUTHENTICATION)
+    UnsupportedReason.NOT_FORMATABLE -> TagError.Unsupported(TagError.Unsupported.FORMAT)
 }

@@ -1,5 +1,8 @@
 package com.tagforge.domain.tools
 
+import com.tagforge.domain.capability.TagCapabilities
+import com.tagforge.domain.capability.ToolOperation
+import com.tagforge.domain.capability.refusal
 import com.tagforge.domain.common.Outcome
 import com.tagforge.domain.common.TagResult
 import com.tagforge.domain.ntag.MemoryDump
@@ -29,9 +32,7 @@ class DumpMemoryUseCase(private val readMemory: ReadMemoryUseCase = ReadMemoryUs
             is Outcome.Err -> return identified
             is Outcome.Ok -> identified.value
         }
-        if (info.family == TagFamily.MIFARE_CLASSIC) {
-            return Outcome.Err(TagError.Unsupported(TagError.Unsupported.MIFARE_CLASSIC))
-        }
+        TagCapabilities.of(info).refusal(ToolOperation.DUMP)?.let { return Outcome.Err(it) }
         return when (val read = readMemory.execute(session) { reported -> if (reported != OperationPhase.CONNECTING) phase(reported) }) {
             is Outcome.Err -> read
             is Outcome.Ok -> Outcome.Ok(DumpReport(session.info, read.value))

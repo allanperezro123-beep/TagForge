@@ -54,7 +54,7 @@ object TagCapabilities {
         val ndef = TagTech.NDEF in info.techs
         val formatable = TagTech.NDEF_FORMATABLE in info.techs
         val available = Support.Available(AccessChannel.PLATFORM_NDEF)
-        val noNdef = Support.Unavailable(if (ndef || formatable || hasRawProtocol(info)) UnsupportedReason.NO_NDEF else UnsupportedReason.INFO_ONLY)
+        val noNdef = Support.Unavailable(if (ndef || formatable || canCarryNdef(info)) UnsupportedReason.NO_NDEF else UnsupportedReason.INFO_ONLY)
         return when (operation) {
             ToolOperation.READ_NDEF, ToolOperation.ERASE, ToolOperation.CLONE -> if (ndef) available else noNdef
             ToolOperation.WRITE_NDEF -> if (ndef || formatable) available else noNdef
@@ -67,6 +67,8 @@ object TagCapabilities {
         }
     }
 
-    private fun hasRawProtocol(info: TagInfo): Boolean =
-        info.family == TagFamily.ISO15693 || info.family == TagFamily.MIFARE_CLASSIC
+    /** True for technologies that can hold an NDEF message even when Android shows none yet (blank or unrecognised tag). */
+    private fun canCarryNdef(info: TagInfo): Boolean =
+        info.family == TagFamily.ISO15693 || info.family == TagFamily.MIFARE_CLASSIC ||
+            info.techs.any { it == TagTech.NFC_A || it == TagTech.NFC_V || it == TagTech.ISO_DEP || it == TagTech.MIFARE_ULTRALIGHT }
 }

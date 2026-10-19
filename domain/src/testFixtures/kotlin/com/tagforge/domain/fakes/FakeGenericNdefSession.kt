@@ -23,7 +23,8 @@ class FakeGenericNdefSession(
     private val maxSize: Int = 2048,
     val formatable: Boolean = false,
     family: TagFamily = TagFamily.ISO14443_4,
-    techs: Set<TagTech> = setOf(TagTech.NFC_A, TagTech.ISO_DEP, TagTech.NDEF),
+    techs: Set<TagTech> = setOf(TagTech.NFC_A, TagTech.ISO_DEP, TagTech.NDEF) +
+        if (formatable) setOf(TagTech.NDEF_FORMATABLE) else emptySet(),
     uid: Bytes = Bytes.of(0x08, 0x11, 0x22, 0x33),
 ) : TagSession {
 
