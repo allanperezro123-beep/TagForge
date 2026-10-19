@@ -18,10 +18,11 @@ import com.tagforge.domain.tag.TagTech
 class FakeNtag21x(
     val model: NtagModel,
     val uid: Bytes = DEFAULT_UID,
+    /** Like `NfcA.getMaxTransceiveLength()`: a longer command or response is refused with an I/O error. */
+    override val maxTransceiveLength: Int = 253,
 ) : TagTransceiver {
 
     override val tech: TagTech = TagTech.NFC_A
-    override val maxTransceiveLength: Int = 253
 
     private val pages: Array<ByteArray> = blankPages(model, uid)
 
@@ -113,19 +114,22 @@ class FakeNtag21x(
             return Outcome.Err(it)
         }
         if (command.isEmpty()) return Outcome.Ok(NAK_INVALID_ARGUMENT)
+        if (command.size > maxTransceiveLength) return Outcome.Err(TagError.Io("Transceive length exceeds supported maximum"))
         log += command
-        return Outcome.Ok(
-            when (command[0]) {
-                NtagCommands.GET_VERSION -> getVersion()
-                NtagCommands.READ -> read(command)
-                NtagCommands.FAST_READ -> fastRead(command)
-                NtagCommands.WRITE -> write(command)
-                NtagCommands.PWD_AUTH -> pwdAuth(command)
-                NtagCommands.READ_SIG -> readSig(command)
-                NtagCommands.READ_CNT -> readCnt(command)
-                else -> NAK_INVALID_ARGUMENT
-            },
-        )
+        val response = respond(command)
+        if (response.size > maxTransceiveLength) return Outcome.Err(TagError.Io("Transceive response exceeds supported maximum"))
+        return Outcome.Ok(response)
+    }
+
+    private fun respond(command: Bytes): Bytes = when (command[0]) {
+        NtagCommands.GET_VERSION -> getVersion()
+        NtagCommands.READ -> read(command)
+        NtagCommands.FAST_READ -> fastRead(command)
+        NtagCommands.WRITE -> write(command)
+        NtagCommands.PWD_AUTH -> pwdAuth(command)
+        NtagCommands.READ_SIG -> readSig(command)
+        NtagCommands.READ_CNT -> readCnt(command)
+        else -> NAK_INVALID_ARGUMENT
     }
 
     // ---- password, signature, counter (datasheet 8.8, 10.5-10.7) --------------------------------------------
