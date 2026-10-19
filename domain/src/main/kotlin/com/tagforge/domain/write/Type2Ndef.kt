@@ -27,7 +27,7 @@ import com.tagforge.domain.tag.TagTech
 internal object Type2Ndef {
 
     suspend fun read(session: TagSession, codec: NdefCodec = DefaultNdefCodec): TagResult<NdefMessage?> {
-        val model = session.info.ntag
+        val model = session.info.layout
         val transceiver = session.transceiver(TagTech.NFC_A)
         if (model == null || transceiver == null) return session.readNdef()
 

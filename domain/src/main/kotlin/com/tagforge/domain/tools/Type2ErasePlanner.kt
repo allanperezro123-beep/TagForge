@@ -3,7 +3,7 @@ package com.tagforge.domain.tools
 import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.ndef.Type2Tlv
 import com.tagforge.domain.ntag.NtagCommands
-import com.tagforge.domain.ntag.NtagModel
+import com.tagforge.domain.type2.Type2Layout
 import com.tagforge.domain.write.PageWrite
 
 /**
@@ -24,7 +24,7 @@ internal object Type2ErasePlanner {
      * @param leading Lock/Memory Control TLVs kept in front of the empty NDEF TLV
      * @param wipeEnd byte offset (exclusive) up to which stale bytes of the old content are zeroed
      */
-    fun plan(model: NtagModel, current: Bytes, leading: Bytes, wipeEnd: Int): List<PageWrite> {
+    fun plan(model: Type2Layout, current: Bytes, leading: Bytes, wipeEnd: Int): List<PageWrite> {
         val framed = Type2Tlv.wrap(Bytes.EMPTY, leading)
         val end = maxOf(framed.size, minOf(wipeEnd, current.size))
         val pageCount = minOf((end + PAGE - 1) / PAGE, current.size / PAGE)

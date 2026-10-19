@@ -171,7 +171,7 @@ class CloneViewModel(
     private fun onSourceCaptured(source: CloneSource) {
         captured = source
         val summary = CloneSourceSummary(
-            chip = source.info.ntag?.displayName,
+            chip = source.info.chipName,
             uid = source.info.uid,
             messageSize = DefaultNdefCodec.encode(source.message).size,
             summary = HistorySummarizer.summarize(source.message),

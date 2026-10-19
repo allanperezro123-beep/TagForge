@@ -28,6 +28,15 @@ enum class Region(
     PWD(hiddenByChip = true),
 
     PACK(hiddenByChip = true),
+
+    /** MIFARE Ultralight C: 16-bit one-way counter page. */
+    COUNTER,
+
+    /** MIFARE Ultralight C: AUTH0 / AUTH1 pages (bit 0 of byte 0). */
+    AUTH_CONFIG,
+
+    /** MIFARE Ultralight C: the 3DES key; the chip never reveals it. */
+    KEY(hiddenByChip = true),
 }
 
 /** One dumped page and its role. [regions] has two entries only for page 02 (BCC1 + static lock); [region] is the main one. */

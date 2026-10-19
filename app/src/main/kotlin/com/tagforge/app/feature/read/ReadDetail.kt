@@ -137,7 +137,7 @@ internal fun tagInfoRows(info: TagInfo, hasMessage: Boolean): List<Pair<String, 
         null -> unknown
     }
 
-    val type = info.ntag?.displayName
+    val type = info.chipName
         ?: if (info.family == TagFamily.UNKNOWN && TagTech.NFC_A in info.techs) {
             stringResource(
                 R.string.info_type_unknown_nfca,
@@ -149,7 +149,7 @@ internal fun tagInfoRows(info: TagInfo, hasMessage: Boolean): List<Pair<String, 
         }
 
     val memory = when {
-        info.ntag != null -> stringResource(R.string.info_memory_value, info.ntag!!.userBytes, info.ntag!!.ccNdefSize)
+        info.layout != null -> info.layout!!.let { stringResource(R.string.info_memory_value, (it.userEnd - it.userStart + 1) * 4, it.ccNdefSize) }
         info.ndef != null -> stringResource(R.string.info_memory_total, info.ndef!!.maxSize)
         else -> unknown
     }
@@ -177,6 +177,7 @@ internal fun tagInfoRows(info: TagInfo, hasMessage: Boolean): List<Pair<String, 
 private fun familyLabel(family: TagFamily): String = stringResource(
     when (family) {
         TagFamily.NTAG21X -> R.string.info_family_ntag
+        TagFamily.NTAG_I2C -> R.string.info_family_ntag_i2c
         TagFamily.ULTRALIGHT -> R.string.info_family_ultralight
         TagFamily.MIFARE_CLASSIC -> R.string.info_family_classic
         TagFamily.DESFIRE -> R.string.info_family_desfire

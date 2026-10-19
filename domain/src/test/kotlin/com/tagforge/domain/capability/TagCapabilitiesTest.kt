@@ -5,6 +5,7 @@ import com.tagforge.domain.ntag.NtagModel
 import com.tagforge.domain.tag.TagFamily
 import com.tagforge.domain.tag.TagInfo
 import com.tagforge.domain.tag.TagTech
+import com.tagforge.domain.type2.Type2Chip
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -93,5 +94,22 @@ class TagCapabilitiesTest {
         assertEquals(AccessChannel.PLATFORM_NDEF, channel(blank, ToolOperation.FORMAT))
         assertEquals(AccessChannel.PLATFORM_NDEF, channel(blank, ToolOperation.WRITE_NDEF))
         assertEquals(UnsupportedReason.NO_NDEF, blank.reasonFor(ToolOperation.READ_NDEF))
+    }
+
+    @Test
+    fun ultralightFamilyAndOtherType2ChipsUseRawNfcAForEverything() {
+        Type2Chip.entries.forEach { chip ->
+            val info = TagInfo(Bytes.of(1, 2, 3, 4), setOf(TagTech.NFC_A, TagTech.MIFARE_ULTRALIGHT), chip.family, type2 = chip)
+            val c = TagCapabilities.of(info)
+            ToolOperation.entries.forEach { assertEquals(AccessChannel.RAW_NFC_A, channel(c, it), "${chip.name} $it") }
+            assertTrue(c.readIncludesDump)
+        }
+    }
+
+    @Test
+    fun anUltralightWhoseChipIsUnknownFallsBackToThePlatformWhenItHasNdef() {
+        val c = caps(TagFamily.ULTRALIGHT, TagTech.NFC_A, TagTech.MIFARE_ULTRALIGHT, TagTech.NDEF)
+        assertEquals(AccessChannel.PLATFORM_NDEF, channel(c, ToolOperation.READ_NDEF))
+        assertEquals(UnsupportedReason.INFO_ONLY, c.reasonFor(ToolOperation.DUMP))
     }
 }

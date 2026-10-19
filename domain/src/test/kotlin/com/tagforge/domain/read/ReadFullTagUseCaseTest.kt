@@ -53,8 +53,8 @@ class ReadFullTagUseCaseTest {
     fun tagLostAfterTheReadoutKeepsTheReadoutAndExplainsTheMissingDump() = runTest {
         val tag = FakeNtag21x(NtagModel.NTAG213)
         val session = FakeTagSession.ntag(tag)
-        // the NDEF read is 3 FAST_READs (36 user pages / 16); the dump starts afterwards
-        val sentBeforeDump = 3
+        // the NDEF read is 10 FAST_READs (page 3 plus the 36 user pages, 4 pages each); the dump starts afterwards
+        val sentBeforeDump = 10
         tag.failNextAfter(sentBeforeDump, TagError.TagLost)
 
         val result = scan(session)

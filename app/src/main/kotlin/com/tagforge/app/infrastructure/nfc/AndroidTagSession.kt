@@ -11,11 +11,14 @@ import com.tagforge.domain.ndef.NdefCodec
 import com.tagforge.domain.ndef.NdefMessage
 import com.tagforge.domain.ndef.Tnf
 import com.tagforge.domain.ntag.NtagCommands
-import com.tagforge.domain.ntag.NtagIdentifier
 import com.tagforge.domain.ntag.NtagResponses
 import com.tagforge.domain.ports.TagSession
 import com.tagforge.domain.ports.TagTransceiver
 import com.tagforge.domain.tag.TagError
+import com.tagforge.domain.tag.TagFamily
+import com.tagforge.domain.tag.UltralightType
+import com.tagforge.domain.type2.Type2Identifier
+import com.tagforge.domain.type2.Type2Identity
 import com.tagforge.domain.tag.TagInfo
 import com.tagforge.domain.tag.TagTech
 import kotlinx.coroutines.CancellationException
@@ -66,15 +69,25 @@ class AndroidTagSession(
         }
     }
 
+    private var identifyDone = false
+
     override suspend fun identify(): TagResult<TagInfo> {
         val transceiver = nfcATransceiver
-        val maybeNtag = TagTech.NFC_A in info.techs && info.ntag == null &&
+        val maybeType2 = TagTech.NFC_A in info.techs && !identifyDone &&
             (TagTech.MIFARE_ULTRALIGHT in info.techs || info.sak == 0)
-        if (transceiver != null && maybeNtag) {
-            when (val identified = NtagIdentifier.identify(transceiver)) {
+        if (transceiver != null && maybeType2) {
+            // Android's own Ultralight type is the fallback for chips that do not know GET_VERSION (UL, UL-C).
+            val androidType = if (TagTech.MIFARE_ULTRALIGHT in info.techs) info.details.ultralight?.type ?: UltralightType.UNKNOWN else null
+            when (val identified = Type2Identifier.identify(transceiver, androidType)) {
                 is Outcome.Err -> return identified
-                is Outcome.Ok -> identified.value?.let { model ->
-                    info = info.copy(ntag = model, family = TagInfoExtractor.familyFor(info.techs, model))
+                is Outcome.Ok -> {
+                    identifyDone = true
+                    when (val identity = identified.value) {
+                        is Type2Identity.Ntag -> info = info.copy(ntag = identity.model, family = TagInfoExtractor.familyFor(info.techs, identity.model))
+                        is Type2Identity.Other -> info = info.copy(type2 = identity.chip, family = identity.chip.family)
+                        is Type2Identity.NtagI2c -> info = info.copy(family = TagFamily.NTAG_I2C)
+                        null -> Unit
+                    }
                 }
             }
         }
@@ -114,11 +127,11 @@ class AndroidTagSession(
      * user memory is password-protected that fails, so we probe the first user page: a refusal means "protected".
      */
     private suspend fun readWithoutNdefTech(): TagResult<NdefMessage?> {
-        val ntag = info.ntag
+        val layout = info.layout
         val transceiver = nfcATransceiver
-        if (ntag == null || transceiver == null) return Outcome.Err(TagError.NotNdef)
+        if (layout == null || transceiver == null) return Outcome.Err(TagError.NotNdef)
 
-        val probe = transceiver.transceive(NtagCommands.read(ntag.userStart))
+        val probe = transceiver.transceive(NtagCommands.read(layout.userStart))
         return when (probe) {
             is Outcome.Err -> Outcome.Err(TagError.AuthRequired)   // NAK often surfaces as a dropped connection
             is Outcome.Ok -> when (NtagResponses.checkData(probe.value, NtagCommands.READ_RESPONSE_SIZE)) {

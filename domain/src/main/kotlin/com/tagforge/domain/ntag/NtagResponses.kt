@@ -16,11 +16,14 @@ object NtagResponses {
     private const val VENDOR_INDEX = 1
     private const val PRODUCT_TYPE_INDEX = 2
     private const val STORAGE_SIZE_INDEX = 6
+    private const val SUBTYPE_INDEX = 3
+    private const val SUBTYPE_I2C = 0x05
 
     /** Maps a GET_VERSION response to an NTAG21x model; null for anything else (never an error). */
     fun parseVersion(response: Bytes): NtagModel? {
         if (response.size != VERSION_LENGTH) return null
         if (response[VENDOR_INDEX] != VENDOR_NXP || response[PRODUCT_TYPE_INDEX] != PRODUCT_TYPE_NTAG) return null
+        if (response[SUBTYPE_INDEX] == SUBTYPE_I2C) return null   // NTAG I2C reuses the NTAG21x storage codes
         return NtagModel.fromVersionSize(response[STORAGE_SIZE_INDEX])
     }
 

@@ -23,6 +23,9 @@ fun Region.labelRes(): Int = when (this) {
     Region.CFG1 -> R.string.region_cfg1
     Region.PWD -> R.string.region_pwd
     Region.PACK -> R.string.region_pack
+    Region.COUNTER -> R.string.region_counter
+    Region.AUTH_CONFIG -> R.string.region_auth_config
+    Region.KEY -> R.string.region_key
 }
 
 /** One-paragraph explanation for the row-tap bottom sheet. */
@@ -37,6 +40,9 @@ fun Region.explanationRes(): Int = when (this) {
     Region.CFG1 -> R.string.region_cfg1_explain
     Region.PWD -> R.string.region_pwd_explain
     Region.PACK -> R.string.region_pack_explain
+    Region.COUNTER -> R.string.region_counter_explain
+    Region.AUTH_CONFIG -> R.string.region_auth_config_explain
+    Region.KEY -> R.string.region_key_explain
 }
 
 /** Band colour per role: all are theme colours, so contrast follows the theme (and the legend text carries the meaning). */
@@ -46,8 +52,8 @@ fun Region.bandColor(): Color = when (this) {
     Region.STATIC_LOCK, Region.DYN_LOCK -> MaterialTheme.extendedColors.warning
     Region.CC -> MaterialTheme.colorScheme.tertiary
     Region.USER -> MaterialTheme.colorScheme.primary
-    Region.CFG0, Region.CFG1 -> MaterialTheme.colorScheme.secondary
-    Region.PWD, Region.PACK -> MaterialTheme.colorScheme.error
+    Region.CFG0, Region.CFG1, Region.AUTH_CONFIG, Region.COUNTER -> MaterialTheme.colorScheme.secondary
+    Region.PWD, Region.PACK, Region.KEY -> MaterialTheme.colorScheme.error
 }
 
 @StringRes

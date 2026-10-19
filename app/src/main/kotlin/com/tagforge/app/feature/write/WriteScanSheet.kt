@@ -117,7 +117,7 @@ private fun SuccessContent(
     )
     StatusText(
         stringResource(R.string.write_sheet_success),
-        stringResource(R.string.write_sheet_success_detail, sheet.report.messageSize, info.ntag?.displayName ?: "NFC"),
+        stringResource(R.string.write_sheet_success_detail, sheet.report.messageSize, info.chipName ?: "NFC"),
     )
     Button(onClick = onDone, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.write_sheet_done)) }
     if (onWriteAnother != null) {

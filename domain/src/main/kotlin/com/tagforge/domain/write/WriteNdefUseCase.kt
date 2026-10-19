@@ -8,7 +8,7 @@ import com.tagforge.domain.ndef.NdefBudget
 import com.tagforge.domain.ndef.NdefCodec
 import com.tagforge.domain.ndef.NdefMessage
 import com.tagforge.domain.ndef.Type2Tlv
-import com.tagforge.domain.ntag.NtagModel
+import com.tagforge.domain.type2.Type2Layout
 import com.tagforge.domain.ports.TagSession
 import com.tagforge.domain.ports.TagTransceiver
 import com.tagforge.domain.scan.OperationKind
@@ -72,10 +72,10 @@ class WriteNdefUseCase(
     }
 
     /** Same number the wizard meter shows: what Android's `Ndef.maxSize` reports, or its offline equivalent per chip. */
-    private fun capacityOf(info: TagInfo): Int? = info.ndef?.maxSize ?: info.ntag?.let(NdefBudget::androidMaxSize)
+    private fun capacityOf(info: TagInfo): Int? = info.ndef?.maxSize ?: info.layout?.let(NdefBudget::androidMaxSize)
 
     private suspend fun writeMessage(session: TagSession, info: TagInfo, encoded: Bytes): TagResult<Unit> {
-        val model = info.ntag
+        val model = info.layout
         val transceiver = session.transceiver(TagTech.NFC_A)
         if (model != null && transceiver != null) {
             writeType2(transceiver, model, encoded)?.let { return it }
@@ -86,17 +86,24 @@ class WriteNdefUseCase(
     /**
      * Null means "this chip is not set up for raw NDEF writing, use the generic path". Otherwise the final result.
      */
-    private suspend fun writeType2(transceiver: TagTransceiver, model: NtagModel, encoded: Bytes): TagResult<Unit>? {
-        val area = when (val read = Type2Io.readCcAndUserArea(transceiver, model)) {
+    private suspend fun writeType2(transceiver: TagTransceiver, model: Type2Layout, encoded: Bytes): TagResult<Unit>? {
+        var area = when (val read = Type2Io.readCcAndUserArea(transceiver, model)) {
             is Outcome.Err -> return read
             is Outcome.Ok -> read.value
         }
-        if (!area.hasCapabilityContainer) return null   // capability container missing: let the platform format it
+        if (!area.hasCapabilityContainer) {
+            // Blank Ultralight-family page 3: write the capability container over the SAME channel; anything else
+            // without a CC is left to the platform formatter.
+            area = when (val init = Type2Io.initCapabilityContainer(transceiver, model, area)) {
+                is Outcome.Err -> return init
+                is Outcome.Ok -> init.value ?: return null
+            }
+        }
         val current = area.user
 
         val leading = (Type2Tlv.unwrap(current) as? Outcome.Ok)?.value?.leadingBytes?.let { current.slice(0, it) }
             ?: model.factoryLockControlTlv ?: Bytes.EMPTY
-        val steps = Type2WritePlanner.plan(model, current, encoded, leading)
+        val steps = Type2WritePlanner.plan(model, current, encoded, leading, area.ndefAreaFor(model))
             ?: return Outcome.Err(TagError.CapacityExceeded(encoded.size, NdefBudget.androidMaxSize(model)))
 
         return Type2Io.execute(transceiver, steps)

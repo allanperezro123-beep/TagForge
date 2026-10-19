@@ -11,6 +11,7 @@ import com.tagforge.domain.scan.OperationKind
 import com.tagforge.domain.scan.OperationPhase
 import com.tagforge.domain.scan.TagOperation
 import com.tagforge.domain.tag.TagError
+import com.tagforge.domain.tag.TagInfo
 import com.tagforge.domain.tag.TagTech
 
 /**
@@ -33,24 +34,27 @@ class ReadMemoryUseCase : TagOperation<MemoryDump> {
         val transceiver = session.transceiver(TagTech.NFC_A) ?: return Outcome.Err(TagError.Unsupported("NfcA"))
 
         phase(OperationPhase.READING)
-        val model = info.ntag
-        val totalPages = model?.totalPages ?: UNKNOWN_CHIP_PAGES
+        val layout = info.layout
+        val totalPages = layout?.totalPages ?: UNKNOWN_CHIP_PAGES
         val pages = ArrayList<Bytes>(totalPages)
+        val fastRead = layout?.supportsFastRead == true
 
         var start = 0
         while (start < totalPages) {
             val end = minOf(start + CHUNK_PAGES - 1, totalPages - 1)
-            val command = if (model != null) NtagCommands.fastRead(start, end) else NtagCommands.read(start)
+            val wanted = (end - start + 1) * NtagCommands.PAGE_SIZE
+            val command = if (fastRead) NtagCommands.fastRead(start, end) else NtagCommands.read(start)
             val response = when (val sent = transceiver.transceive(command)) {
                 is Outcome.Err -> return sent
                 is Outcome.Ok -> sent.value
             }
-            val expectedBytes = (end - start + 1) * NtagCommands.PAGE_SIZE
+            // FAST_READ answers exactly the pages asked for; READ always answers four pages, the tail may roll over.
+            val expectedBytes = if (fastRead) wanted else NtagCommands.READ_RESPONSE_SIZE
             val data = when (val checked = NtagResponses.checkData(response, expectedBytes)) {
                 is Outcome.Ok -> checked.value
                 is Outcome.Err ->
                     if (checked.error is TagError.Nak && start > 0) {
-                        return Outcome.Ok(MemoryDump(model, pages, start until totalPages))
+                        return Outcome.Ok(dump(info, pages, start until totalPages))
                     } else {
                         return checked
                     }
@@ -58,8 +62,11 @@ class ReadMemoryUseCase : TagOperation<MemoryDump> {
             for (i in 0 until (end - start + 1)) pages += data.slice(i * NtagCommands.PAGE_SIZE, (i + 1) * NtagCommands.PAGE_SIZE)
             start = end + 1
         }
-        return Outcome.Ok(MemoryDump(model, pages, null))
+        return Outcome.Ok(dump(info, pages, null))
     }
+
+    private fun dump(info: TagInfo, pages: List<Bytes>, unreadable: IntRange?) =
+        MemoryDump(info.ntag, pages, unreadable, info.type2)
 
     private companion object {
         const val CHUNK_PAGES = 4

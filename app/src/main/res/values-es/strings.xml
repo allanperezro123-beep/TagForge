@@ -109,6 +109,7 @@
     <string name="info_ndef_empty">Formateada, vacía</string>
     <string name="info_ndef_absent">No presente</string>
     <string name="info_family_ntag">NTAG21x</string>
+    <string name="info_family_ntag_i2c">NTAG I2C</string>
     <string name="info_family_ultralight">MIFARE Ultralight</string>
     <string name="info_family_classic">MIFARE Classic</string>
     <string name="info_family_desfire">MIFARE DESFire</string>
@@ -485,6 +486,9 @@
     <string name="region_cfg1">CFG1 (ACCESS)</string>
     <string name="region_pwd">PWD</string>
     <string name="region_pack">PACK</string>
+    <string name="region_counter">Contador</string>
+    <string name="region_auth_config">Config. de autenticación</string>
+    <string name="region_key">Clave 3DES</string>
     <string name="region_uid_explain">El número de serie único del chip y sus bytes de control. Se graba en fábrica y no se puede cambiar.</string>
     <string name="region_static_lock_explain">Los bytes 2 y 3 de la página 2 bloquean las páginas 3 a 15. Cada bit solo puede pasar de 0 a 1, así que el bloqueo es permanente.</string>
     <string name="region_cc_explain">Indica a los lectores que es una etiqueta NFC Forum y cuánta memoria NDEF tiene. Aquí los bits solo se pueden activar, nunca borrar.</string>
@@ -494,6 +498,9 @@
     <string name="region_cfg1_explain">Ajustes de acceso. El bit 7 (PROT) decide si leer también exige contraseña; los bits bajos limitan los intentos fallidos.</string>
     <string name="region_pwd_explain">La contraseña de 32 bits. El chip nunca la devuelve: esta página siempre se lee como ceros.</string>
     <string name="region_pack_explain">La confirmación que se envía tras una contraseña correcta. También se lee siempre como ceros.</string>
+    <string name="region_counter_explain">El contador de 16 bits de un solo sentido del Ultralight C. Solo puede aumentar.</string>
+    <string name="region_auth_config_explain">AUTH0 / AUTH1 del Ultralight C: la primera página que exige autenticación y si también hace falta para leer. Tag Forge nunca los modifica.</string>
+    <string name="region_key_explain">La clave de autenticación del Ultralight C. El chip nunca permite leerla, así que siempre se muestra en ceros.</string>
 
     <!-- Phase 3: Clone -->
     <string name="clone_title">Clonar una etiqueta</string>

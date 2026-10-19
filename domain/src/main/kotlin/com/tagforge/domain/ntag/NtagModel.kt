@@ -1,6 +1,7 @@
 package com.tagforge.domain.ntag
 
 import com.tagforge.domain.common.Bytes
+import com.tagforge.domain.type2.Type2Layout
 
 /**
  * NXP NTAG213/215/216 memory map, verified against datasheet Rev. 3.2 (doc 265332).
@@ -9,12 +10,12 @@ import com.tagforge.domain.common.Bytes
  * [userBytes] for NTAG215/216; budgets must use the CC value, never raw user memory.
  */
 enum class NtagModel(
-    val displayName: String,
+    override val displayName: String,
     /** Third byte of the GET_VERSION response (storage size code). */
     val versionSize: Int,
-    val totalPages: Int,
-    val userStart: Int,
-    val userEnd: Int,
+    override val totalPages: Int,
+    override val userStart: Int,
+    override val userEnd: Int,
     val dynLock: Int,
     val cfg0: Int,
     val cfg1: Int,
@@ -25,8 +26,8 @@ enum class NtagModel(
     /** Pages covered by one dynamic lock bit. */
     val dynamicLockGranularityPages: Int,
     /** NTAG213 ships with a Lock Control TLV in pages 04-05; erase/format MUST preserve it. */
-    val factoryLockControlTlv: Bytes?,
-) {
+    override val factoryLockControlTlv: Bytes?,
+) : Type2Layout {
     NTAG213(
         displayName = "NTAG213", versionSize = 0x0F, totalPages = 45, userStart = 4, userEnd = 39,
         dynLock = 40, cfg0 = 41, cfg1 = 42, pwd = 43, pack = 44,
@@ -55,7 +56,11 @@ enum class NtagModel(
     val userBytes: Int get() = (userEnd - userStart + 1) * 4
 
     /** NDEF area size advertised in the CC (144 / 496 / 872). */
-    val ccNdefSize: Int get() = capabilityContainer[2] * 8
+    override val ccNdefSize: Int get() = capabilityContainer[2] * 8
+
+    override val supportsFastRead: Boolean get() = true
+
+    override val trustsCcSize: Boolean get() = false
 
     /** Bytes of user memory at pages 04-05 as shipped from the factory. */
     val factoryNdefArea: Bytes

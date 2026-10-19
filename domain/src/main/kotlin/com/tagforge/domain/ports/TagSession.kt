@@ -1,6 +1,7 @@
 package com.tagforge.domain.ports
 
 import com.tagforge.domain.common.Bytes
+import com.tagforge.domain.common.Outcome
 import com.tagforge.domain.common.TagResult
 import com.tagforge.domain.ndef.NdefMessage
 import com.tagforge.domain.tag.TagInfo
@@ -13,6 +14,12 @@ interface TagTransceiver {
 
     /** Sends [command] and returns the raw response (a lone 4-bit NAK arrives as a 1-byte response). */
     suspend fun transceive(command: Bytes): TagResult<Bytes>
+
+    /**
+     * Re-establishes the RF link to the same tag after a refused command dropped it (a NAK to an unknown command such
+     * as GET_VERSION on a plain Ultralight). Err(TagLost) when the tag is really gone.
+     */
+    suspend fun reconnect(): TagResult<Unit> = Outcome.Ok(Unit)
 }
 
 /**

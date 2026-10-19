@@ -70,8 +70,8 @@ class NtagMemoryMapTest {
     }
 
     @Test
-    fun onlyPwdAndPackAreHiddenByTheChip() {
-        assertEquals(setOf(Region.PWD, Region.PACK), Region.entries.filter { it.hiddenByChip }.toSet())
+    fun onlyPwdPackAndTheUltralightCKeyAreHiddenByTheChip() {
+        assertEquals(setOf(Region.PWD, Region.PACK, Region.KEY), Region.entries.filter { it.hiddenByChip }.toSet())
         assertFalse(Region.USER.hiddenByChip)
     }
 

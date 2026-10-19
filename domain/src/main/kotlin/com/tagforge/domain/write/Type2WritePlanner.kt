@@ -3,7 +3,7 @@ package com.tagforge.domain.write
 import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.ndef.Type2Tlv
 import com.tagforge.domain.ntag.NtagCommands
-import com.tagforge.domain.ntag.NtagModel
+import com.tagforge.domain.type2.Type2Layout
 
 /** One WRITE command: an absolute page number and its four bytes. */
 data class PageWrite(val page: Int, val data: Bytes)
@@ -38,7 +38,7 @@ object Type2WritePlanner {
      * written with length 0, the body follows, and the real header is committed last, exactly like [plan].
      * Without an NDEF TLV ([leadingSize] null) the pages are simply written in ascending order.
      */
-    fun planImage(model: NtagModel, current: Bytes, image: Bytes, leadingSize: Int?, lengthSize: Int = 1): List<PageWrite> {
+    fun planImage(model: Type2Layout, current: Bytes, image: Bytes, leadingSize: Int?, lengthSize: Int = 1): List<PageWrite> {
         require(image.size % PAGE == 0 && image.size <= current.size) { "image must be page aligned and fit the user area" }
         val pageCount = image.size / PAGE
         fun page(source: Bytes, index: Int) = source.slice(index * PAGE, (index + 1) * PAGE)
@@ -60,9 +60,9 @@ object Type2WritePlanner {
         return steps
     }
 
-    fun plan(model: NtagModel, current: Bytes, message: Bytes, leading: Bytes): List<PageWrite>? {
+    fun plan(model: Type2Layout, current: Bytes, message: Bytes, leading: Bytes, areaSize: Int = model.ccNdefSize): List<PageWrite>? {
         var framed = Type2Tlv.wrap(message, leading)
-        val area = model.ccNdefSize
+        val area = areaSize
         if (framed.size > area) {
             // The terminator TLV is optional when the message fills the area exactly (NFC Forum Type 2 TLV rules).
             if (framed.size - 1 == area && framed[framed.size - 1] == TERMINATOR) framed = framed.slice(0, framed.size - 1) else return null

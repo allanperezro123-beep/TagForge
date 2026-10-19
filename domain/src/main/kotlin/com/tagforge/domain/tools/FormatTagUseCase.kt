@@ -4,7 +4,7 @@ import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.common.Outcome
 import com.tagforge.domain.common.TagResult
 import com.tagforge.domain.ndef.Type2Tlv
-import com.tagforge.domain.ntag.NtagModel
+import com.tagforge.domain.type2.Type2Layout
 import com.tagforge.domain.ports.TagSession
 import com.tagforge.domain.ports.TagTransceiver
 import com.tagforge.domain.scan.OperationKind
@@ -46,7 +46,7 @@ class FormatTagUseCase : TagOperation<FormatReport> {
         }
         if (info.ndef?.isWritable == false) return Outcome.Err(TagError.ReadOnly)
 
-        val model = info.ntag
+        val model = info.layout
         val transceiver = session.transceiver(TagTech.NFC_A)
         return if (model != null && transceiver != null) {
             formatType2(session, info, transceiver, model, phase)
@@ -61,15 +61,21 @@ class FormatTagUseCase : TagOperation<FormatReport> {
         session: TagSession,
         info: TagInfo,
         transceiver: TagTransceiver,
-        model: NtagModel,
+        model: Type2Layout,
         phase: (OperationPhase) -> Unit,
     ): TagResult<FormatReport> {
         phase(OperationPhase.READING)
-        val area = when (val read = Type2Io.readCcAndUserArea(transceiver, model)) {
+        var area = when (val read = Type2Io.readCcAndUserArea(transceiver, model)) {
             is Outcome.Err -> return read
             is Outcome.Ok -> read.value
         }
-        if (!area.hasCapabilityContainer) return formatThroughPlatform(session, info, phase)
+        if (!area.hasCapabilityContainer) {
+            // Blank Ultralight-family page 3: initialise it over the same channel instead of hopping technologies.
+            area = when (val init = Type2Io.initCapabilityContainer(transceiver, model, area)) {
+                is Outcome.Err -> return init
+                is Outcome.Ok -> init.value ?: return formatThroughPlatform(session, info, phase)
+            }
+        }
         if (area.isReadOnlyPerCc) return Outcome.Err(TagError.ReadOnly)
 
         val current = area.user

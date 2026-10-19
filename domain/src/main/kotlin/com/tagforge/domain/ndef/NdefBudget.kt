@@ -1,6 +1,7 @@
 package com.tagforge.domain.ndef
 
 import com.tagforge.domain.ntag.NtagModel
+import com.tagforge.domain.type2.Type2Layout
 
 /**
  * Size accounting for the write wizard's budget meter.
@@ -43,7 +44,7 @@ object NdefBudget {
      * Control TLV (213 only) minus the NDEF TLV header (2 bytes, 4 for long messages). NTAG213 = 137, 215 = 492,
      * 216 = 868. Used as the meter capacity for a chosen target so it matches what a scanned tag will report.
      */
-    fun androidMaxSize(model: NtagModel): Int {
+    fun androidMaxSize(model: Type2Layout): Int {
         val area = model.ccNdefSize - (model.factoryLockControlTlv?.size ?: 0)
         return area - if (area - 2 <= MAX_ONE_BYTE_TLV_LENGTH) 2 else 4
     }
@@ -56,7 +57,7 @@ object NdefBudget {
      * Capacity when no tag has been scanned: CC NDEF size, minus the factory Lock Control TLV (NTAG213 only),
      * minus the NDEF TLV header (2 or 4 bytes) and the terminator. NTAG213 = 136.
      */
-    fun presetCapacity(model: NtagModel): Int {
+    fun presetCapacity(model: Type2Layout): Int {
         val area = model.ccNdefSize - (model.factoryLockControlTlv?.size ?: 0)
         val withShortHeader = area - 2 - TERMINATOR_SIZE
         return if (withShortHeader <= MAX_ONE_BYTE_TLV_LENGTH) withShortHeader else area - 4 - TERMINATOR_SIZE

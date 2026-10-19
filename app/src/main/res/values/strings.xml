@@ -109,6 +109,7 @@
     <string name="info_ndef_empty">Formatted, empty</string>
     <string name="info_ndef_absent">Not present</string>
     <string name="info_family_ntag">NTAG21x</string>
+    <string name="info_family_ntag_i2c">NTAG I2C</string>
     <string name="info_family_ultralight">MIFARE Ultralight</string>
     <string name="info_family_classic">MIFARE Classic</string>
     <string name="info_family_desfire">MIFARE DESFire</string>
@@ -495,6 +496,9 @@
     <string name="region_cfg1">CFG1 (ACCESS)</string>
     <string name="region_pwd">PWD</string>
     <string name="region_pack">PACK</string>
+    <string name="region_counter">Counter</string>
+    <string name="region_auth_config">Auth config</string>
+    <string name="region_key">3DES key</string>
     <string name="region_uid_explain">The unique serial number of the chip and its check bytes. Written at the factory and never changeable.</string>
     <string name="region_static_lock_explain">Bytes 2 and 3 of page 2 lock pages 3 to 15. Each bit can only go from 0 to 1, so locking is permanent.</string>
     <string name="region_cc_explain">Tells readers this is an NFC Forum tag and how much NDEF memory it has. Bits here can only be set, never cleared.</string>
@@ -504,6 +508,9 @@
     <string name="region_cfg1_explain">Access settings. Bit 7 (PROT) chooses whether reading also needs the password; the low bits limit failed attempts.</string>
     <string name="region_pwd_explain">The 32-bit password. The chip never gives it back: this page always reads as zeros.</string>
     <string name="region_pack_explain">The password acknowledge sent after a correct password. It also always reads as zeros.</string>
+    <string name="region_counter_explain">The 16-bit one-way counter of the Ultralight C. It can only count up.</string>
+    <string name="region_auth_config_explain">AUTH0 / AUTH1 of the Ultralight C: the first page that needs authentication and whether reading needs it too. Tag Forge never changes them.</string>
+    <string name="region_key_explain">The Ultralight C authentication key. The chip never lets it be read, so it always shows as zeros.</string>
 
     <!-- Phase 3: Clone -->
     <string name="clone_title">Clone a tag</string>

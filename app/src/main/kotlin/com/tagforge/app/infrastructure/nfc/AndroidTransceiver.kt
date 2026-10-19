@@ -62,6 +62,24 @@ class AndroidTransceiver(
         }
     }
 
+    /**
+     * A refused command (the NAK of a plain Ultralight to GET_VERSION) often drops the RF link: close and connect again
+     * so the next command starts from a clean selection. Fails with TagLost when the tag really left the field.
+     */
+    override suspend fun reconnect(): TagResult<Unit> = withContext(io) {
+        try {
+            if (nfcA.isConnected) nfcA.close()
+            beforeConnect()
+            nfcA.connect()
+            applyTimeout()
+            Outcome.Ok(Unit)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            Outcome.Err(TagErrorMapper.map(e))
+        }
+    }
+
     fun close() {
         try {
             if (nfcA.isConnected) nfcA.close()

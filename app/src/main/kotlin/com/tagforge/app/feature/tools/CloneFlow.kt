@@ -185,7 +185,7 @@ private fun CloneSheet.toUi(): ToolSheetUi = when (this) {
         detail = stringResource(
             R.string.clone_sheet_success_detail,
             report.messageSize,
-            report.target.ntag?.displayName ?: stringResource(R.string.common_unknown),
+            report.target.chipName ?: stringResource(R.string.common_unknown),
         ),
         extraLabel = stringResource(R.string.clone_sheet_again),
     )

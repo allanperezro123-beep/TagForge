@@ -6,7 +6,7 @@ import com.tagforge.domain.common.TagResult
 import com.tagforge.domain.ndef.DefaultNdefCodec
 import com.tagforge.domain.ndef.NdefMessage
 import com.tagforge.domain.ndef.Type2Tlv
-import com.tagforge.domain.ntag.NtagModel
+import com.tagforge.domain.type2.Type2Layout
 import com.tagforge.domain.ports.TagSession
 import com.tagforge.domain.ports.TagTransceiver
 import com.tagforge.domain.scan.OperationKind
@@ -73,7 +73,7 @@ class CloneTagUseCase {
             }
             if (!includeUserPages) return Outcome.Ok(CloneSource(session.info, message, userPages = null))
 
-            val model = info.ntag
+            val model = info.layout
             val transceiver = session.transceiver(TagTech.NFC_A)
             if (model == null || transceiver == null) return Outcome.Err(TagError.Unsupported(TagError.Unsupported.USER_PAGES_MODEL))
             return when (val area = Type2Io.readCcAndUserArea(transceiver, model)) {
@@ -112,19 +112,25 @@ class CloneTagUseCase {
             }
 
         private suspend fun copyPages(session: TagSession, info: TagInfo, image: Bytes, phase: (OperationPhase) -> Unit): TagResult<CloneReport> {
-            val model = info.ntag
+            val model = info.layout
             val transceiver = session.transceiver(TagTech.NFC_A)
-            if (model == null || transceiver == null || model != source.info.ntag) {
+            if (model == null || transceiver == null || model != source.info.layout) {
                 return Outcome.Err(TagError.Unsupported(TagError.Unsupported.USER_PAGES_MODEL))
             }
             if (info.ndef?.isWritable == false) return Outcome.Err(TagError.ReadOnly)
 
             phase(OperationPhase.READING)
-            val area = when (val read = Type2Io.readCcAndUserArea(transceiver, model)) {
+            var area = when (val read = Type2Io.readCcAndUserArea(transceiver, model)) {
                 is Outcome.Err -> return read
                 is Outcome.Ok -> read.value
             }
-            if (!area.hasCapabilityContainer) return Outcome.Err(TagError.NotNdef)
+            if (!area.hasCapabilityContainer) {
+                // A blank Ultralight-family destination gets its capability container over the same channel.
+                area = when (val init = Type2Io.initCapabilityContainer(transceiver, model, area)) {
+                    is Outcome.Err -> return init
+                    is Outcome.Ok -> init.value ?: return Outcome.Err(TagError.NotNdef)
+                }
+            }
             if (area.isReadOnlyPerCc) return Outcome.Err(TagError.ReadOnly)
             OverwriteGuard.check(session, confirmOverwrite)?.let { return it }
 
@@ -147,7 +153,7 @@ class CloneTagUseCase {
             return verify(session, transceiver, model, image)
         }
 
-        private suspend fun verify(session: TagSession, transceiver: TagTransceiver, model: NtagModel, image: Bytes): TagResult<CloneReport> {
+        private suspend fun verify(session: TagSession, transceiver: TagTransceiver, model: Type2Layout, image: Bytes): TagResult<CloneReport> {
             val after = when (val read = Type2Io.readCcAndUserArea(transceiver, model)) {
                 is Outcome.Err -> return read
                 is Outcome.Ok -> read.value.user

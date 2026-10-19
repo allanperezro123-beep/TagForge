@@ -18,7 +18,7 @@ object TagCapabilities {
     fun of(info: TagInfo): Capabilities = Capabilities(ToolOperation.entries.associateWith { support(info, it) })
 
     private fun support(info: TagInfo, operation: ToolOperation): Support = when {
-        info.ntag != null -> Support.Available(AccessChannel.RAW_NFC_A)
+        info.layout != null -> Support.Available(AccessChannel.RAW_NFC_A)
         info.family == TagFamily.MIFARE_CLASSIC -> classic(info, operation)
         else -> generic(info, operation)
     }

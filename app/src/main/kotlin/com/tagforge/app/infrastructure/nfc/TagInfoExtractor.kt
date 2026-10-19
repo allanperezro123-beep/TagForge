@@ -24,6 +24,7 @@ import com.tagforge.domain.tag.UltralightType
 import com.tagforge.domain.tag.TagFamily
 import com.tagforge.domain.tag.TagInfo
 import com.tagforge.domain.tag.TagTech
+import com.tagforge.domain.type2.Type2Chip
 
 /**
  * Builds [TagInfo] from an Android [Tag]. The pure helpers are unit tested; [basicInfo] only calls APIs that
@@ -67,8 +68,9 @@ object TagInfoExtractor {
      */
     fun isMifareClassicSak(sak: Int): Boolean = sak in CLASSIC_SAKS
 
-    fun familyFor(techs: Set<TagTech>, ntag: NtagModel?, sak: Int? = null): TagFamily = when {
+    fun familyFor(techs: Set<TagTech>, ntag: NtagModel?, sak: Int? = null, type2: Type2Chip? = null): TagFamily = when {
         ntag != null -> TagFamily.NTAG21X
+        type2 != null -> type2.family
         TagTech.MIFARE_CLASSIC in techs -> TagFamily.MIFARE_CLASSIC
         TagTech.NFC_A in techs && TagTech.MIFARE_ULTRALIGHT !in techs && TagTech.ISO_DEP !in techs &&
             sak != null && isMifareClassicSak(sak) -> TagFamily.MIFARE_CLASSIC

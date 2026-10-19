@@ -16,6 +16,7 @@ import com.tagforge.domain.tag.TagError
 import com.tagforge.domain.tag.TagFamily
 import com.tagforge.domain.tag.TagInfo
 import com.tagforge.domain.tag.TagTech
+import com.tagforge.domain.write.Type2Ndef
 
 /** Why a readout has no message even though the read itself succeeded. Mapped to text by the UI. */
 sealed interface ReadNotice {
@@ -56,7 +57,8 @@ class ReadTagUseCase(private val codec: NdefCodec = DefaultNdefCodec) : TagOpera
             return Outcome.Ok(readout(info, null, ReadNotice.UnsupportedFamily(info.family)))
         }
 
-        return when (val read = session.readNdef()) {
+        // A Type 2 chip is read over the same raw NfcA channel the dump uses; only other tags go through the platform.
+        return when (val read = Type2Ndef.read(session, codec)) {
             is Outcome.Ok -> Outcome.Ok(readout(info, read.value, null))
             is Outcome.Err -> when (val error = read.error) {
                 TagError.NotNdef -> Outcome.Ok(readout(info, null, ReadNotice.NotNdef))

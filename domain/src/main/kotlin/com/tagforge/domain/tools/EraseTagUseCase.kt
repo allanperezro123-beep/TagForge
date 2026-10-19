@@ -6,7 +6,7 @@ import com.tagforge.domain.common.TagResult
 import com.tagforge.domain.ndef.NdefMessage
 import com.tagforge.domain.ndef.NdefParseError
 import com.tagforge.domain.ndef.Type2Tlv
-import com.tagforge.domain.ntag.NtagModel
+import com.tagforge.domain.type2.Type2Layout
 import com.tagforge.domain.ports.TagSession
 import com.tagforge.domain.ports.TagTransceiver
 import com.tagforge.domain.scan.OperationKind
@@ -45,7 +45,7 @@ class EraseTagUseCase : TagOperation<EraseReport> {
         }
         if (info.ndef?.isWritable == false) return Outcome.Err(TagError.ReadOnly)
 
-        val model = info.ntag
+        val model = info.layout
         val transceiver = session.transceiver(TagTech.NFC_A)
         return if (model != null && transceiver != null) {
             eraseType2(session, transceiver, model, phase)
@@ -59,7 +59,7 @@ class EraseTagUseCase : TagOperation<EraseReport> {
     private suspend fun eraseType2(
         session: TagSession,
         transceiver: TagTransceiver,
-        model: NtagModel,
+        model: Type2Layout,
         phase: (OperationPhase) -> Unit,
     ): TagResult<EraseReport> {
         phase(OperationPhase.READING)
@@ -95,7 +95,7 @@ class EraseTagUseCase : TagOperation<EraseReport> {
     private suspend fun verifyType2(
         session: TagSession,
         transceiver: TagTransceiver,
-        model: NtagModel,
+        model: Type2Layout,
         leading: Bytes,
         oldExtent: Int,
         hadContent: Boolean,
