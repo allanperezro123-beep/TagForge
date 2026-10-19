@@ -4,6 +4,7 @@ import android.nfc.Tag
 import android.nfc.tech.Ndef
 import android.nfc.tech.NdefFormatable
 import android.nfc.tech.NfcA
+import android.nfc.tech.NfcV
 import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.common.Outcome
 import com.tagforge.domain.common.TagResult
@@ -43,6 +44,10 @@ class AndroidTagSession(
         NfcA.get(tag)?.let { AndroidTransceiver(it, io, beforeConnect = ::closeNdefQuietly) }
     }
 
+    private val nfcVTransceiver: AndroidNfcVTransceiver? by lazy {
+        NfcV.get(tag)?.let { AndroidNfcVTransceiver(it, io, beforeConnect = ::closeNdefQuietly) }
+    }
+
     /**
      * `Ndef.get` returns a NEW object every time and `isConnected` is per object, so the instance that was connected
      * must be remembered: closing a fresh one would silently do nothing and leave the Ndef technology active.
@@ -59,6 +64,11 @@ class AndroidTagSession(
         } finally {
             ndefTech = null
         }
+    }
+
+    private fun closeRawChannels() {
+        nfcATransceiver?.close()
+        nfcVTransceiver?.close()
     }
 
     private fun closeFormatableQuietly() {
@@ -94,13 +104,17 @@ class AndroidTagSession(
         return Outcome.Ok(info)
     }
 
-    override fun transceiver(tech: TagTech): TagTransceiver? = if (tech == TagTech.NFC_A) nfcATransceiver else null
+    override fun transceiver(tech: TagTech): TagTransceiver? = when (tech) {
+        TagTech.NFC_A -> nfcATransceiver
+        TagTech.NFC_V -> nfcVTransceiver
+        else -> null
+    }
 
     override suspend fun readNdef(): TagResult<NdefMessage?> = withContext(io) {
         val ndef = ndefTech() ?: return@withContext readWithoutNdefTech()
         try {
             if (!ndef.isConnected) {
-                nfcATransceiver?.close()
+                closeRawChannels()
                 ndef.connect()
             }
             val platformMessage = ndef.ndefMessage ?: return@withContext Outcome.Ok(null)
@@ -147,7 +161,7 @@ class AndroidTagSession(
             val ndef = ndefTech()
             if (ndef != null) {
                 if (!ndef.isConnected) {
-                    nfcATransceiver?.close()
+                    closeRawChannels()
                     ndef.connect()
                 }
                 when {
@@ -162,7 +176,7 @@ class AndroidTagSession(
             } else {
                 // An unformatted tag: format it and write in one step.
                 val formatable = NdefFormatable.get(tag) ?: return@withContext Outcome.Err(TagError.NotNdef)
-                nfcATransceiver?.close()
+                closeRawChannels()
                 formatable.connect()
                 formatable.format(platformMessage)
                 Outcome.Ok(Unit)
@@ -181,7 +195,7 @@ class AndroidTagSession(
     override suspend fun formatNdef(initial: NdefMessage?): TagResult<Unit> = withContext(io) {
         try {
             val formatable = NdefFormatable.get(tag) ?: return@withContext Outcome.Err(TagError.Unsupported("format"))
-            nfcATransceiver?.close()
+            closeRawChannels()
             closeNdefQuietly()
             if (!formatable.isConnected) formatable.connect()
             val first = if (initial == null || initial.isEmpty) {
@@ -202,7 +216,7 @@ class AndroidTagSession(
 
     override suspend fun close() {
         withContext(io) {
-            nfcATransceiver?.close()
+            closeRawChannels()
             closeNdefQuietly()
             closeFormatableQuietly()
         }

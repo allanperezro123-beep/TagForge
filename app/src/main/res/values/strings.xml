@@ -499,6 +499,7 @@
     <string name="region_counter">Counter</string>
     <string name="region_auth_config">Auth config</string>
     <string name="region_key">3DES key</string>
+    <string name="region_sector_trailer">Sector trailer</string>
     <string name="region_uid_explain">The unique serial number of the chip and its check bytes. Written at the factory and never changeable.</string>
     <string name="region_static_lock_explain">Bytes 2 and 3 of page 2 lock pages 3 to 15. Each bit can only go from 0 to 1, so locking is permanent.</string>
     <string name="region_cc_explain">Tells readers this is an NFC Forum tag and how much NDEF memory it has. Bits here can only be set, never cleared.</string>
@@ -511,6 +512,7 @@
     <string name="region_counter_explain">The 16-bit one-way counter of the Ultralight C. It can only count up.</string>
     <string name="region_auth_config_explain">AUTH0 / AUTH1 of the Ultralight C: the first page that needs authentication and whether reading needs it too. Tag Forge never changes them.</string>
     <string name="region_key_explain">The Ultralight C authentication key. The chip never lets it be read, so it always shows as zeros.</string>
+    <string name="region_sector_trailer_explain">The last block of every MIFARE Classic sector: Key A, access bits and Key B. Tag Forge reads the rest of the card but never writes this block, because a wrong value can lock the sector for good.</string>
 
     <!-- Phase 3: Clone -->
     <string name="clone_title">Clone a tag</string>
@@ -562,6 +564,9 @@
     <string name="tech_manufacturer">Manufacturer bytes</string>
     <string name="tech_dsf_id">DSFID</string>
     <string name="tech_response_flags">Response flags</string>
+    <string name="tech_afi">AFI</string>
+    <string name="tech_block_count">Blocks</string>
+    <string name="tech_block_size">Block size (bytes)</string>
     <string name="tech_historical_bytes">Historical bytes</string>
     <string name="tech_hi_layer_response">Higher-layer response</string>
     <string name="tech_extended_length">Extended-length APDUs</string>

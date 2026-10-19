@@ -37,6 +37,9 @@ enum class Region(
 
     /** MIFARE Ultralight C: the 3DES key; the chip never reveals it. */
     KEY(hiddenByChip = true),
+
+    /** MIFARE Classic: last block of every sector (Key A, access bits, Key B). Tag Forge never writes it. */
+    SECTOR_TRAILER,
 }
 
 /** One dumped page and its role. [regions] has two entries only for page 02 (BCC1 + static lock); [region] is the main one. */

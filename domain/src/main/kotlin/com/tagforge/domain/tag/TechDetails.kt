@@ -1,6 +1,7 @@
 package com.tagforge.domain.tag
 
 import com.tagforge.domain.common.Bytes
+import com.tagforge.domain.iso15693.Iso15693
 
 /** MIFARE Ultralight family as `MifareUltralight.getType()` reports it (1 = Ultralight, 2 = Ultralight C). */
 enum class UltralightType(val displayName: String?, val pages: Int?) {
@@ -40,7 +41,18 @@ data class NfcBDetails(val applicationData: Bytes, val protocolInfo: Bytes)
 
 data class NfcFDetails(val systemCode: Bytes, val manufacturer: Bytes)
 
-data class NfcVDetails(val dsfId: Int, val responseFlags: Int)
+/**
+ * [afi], [blockCount] and [blockSize] come from ISO 15693 Get System Info (not from the OS) and stay null when the tag
+ * does not answer it; [icReference] is the IC reference byte of that answer.
+ */
+data class NfcVDetails(
+    val dsfId: Int,
+    val responseFlags: Int,
+    val afi: Int? = null,
+    val blockCount: Int? = null,
+    val blockSize: Int? = null,
+    val icReference: Int? = null,
+)
 
 data class IsoDepDetails(val hiLayerResponse: Bytes?, val extendedLengthSupported: Boolean, val timeoutMs: Int?)
 
@@ -53,7 +65,7 @@ enum class DetailKey {
     ATQA, SAK,
     APPLICATION_DATA, PROTOCOL_INFO,
     SYSTEM_CODE, MANUFACTURER,
-    DSF_ID, RESPONSE_FLAGS,
+    DSF_ID, RESPONSE_FLAGS, AFI, BLOCK_COUNT, BLOCK_SIZE,
     HISTORICAL_BYTES, HI_LAYER_RESPONSE, EXTENDED_LENGTH, TIMEOUT_MS,
     ULTRALIGHT_TYPE, PAGES,
     CLASSIC_TYPE, SECTORS, BLOCKS, SIZE_BYTES,
@@ -94,7 +106,19 @@ data class TechDetails(
             add(TechSection(TagTech.NFC_F, listOf(entry(DetailKey.SYSTEM_CODE, it.systemCode.toHex(" ")), entry(DetailKey.MANUFACTURER, it.manufacturer.toHex(" ")))))
         }
         if (TagTech.NFC_V in info.techs) nfcV?.let {
-            add(TechSection(TagTech.NFC_V, listOf(entry(DetailKey.DSF_ID, hexByte(it.dsfId)), entry(DetailKey.RESPONSE_FLAGS, hexByte(it.responseFlags)))))
+            add(
+                TechSection(
+                    TagTech.NFC_V,
+                    buildList {
+                        add(entry(DetailKey.DSF_ID, hexByte(it.dsfId)))
+                        add(entry(DetailKey.RESPONSE_FLAGS, hexByte(it.responseFlags)))
+                        it.afi?.let { afi -> add(entry(DetailKey.AFI, hexByte(afi))) }
+                        it.blockCount?.let { n -> add(entry(DetailKey.BLOCK_COUNT, n.toString())) }
+                        it.blockSize?.let { n -> add(entry(DetailKey.BLOCK_SIZE, n.toString())) }
+                        Iso15693.manufacturerName(info.uid)?.let { name -> add(entry(DetailKey.MANUFACTURER, name)) }
+                    },
+                ),
+            )
         }
         if (TagTech.ISO_DEP in info.techs) isoDep?.let {
             add(

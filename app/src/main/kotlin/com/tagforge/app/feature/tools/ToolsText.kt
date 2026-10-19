@@ -26,6 +26,7 @@ fun Region.labelRes(): Int = when (this) {
     Region.COUNTER -> R.string.region_counter
     Region.AUTH_CONFIG -> R.string.region_auth_config
     Region.KEY -> R.string.region_key
+    Region.SECTOR_TRAILER -> R.string.region_sector_trailer
 }
 
 /** One-paragraph explanation for the row-tap bottom sheet. */
@@ -43,13 +44,14 @@ fun Region.explanationRes(): Int = when (this) {
     Region.COUNTER -> R.string.region_counter_explain
     Region.AUTH_CONFIG -> R.string.region_auth_config_explain
     Region.KEY -> R.string.region_key_explain
+    Region.SECTOR_TRAILER -> R.string.region_sector_trailer_explain
 }
 
 /** Band colour per role: all are theme colours, so contrast follows the theme (and the legend text carries the meaning). */
 @Composable
 fun Region.bandColor(): Color = when (this) {
     Region.UID -> MaterialTheme.colorScheme.outline
-    Region.STATIC_LOCK, Region.DYN_LOCK -> MaterialTheme.extendedColors.warning
+    Region.STATIC_LOCK, Region.DYN_LOCK, Region.SECTOR_TRAILER -> MaterialTheme.extendedColors.warning
     Region.CC -> MaterialTheme.colorScheme.tertiary
     Region.USER -> MaterialTheme.colorScheme.primary
     Region.CFG0, Region.CFG1, Region.AUTH_CONFIG, Region.COUNTER -> MaterialTheme.colorScheme.secondary
@@ -66,6 +68,9 @@ fun DetailKey.labelRes(): Int = when (this) {
     DetailKey.MANUFACTURER -> R.string.tech_manufacturer
     DetailKey.DSF_ID -> R.string.tech_dsf_id
     DetailKey.RESPONSE_FLAGS -> R.string.tech_response_flags
+    DetailKey.AFI -> R.string.tech_afi
+    DetailKey.BLOCK_COUNT -> R.string.tech_block_count
+    DetailKey.BLOCK_SIZE -> R.string.tech_block_size
     DetailKey.HISTORICAL_BYTES -> R.string.tech_historical_bytes
     DetailKey.HI_LAYER_RESPONSE -> R.string.tech_hi_layer_response
     DetailKey.EXTENDED_LENGTH -> R.string.tech_extended_length

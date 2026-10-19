@@ -10,6 +10,7 @@ import android.nfc.tech.NfcB
 import android.nfc.tech.NfcF
 import android.nfc.tech.NfcV
 import com.tagforge.domain.common.Bytes
+import com.tagforge.domain.iso15693.Iso15693
 import com.tagforge.domain.ntag.NtagModel
 import com.tagforge.domain.tag.ClassicDetails
 import com.tagforge.domain.tag.ClassicType
@@ -57,6 +58,10 @@ object TagInfoExtractor {
     fun techFor(className: String): TagTech? = TECH_BY_CLASS[className]
 
     fun manufacturerFor(uid: Bytes): String? = if (uid.isEmpty()) null else MANUFACTURERS[uid[0]]
+
+    /** ISO 15693 UIDs carry the manufacturer at index 6 of Android's array; every other tag at index 0. */
+    fun manufacturerFor(info: TagInfo): String? =
+        if (info.family == TagFamily.ISO15693) Iso15693.manufacturerName(info.uid) else manufacturerFor(info.uid)
 
     fun formatAtqa(atqa: Bytes): String = "0x" + atqa.toHex()
 

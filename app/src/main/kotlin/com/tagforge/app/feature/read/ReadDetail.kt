@@ -31,6 +31,7 @@ import com.tagforge.app.ui.components.EmptyState
 import com.tagforge.app.ui.components.HexRowUi
 import com.tagforge.app.ui.components.HexViewer
 import com.tagforge.app.ui.components.RecordCard
+import com.tagforge.domain.iso15693.Iso15693
 import com.tagforge.domain.ntag.MemoryDump
 import com.tagforge.domain.read.ReadNotice
 import com.tagforge.domain.read.TagScan
@@ -160,8 +161,8 @@ internal fun tagInfoRows(info: TagInfo, hasMessage: Boolean): List<Pair<String, 
     }
 
     return buildList {
-        add(stringResource(R.string.info_uid) to info.uid.toHex(":"))
-        add(stringResource(R.string.info_manufacturer) to (TagInfoExtractor.manufacturerFor(info.uid) ?: unknown))
+        add(stringResource(R.string.info_uid) to (if (info.family == TagFamily.ISO15693) Iso15693.displayUid(info.uid) else info.uid).toHex(":"))
+        add(stringResource(R.string.info_manufacturer) to (TagInfoExtractor.manufacturerFor(info) ?: unknown))
         add(stringResource(R.string.info_type) to type)
         add(stringResource(R.string.info_technologies) to info.techs.joinToString(", ") { techLabel(it) })
         info.atqa?.let { add(stringResource(R.string.info_atqa) to TagInfoExtractor.formatAtqa(it)) }

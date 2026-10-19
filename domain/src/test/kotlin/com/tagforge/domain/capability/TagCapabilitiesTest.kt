@@ -110,6 +110,14 @@ class TagCapabilitiesTest {
     fun anUltralightWhoseChipIsUnknownFallsBackToThePlatformWhenItHasNdef() {
         val c = caps(TagFamily.ULTRALIGHT, TagTech.NFC_A, TagTech.MIFARE_ULTRALIGHT, TagTech.NDEF)
         assertEquals(AccessChannel.PLATFORM_NDEF, channel(c, ToolOperation.READ_NDEF))
+        // An unrecognised Type 2 chip still gets the first 16 pages dumped (plain READ) from Tools, on raw NfcA.
+        assertEquals(AccessChannel.RAW_NFC_A, channel(c, ToolOperation.DUMP))
+        assertFalse(c.readIncludesDump)
+    }
+
+    @Test
+    fun aPlainNfcATagThatIsNotType2OrIsoDepStaysInfoOnlyForDump() {
+        val c = TagCapabilities.of(TagInfo(Bytes.of(1, 2, 3, 4), setOf(TagTech.NFC_A), TagFamily.UNKNOWN, sak = 0x20))
         assertEquals(UnsupportedReason.INFO_ONLY, c.reasonFor(ToolOperation.DUMP))
     }
 }

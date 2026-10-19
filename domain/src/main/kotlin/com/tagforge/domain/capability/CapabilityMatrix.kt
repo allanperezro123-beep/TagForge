@@ -10,7 +10,7 @@ import com.tagforge.domain.tag.TagTech
  *  1. A Type 2 chip Tag Forge knows page by page (NTAG21x and the other Type 2 chips) does everything over raw NfcA.
  *  2. MIFARE Classic needs the NXP controller (the `MifareClassic` technology); with it, dump and clone use the public
  *     default keys and NDEF goes through the platform. Without it nothing is possible, and the reason says so.
- *  3. Everything else: raw dump only where a raw protocol is implemented (ISO 15693), and NDEF through the platform
+ *  3. Everything else: raw dump only where a raw protocol is implemented (ISO 15693, plain READ on an unrecognised Type 2), and NDEF through the platform
  *     whenever Android exposes `Ndef` / `NdefFormatable` for the tag.
  */
 object TagCapabilities {
@@ -42,6 +42,7 @@ object TagCapabilities {
     private fun generic(info: TagInfo, operation: ToolOperation): Support = when (operation) {
         ToolOperation.DUMP -> when {
             TagTech.NFC_V in info.techs && info.family == TagFamily.ISO15693 -> Support.Available(AccessChannel.RAW_NFC_V)
+            isUnrecognisedType2(info) -> Support.Available(AccessChannel.RAW_NFC_A)
             info.family == TagFamily.ISO14443_4 || info.family == TagFamily.DESFIRE ->
                 Support.Unavailable(UnsupportedReason.NEEDS_AUTHENTICATION)
             else -> Support.Unavailable(UnsupportedReason.INFO_ONLY)
@@ -66,6 +67,11 @@ object TagCapabilities {
             ToolOperation.DUMP -> Support.Unavailable(UnsupportedReason.INFO_ONLY)
         }
     }
+
+    /** A Type 2 chip this app has no map for: Android says Ultralight, or NfcA with SAK 00. Plain READ works on all of them. */
+    private fun isUnrecognisedType2(info: TagInfo): Boolean =
+        TagTech.NFC_A in info.techs && TagTech.ISO_DEP !in info.techs &&
+            (TagTech.MIFARE_ULTRALIGHT in info.techs || info.sak == 0)
 
     /** True for technologies that can hold an NDEF message even when Android shows none yet (blank or unrecognised tag). */
     private fun canCarryNdef(info: TagInfo): Boolean =

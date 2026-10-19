@@ -84,7 +84,7 @@ class ReadFullTagUseCaseTest {
         val result = scan(FakeTagSession.withoutNtag())
 
         assertNull(result.dump)
-        assertEquals(TagError.Unsupported("NfcA"), result.dumpError)
+        assertNull(result.dumpError)   // not attempted: the dump would need another technology
         assertIs<ReadNotice.UnsupportedFamily>(result.readout.notice)
     }
 }
