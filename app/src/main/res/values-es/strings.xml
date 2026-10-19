@@ -150,6 +150,8 @@
     <string name="about_version">Versión %1$s</string>
     <string name="about_description">Lee y escribe etiquetas NFC. Hecha desde cero, sin que ningún dato salga de tu dispositivo.</string>
     <string name="about_privacy">Sin cuenta, sin analíticas y sin acceso a la red.</string>
+    <string name="about_developer">Desarrollado por Blue Code</string>
+    <string name="about_copyright">© 2026 Blue Code. Todos los derechos reservados.</string>
 
     <!-- Registros enriquecidos (Fase 2) -->
     <string name="record_type_wifi">Red WiFi</string>

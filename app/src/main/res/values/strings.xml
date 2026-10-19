@@ -150,6 +150,8 @@
     <string name="about_version">Version %1$s</string>
     <string name="about_description">Read and write NFC tags. Built from scratch, with no data leaving your device.</string>
     <string name="about_privacy">No account, no analytics and no network access.</string>
+    <string name="about_developer">Developed by Blue Code</string>
+    <string name="about_copyright">© 2026 Blue Code. All rights reserved.</string>
 
     <!-- Rich records (Phase 2) -->
     <string name="record_type_wifi">WiFi network</string>

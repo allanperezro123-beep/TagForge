@@ -48,6 +48,12 @@ fun AboutScreen(
             )
             Text(stringResource(R.string.about_description), style = MaterialTheme.typography.bodyLarge)
             Text(stringResource(R.string.about_privacy), style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(R.string.about_developer), style = MaterialTheme.typography.titleMedium)
+            Text(
+                stringResource(R.string.about_copyright),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
