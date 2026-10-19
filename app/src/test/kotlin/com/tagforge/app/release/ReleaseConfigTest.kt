@@ -9,7 +9,7 @@ import kotlin.test.assertTrue
 
 /**
  * RB-01 to RB-03 as checks on the files that define the release: R8 on, signing only from the git-ignored
- * keystore.properties (and failing loudly without it), 1.0.1 / 601, and no secret anywhere in the repository.
+ * keystore.properties (and failing loudly without it), 1.1.0 / 610, and no secret anywhere in the repository.
  */
 class ReleaseConfigTest {
 
@@ -22,15 +22,15 @@ class ReleaseConfigTest {
     // ---- RB-03 versioning ------------------------------------------------------------------------------------------
 
     @Test
-    fun theReleaseIsOnePointZeroPointOneWithVersionCodeSixHundredOne() {
-        assertTrue(Regex("""versionName\s*=\s*"1\.0\.1"""").containsMatchIn(buildScript), "versionName 1.0.1")
+    fun theReleaseIsOnePointOnePointZeroWithVersionCodeSixHundredTen() {
+        assertTrue(Regex("""versionName\s*=\s*"1\.1\.0"""").containsMatchIn(buildScript), "versionName 1.1.0")
         val code = Regex("""versionCode\s*=\s*(\d+)""").find(buildScript)?.groupValues?.get(1)?.toInt()
-        assertEquals(601, code, "versionCode = phase * 100 + patch")
+        assertEquals(610, code, "versionCode = phase * 100 + patch")
     }
 
     @Test
     fun versionCodeKeepsGrowingFromEveryEarlierPhase() {
-        val earlier = listOf(100, 200, 300, 301, 400, 500, 600)
+        val earlier = listOf(100, 200, 300, 301, 400, 500, 600, 601)
         val code = Regex("""versionCode\s*=\s*(\d+)""").find(buildScript)!!.groupValues[1].toInt()
         assertTrue(earlier.all { it < code }, "installs over every earlier build without uninstalling")
         assertEquals(earlier.sorted(), earlier)

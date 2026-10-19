@@ -27,8 +27,8 @@ android {
         applicationId = "com.tagforge.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 601
-        versionName = "1.0.1"
+        versionCode = 610
+        versionName = "1.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -114,7 +114,7 @@ androidComponents {
         val merged = variant.artifacts.get(SingleArtifact.MERGED_MANIFEST)
         // RB-03: the signed APK and its R8 mapping travel together under apks/ (git-ignored). The APK artifact comes from
         // the package task, which refuses to run without keystore.properties.
-        val archiveName = "tagforge-p6-1.0.1"
+        val archiveName = "tagforge-1.1.0"
         tasks.register<Copy>("archiveRelease") {
             group = "distribution"
             description = "Copies the signed release APK and its R8 mapping to apks/ (needs keystore.properties)."
