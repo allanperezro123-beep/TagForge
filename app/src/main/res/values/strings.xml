@@ -51,7 +51,8 @@
     <string name="error_verify_mismatch">The tag content does not match what was written.</string>
     <string name="error_nak">The tag refused the command (code %1$d).</string>
     <string name="error_malformed">The tag data is invalid.</string>
-    <string name="error_io">Could not talk to the tag.</string>
+    <string name="error_io">Communication error with the tag. This is not the same as moving it away: try again and, if it persists, report it.</string>
+    <string name="error_io_detail">Communication error with the tag (%1$s). This is not the same as moving it away: try again and, if it persists, report this detail.</string>
 
     <!-- Read screen -->
     <string name="read_title">Read tag</string>

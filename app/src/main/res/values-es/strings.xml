@@ -51,7 +51,8 @@
     <string name="error_verify_mismatch">El contenido de la etiqueta no coincide con lo escrito.</string>
     <string name="error_nak">La etiqueta rechazó el comando (código %1$d).</string>
     <string name="error_malformed">Los datos de la etiqueta no son válidos.</string>
-    <string name="error_io">No se pudo comunicar con la etiqueta.</string>
+    <string name="error_io">Error de comunicación con la etiqueta. No es lo mismo que alejarla: inténtalo de nuevo y, si persiste, repórtalo.</string>
+    <string name="error_io_detail">Error de comunicación con la etiqueta (%1$s). No es lo mismo que alejarla: inténtalo de nuevo y, si persiste, reporta este detalle.</string>
 
     <!-- Read screen -->
     <string name="read_title">Leer etiqueta</string>

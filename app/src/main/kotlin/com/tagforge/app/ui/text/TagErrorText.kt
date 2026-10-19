@@ -33,7 +33,9 @@ object TagErrorText {
         is TagError.VerifyMismatch -> ErrorText(R.string.error_verify_mismatch)
         is TagError.Nak -> ErrorText(R.string.error_nak, listOf(error.code))
         is TagError.Malformed -> ErrorText(R.string.error_malformed)
-        is TagError.Io -> ErrorText(R.string.error_io)
+        is TagError.Io -> error.detail?.takeIf { it.isNotBlank() }
+            ?.let { ErrorText(R.string.error_io_detail, listOf(it)) }
+            ?: ErrorText(R.string.error_io)
         is TagError.Security -> SecurityErrorText.of(error.failure)
     }
 }

@@ -108,4 +108,15 @@ class TagErrorTextTest {
         assertEquals(listOf<Any>("MIFARE Classic"), TagErrorText.of(TagError.Unsupported("MIFARE Classic")).args)
         assertEquals(R.string.error_auth_required, TagErrorText.of(TagError.AuthRequired).message)
     }
+
+    @Test
+    fun aCommunicationErrorShowsItsTechnicalDetailSoFieldReportsAreExact() {
+        val withDetail = TagErrorText.of(TagError.Io("IOException: Transceive failed"))
+        assertEquals(R.string.error_io_detail, withDetail.message)
+        assertEquals(listOf<Any>("IOException: Transceive failed"), withDetail.args)
+
+        assertEquals(R.string.error_io, TagErrorText.of(TagError.Io(null)).message)
+        assertEquals(R.string.error_io, TagErrorText.of(TagError.Io("  ")).message)
+        assertTrue(R.string.error_io != R.string.error_tag_lost_body, "a lost tag and a comms error must read differently")
+    }
 }

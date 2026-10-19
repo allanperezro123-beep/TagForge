@@ -40,11 +40,21 @@ class AndroidTagSession(
         NfcA.get(tag)?.let { AndroidTransceiver(it, io, beforeConnect = ::closeNdefQuietly) }
     }
 
+    /**
+     * `Ndef.get` returns a NEW object every time and `isConnected` is per object, so the instance that was connected
+     * must be remembered: closing a fresh one would silently do nothing and leave the Ndef technology active.
+     */
+    private var ndefTech: Ndef? = null
+
+    private fun ndefTech(): Ndef? = ndefTech ?: Ndef.get(tag)?.also { ndefTech = it }
+
     private fun closeNdefQuietly() {
         try {
-            Ndef.get(tag)?.takeIf { it.isConnected }?.close()
+            ndefTech?.takeIf { it.isConnected }?.close()
         } catch (_: Throwable) {
             // already gone
+        } finally {
+            ndefTech = null
         }
     }
 
@@ -74,7 +84,7 @@ class AndroidTagSession(
     override fun transceiver(tech: TagTech): TagTransceiver? = if (tech == TagTech.NFC_A) nfcATransceiver else null
 
     override suspend fun readNdef(): TagResult<NdefMessage?> = withContext(io) {
-        val ndef = Ndef.get(tag) ?: return@withContext readWithoutNdefTech()
+        val ndef = ndefTech() ?: return@withContext readWithoutNdefTech()
         try {
             if (!ndef.isConnected) {
                 nfcATransceiver?.close()
@@ -121,7 +131,7 @@ class AndroidTagSession(
     override suspend fun writeNdef(message: NdefMessage): TagResult<Unit> = withContext(io) {
         try {
             val platformMessage = android.nfc.NdefMessage(codec.encode(message).toByteArray())
-            val ndef = Ndef.get(tag)
+            val ndef = ndefTech()
             if (ndef != null) {
                 if (!ndef.isConnected) {
                     nfcATransceiver?.close()

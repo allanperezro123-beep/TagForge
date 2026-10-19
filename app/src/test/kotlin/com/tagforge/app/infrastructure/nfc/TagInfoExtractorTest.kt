@@ -113,8 +113,8 @@ class TagInfoExtractorTest {
 
     @Test
     fun otherIoExceptionsMapToIoWithTheirMessage() {
-        assertEquals(TagError.Io("Transceive failed"), TagErrorMapper.map(IOException("Transceive failed")))
-        assertEquals(TagError.Io(null), TagErrorMapper.map(IOException()))
+        assertEquals(TagError.Io("IOException: Transceive failed"), TagErrorMapper.map(IOException("Transceive failed")))
+        assertEquals(TagError.Io("IOException"), TagErrorMapper.map(IOException()))
     }
 
     @Test
@@ -124,12 +124,13 @@ class TagInfoExtractorTest {
     }
 
     @Test
-    fun outdatedTagSecurityExceptionIsTagLost() {
-        assertEquals(TagError.TagLost, TagErrorMapper.map(SecurityException("Tag is out of date")))
+    fun outdatedTagSecurityExceptionIsReportedAsAStaleHandleNotAsALostTag() {
+        // the user still retries, but a field report can now tell it apart from a real TagLostException
+        assertEquals(TagError.Io("SecurityException: Tag is out of date"), TagErrorMapper.map(SecurityException("Tag is out of date")))
     }
 
     @Test
     fun unexpectedExceptionsBecomeIoNeverACrash() {
-        assertEquals(TagError.Io("boom"), TagErrorMapper.map(IllegalStateException("boom")))
+        assertEquals(TagError.Io("IllegalStateException: boom"), TagErrorMapper.map(IllegalStateException("boom")))
     }
 }
