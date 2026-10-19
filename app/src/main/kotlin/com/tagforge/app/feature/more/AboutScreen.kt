@@ -17,6 +17,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.tagforge.app.R
 import com.tagforge.app.ui.components.BackNavigationIcon
+import com.tagforge.app.ui.components.TagForgeWordmark
+import com.tagforge.app.ui.components.WordmarkSize
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,7 +40,7 @@ fun AboutScreen(
             modifier = Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium)
+            TagForgeWordmark(size = WordmarkSize.Large)
             Text(
                 stringResource(R.string.about_version, versionName),
                 style = MaterialTheme.typography.titleSmall,

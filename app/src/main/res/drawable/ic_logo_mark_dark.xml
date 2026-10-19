@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="64dp"
+    android:height="40dp"
+    android:viewportWidth="64"
+    android:viewportHeight="40">
+  <!-- In-app mark for DARK surfaces. See ic_logo_mark_light.xml for why the variants are chosen in code. -->
+  <path
+      android:pathData="M7.8 5.5L32.8 5.5A5.5 5.5 0 0 1 38.3 11L38.3 29A5.5 5.5 0 0 1 32.8 34.5L7.8 34.5A5.5 5.5 0 0 1 2.3 29L2.3 11A5.5 5.5 0 0 1 7.8 5.5ZM15.69 22.36L15.69 20.11A3.47 3.47 0 0 1 12.23 23.58L10.6 23.58A1.08 1.08 0 0 0 9.52 24.66L9.52 27.47A1.19 1.19 0 0 0 10.71 28.67L28.69 28.67A1.19 1.19 0 0 0 29.88 27.47L29.88 24.66A1.08 1.08 0 0 0 28.8 23.58L28.47 23.58A3.47 3.47 0 0 1 25.01 20.11L25.01 17.73A1.08 1.08 0 0 1 26.09 16.64L31.51 16.64A1.19 1.19 0 0 0 32.7 15.45L32.7 12.53A1.19 1.19 0 0 0 31.51 11.33L8.97 11.33A0.87 0.87 0 0 0 8.4 12.85L13.44 17.35A6.72 6.72 0 0 1 15.69 22.36ZM43.92 13.76A8.4 8.4 0 0 1 43.92 26.24A1.9 1.9 0 0 1 41.38 23.42A4.6 4.6 0 0 0 41.38 16.58A1.9 1.9 0 0 1 43.92 13.76ZM48.94 8.18A15.9 15.9 0 0 1 48.94 31.82A1.9 1.9 0 0 1 46.4 28.99A12.1 12.1 0 0 0 46.4 11.01A1.9 1.9 0 0 1 48.94 8.18ZM53.96 2.61A23.4 23.4 0 0 1 53.96 37.39A1.9 1.9 0 0 1 51.41 34.57A19.6 19.6 0 0 0 51.41 5.43A1.9 1.9 0 0 1 53.96 2.61Z"
+      android:fillType="evenOdd">
+    <aapt:attr name="android:fillColor">
+      <gradient
+          android:type="linear"
+          android:startX="2.3"
+          android:startY="37.88"
+          android:endX="61.7"
+          android:endY="2.12">
+        <item android:offset="0" android:color="#FF3670EE" />
+        <item android:offset="1" android:color="#FF48D2E9" />
+      </gradient>
+    </aapt:attr>
+  </path>
+</vector>

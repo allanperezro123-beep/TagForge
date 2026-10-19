@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#9A4426</color>
-    <!-- Home-screen widget surface and text. Night variants in values-night; both pairs are checked by WidgetContrastTest. -->
-    <color name="widget_background">#FFF1EA</color>
-    <color name="widget_text">#3B1F14</color>
+    <!-- Window and splash background: the brand light surface. Night variant (the launcher navy) in values-night. -->
+    <color name="splash_background">#F6F9FF</color>
+    <!-- Home-screen widget surface and text (brand surfaceContainer / onSurface). Night variants in values-night; both pairs are checked by WidgetContrastTest. -->
+    <color name="widget_background">#EAEEF5</color>
+    <color name="widget_text">#181B20</color>
 </resources>

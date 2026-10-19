@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.TagForge" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- The window background matches the splash and the Compose surface, so there is no colour flash between them. -->
+    <style name="Theme.TagForge" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background</item>
+    </style>
 
     <!-- Task runner: a see-through window so the confirmation sheet floats over whatever was on screen. -->
     <style name="Theme.TagForge.Translucent" parent="Theme.TagForge">
@@ -11,8 +14,8 @@
     </style>
 
     <style name="Theme.TagForge.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_icon</item>
         <item name="postSplashScreenTheme">@style/Theme.TagForge</item>
     </style>
 </resources>
