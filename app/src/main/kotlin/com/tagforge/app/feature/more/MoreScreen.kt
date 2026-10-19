@@ -4,6 +4,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Bookmarks
@@ -43,7 +45,7 @@ fun MoreScreen(
         modifier = modifier,
         topBar = { TopAppBar(title = { Text(stringResource(R.string.more_title)) }) },
     ) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize()) {
+        Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())) {
             MoreEntry(
                 icon = Icons.Outlined.History,
                 title = stringResource(R.string.more_history),
