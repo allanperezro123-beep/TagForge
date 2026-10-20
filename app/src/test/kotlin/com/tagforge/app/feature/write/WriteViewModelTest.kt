@@ -379,11 +379,71 @@ class WriteViewModelTest {
     }
 
     @Test
-    fun backFromTheReviewIsLeftToTheNavigationHost() = runTest {
-        val vm = viewModel()
-        vm.addRecord(uri)
+    fun backFromAReviewThatHasNoPreviousStepIsLeftToTheNavigationHost() = runTest {
+        val vm = viewModel(initialRecords = listOf(uri))
+        runCurrent()
+
+        assertFalse(vm.uiState.value.canStepBack)
         assertFalse(vm.onBack())
         assertEquals(WriteStep.REVIEW, vm.uiState.value.step)
+    }
+
+    @Test
+    fun backFromTheReviewReturnsToTheFilledFormAndThenToThePickerAndThenLeavesTheWizard() = runTest {
+        val vm = viewModel()
+        vm.addRecord(uri)
+        assertTrue(vm.uiState.value.canStepBack)
+
+        assertTrue(vm.onBack())
+        assertEquals(WriteStep.FORM, vm.uiState.value.step)
+        assertEquals(uri, vm.uiState.value.editing?.spec, "the form comes back with what the user had typed")
+        assertTrue(vm.uiState.value.records.isEmpty(), "the record only exists once the user continues again")
+
+        assertTrue(vm.onBack())
+        assertEquals(WriteStep.TYPE, vm.uiState.value.step)
+
+        assertFalse(vm.uiState.value.canStepBack)
+        assertFalse(vm.onBack(), "the first step hands back to the previous section")
+    }
+
+    @Test
+    fun goingBackToTheFormAndContinuingAgainAddsTheRecordOnlyOnce() = runTest {
+        val vm = viewModel()
+        vm.addRecord(uri)
+        vm.onBack()
+
+        vm.onContinue()
+
+        assertEquals(listOf<RecordSpec>(uri), vm.uiState.value.records)
+        assertEquals(WriteStep.REVIEW, vm.uiState.value.step)
+    }
+
+    @Test
+    fun backFromTheSecondRecordsFormReturnsToTheReviewOfTheFirst() = runTest {
+        val vm = viewModel()
+        vm.addRecord(uri)
+        vm.addRecord(RecordSpec.Text("hola", "es"))
+
+        assertTrue(vm.onBack())
+        assertEquals(WriteStep.FORM, vm.uiState.value.step)
+        assertTrue(vm.onBack())
+        assertEquals(WriteStep.TYPE, vm.uiState.value.step)
+        assertTrue(vm.onBack())
+        assertEquals(WriteStep.REVIEW, vm.uiState.value.step)
+        assertEquals(listOf<RecordSpec>(uri), vm.uiState.value.records)
+    }
+
+    @Test
+    fun afterRemovingARecordTheReviewIsTheFloorOfTheWizard() = runTest {
+        val vm = viewModel()
+        vm.addRecord(uri)
+        vm.addRecord(RecordSpec.Text("hola", "es"))
+
+        vm.onRemoveRecord(1)
+
+        assertFalse(vm.uiState.value.canStepBack, "going back must not bring the removed record to life")
+        assertFalse(vm.onBack())
+        assertEquals(listOf<RecordSpec>(uri), vm.uiState.value.records)
     }
 
     // ---- templates (HT-02) --------------------------------------------------------------------------------------------

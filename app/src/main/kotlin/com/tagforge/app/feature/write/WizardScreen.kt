@@ -37,7 +37,7 @@ fun WizardScreen(
     state: WriteUiState,
     actions: WriteActions,
     snackbarHostState: SnackbarHostState,
-    onBack: (() -> Unit)?,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -45,7 +45,7 @@ fun WizardScreen(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.write_title)) },
-                navigationIcon = { if (onBack != null) BackNavigationIcon(onBack) },
+                navigationIcon = { BackNavigationIcon(onBack) },
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },

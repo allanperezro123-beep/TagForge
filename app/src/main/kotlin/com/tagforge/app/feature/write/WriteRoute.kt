@@ -44,7 +44,7 @@ fun WriteRoute(
     qrText: String? = null,
     armOnOpen: Boolean = false,
     onShowQr: (String) -> Unit = {},
-    onBack: (() -> Unit)? = null,
+    onBack: () -> Unit = {},
 ) {
     val container = rememberAppContainer()
     val viewModel = tagForgeViewModel {
@@ -77,7 +77,8 @@ fun WriteRoute(
         onStopOrDispose { viewModel.onHidden() }
     }
 
-    BackHandler(enabled = state.sheet == null && (state.step == WriteStep.FORM || (state.step == WriteStep.TYPE && state.records.isNotEmpty()))) {
+    // Back steps through the wizard first (review -> form -> type); with no earlier step it falls through to the host.
+    BackHandler(enabled = state.sheet == null && state.canStepBack) {
         viewModel.onBack()
     }
 
@@ -128,7 +129,12 @@ fun WriteRoute(
         },
     )
 
-    WizardScreen(state = state, actions = actions, snackbarHostState = snackbarHostState, onBack = onBack)
+    WizardScreen(
+        state = state,
+        actions = actions,
+        snackbarHostState = snackbarHostState,
+        onBack = { if (!viewModel.onBack()) onBack() },
+    )
 
     if (showTemplateDialog) {
         SaveTemplateDialog(

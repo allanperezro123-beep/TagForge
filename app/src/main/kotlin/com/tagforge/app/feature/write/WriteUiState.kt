@@ -40,6 +40,9 @@ data class EditingRecord(
     val isValid: Boolean get() = errors.isEmpty()
 }
 
+/** Where the wizard was before a forward move; going back restores exactly that, so the arrow can never loop. */
+data class WizardSnapshot(val step: WriteStep, val editing: EditingRecord?, val records: List<RecordSpec>)
+
 /** What the scan sheet shows while a write is armed or running. */
 sealed interface WriteSheet {
     data class Waiting(val messageSize: Int) : WriteSheet
@@ -76,6 +79,7 @@ data class WriteUiState(
     val sheet: WriteSheet? = null,
     val overwrite: OverwritePrompt? = null,
     val canUndoRemove: Boolean = false,
+    val trail: List<WizardSnapshot> = emptyList(),
     // ---- derived ----
     val capacity: Int = 0,
     val analysis: DraftAnalysis,
@@ -87,6 +91,9 @@ data class WriteUiState(
     val canWrite: Boolean = false,
 ) {
     val message: NdefMessage? get() = analysis.message
+
+    /** True while the wizard has an earlier step of its own to go back to (otherwise back leaves to the previous section). */
+    val canStepBack: Boolean get() = trail.isNotEmpty()
 
     /** The text of a QR code for this message, only when it is one valid record a QR can carry. */
     val qrPayload: String? get() = if (analysis.invalid.isEmpty()) QrPayloadMapper.forMessage(records) else null

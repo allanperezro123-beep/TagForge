@@ -93,6 +93,7 @@ fun TagForgeNavHost(
                 qrText = route.qrText,
                 armOnOpen = route.armOnOpen,
                 onShowQr = { navController.navigate(Route.Qr(it)) },
+                onBack = { navController.popBackStack() },
             )
         }
         composable<Route.Qr> { entry ->

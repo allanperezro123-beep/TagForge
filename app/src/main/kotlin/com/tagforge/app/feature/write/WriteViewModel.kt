@@ -88,7 +88,7 @@ class WriteViewModel(
     // ---- wizard ---------------------------------------------------------------------------------------------
 
     fun onTypeSelected(kind: RecordKind) = mutate {
-        it.copy(step = WriteStep.FORM, editing = EditingRecord(index = null, spec = kind.newSpec()))
+        it.copy(step = WriteStep.FORM, editing = EditingRecord(index = null, spec = kind.newSpec()), trail = it.trailWithCurrent())
     }
 
     fun onDraftChanged(spec: RecordSpec) = mutate { state -> state.editing?.let { state.copy(editing = it.copy(spec = spec)) } ?: state }
@@ -104,14 +104,14 @@ class WriteViewModel(
         removed = null
         val index = editing.index
         val records = if (index == null) state.records + editing.spec else state.records.toMutableList().also { it[index] = editing.spec }
-        state.copy(records = records, editing = null, step = WriteStep.REVIEW, canUndoRemove = false)
+        state.copy(records = records, editing = null, step = WriteStep.REVIEW, canUndoRemove = false, trail = state.trailWithCurrent())
     }
 
-    fun onAddRecord() = mutate { it.copy(step = WriteStep.TYPE, editing = null) }
+    fun onAddRecord() = mutate { if (it.step == WriteStep.TYPE) it.copy(editing = null) else it.copy(step = WriteStep.TYPE, editing = null, trail = it.trailWithCurrent()) }
 
     fun onEditRecord(index: Int) = mutate { state ->
         val spec = state.records.getOrNull(index) ?: return@mutate state
-        state.copy(step = WriteStep.FORM, editing = EditingRecord(index, spec))
+        state.copy(step = WriteStep.FORM, editing = EditingRecord(index, spec), trail = state.trailWithCurrent())
     }
 
     fun onRemoveRecord(index: Int) {
@@ -119,10 +119,12 @@ class WriteViewModel(
             val spec = state.records.getOrNull(index) ?: return@mutate state
             removed = index to spec
             val draft = WriteDraft(state.records).remove(index)
+            // The list changed under the saved steps: going back must not bring the removed record to life.
             state.copy(
                 records = draft.records,
                 step = if (draft.records.isEmpty()) WriteStep.TYPE else state.step,
                 canUndoRemove = true,
+                trail = emptyList(),
             )
         }
         if (removed != null) eventChannel.trySend(WriteEvent.RecordRemoved)
@@ -132,10 +134,10 @@ class WriteViewModel(
         val (index, spec) = removed ?: return@mutate state
         removed = null
         val records = state.records.toMutableList().also { it.add(index.coerceAtMost(it.size), spec) }
-        state.copy(records = records, step = WriteStep.REVIEW, canUndoRemove = false)
+        state.copy(records = records, step = WriteStep.REVIEW, canUndoRemove = false, trail = emptyList())
     }
 
-    fun onMoveRecord(index: Int, delta: Int) = mutate { it.copy(records = WriteDraft(it.records).move(index, delta).records) }
+    fun onMoveRecord(index: Int, delta: Int) = mutate { it.copy(records = WriteDraft(it.records).move(index, delta).records, trail = emptyList()) }
 
     fun onIncludeAarChanged(include: Boolean) = mutate { it.copy(includeAar = include) }
 
@@ -146,22 +148,14 @@ class WriteViewModel(
         }
     }
 
-    /** Returns true when the back press was consumed by the wizard; false lets the navigation host handle it. */
+    /**
+     * Steps back to where the user was before the last forward move (review -> the filled form -> the picker). Returns true
+     * when the wizard consumed it; false means there is no earlier step, so the caller leaves to the previous section.
+     */
     fun onBack(): Boolean {
-        val state = _state.value
-        return when (state.step) {
-            WriteStep.FORM -> {
-                mutate { it.copy(editing = null, step = if (it.records.isEmpty()) WriteStep.TYPE else WriteStep.REVIEW) }
-                true
-            }
-            WriteStep.TYPE -> if (state.records.isNotEmpty()) {
-                mutate { it.copy(step = WriteStep.REVIEW) }
-                true
-            } else {
-                false
-            }
-            WriteStep.REVIEW -> false
-        }
+        val previous = _state.value.trail.lastOrNull() ?: return false
+        mutate { it.copy(step = previous.step, editing = previous.editing, records = previous.records, trail = it.trail.dropLast(1)) }
+        return true
     }
 
     // ---- templates ---------------------------------------------------------------------------------------------
@@ -306,6 +300,8 @@ class WriteViewModel(
     private fun mutate(transform: (WriteUiState) -> WriteUiState) {
         _state.update { derive(transform(it)) }
     }
+
+    private fun WriteUiState.trailWithCurrent(): List<WizardSnapshot> = trail + WizardSnapshot(step, editing, records)
 
     private fun derive(state: WriteUiState): WriteUiState {
         val capacity = when (val target = state.target) {
