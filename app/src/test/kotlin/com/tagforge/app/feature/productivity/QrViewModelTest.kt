@@ -3,6 +3,10 @@ package com.tagforge.app.feature.productivity
 import app.cash.turbine.test
 import com.tagforge.app.infrastructure.android.QrEncoder
 import com.tagforge.app.infrastructure.android.QrImage
+import com.tagforge.domain.fakes.FixedClock
+import com.tagforge.domain.fakes.InMemoryTemplateRepository
+import kotlinx.coroutines.flow.first
+import kotlin.time.Instant
 import com.tagforge.domain.ndef.spec.RecordSpec
 import com.tagforge.domain.ndef.spec.WifiAuth
 import com.tagforge.domain.ndef.spec.WifiEncryption
@@ -38,8 +42,15 @@ class QrViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
+    private val templates = InMemoryTemplateRepository()
+
     private fun viewModel(payload: String? = null, images: Map<String, QrImage?> = emptyMap()) =
-        QrViewModel(payload, FakeImages(images), UnconfinedTestDispatcher())
+        QrViewModel(payload, FakeImages(images), UnconfinedTestDispatcher(), templates, FixedClock(Instant.fromEpochMilliseconds(5_000)))
+
+    private fun QrViewModel.paste(text: String) {
+        onPasteChanged(text)
+        onPasteSubmit()
+    }
 
     @Test
     fun aPayloadFromTheWizardIsShownAsAQrCode() = runTest {
@@ -131,5 +142,132 @@ class QrViewModelTest {
         vm.onDismissResult()
 
         assertEquals(QrReadResult.Idle, vm.uiState.value.result)
+    }
+
+    // ---- live camera ---------------------------------------------------------------------------------------------
+
+    @Test
+    fun aCameraFrameCountsOnlyWhileTheScannerIsOpenAndThenClosesIt() = runTest {
+        val vm = viewModel()
+
+        vm.onScanned("https://example.com")
+        assertEquals(QrReadResult.Idle, vm.uiState.value.result)
+
+        vm.onScanStarted()
+        assertTrue(vm.uiState.value.scanning)
+        vm.onScanned("https://example.com")
+
+        assertEquals(false, vm.uiState.value.scanning)
+        assertIs<QrReadResult.Found>(vm.uiState.value.result)
+    }
+
+    // ---- what the result may do ---------------------------------------------------------------------------------
+
+    @Test
+    fun aWebLinkOpensOnlyAfterTheUserAsksAndOnlyThatLink() = runTest {
+        val vm = viewModel()
+        vm.events.test {
+            vm.paste("https://example.com/menu")
+            expectNoEvents()
+
+            vm.onOpenResult()
+
+            assertEquals(QrEvent.OpenUri("https://example.com/menu"), awaitItem())
+        }
+    }
+
+    @Test
+    fun dangerousOrNonOpenableContentNeverProducesAnOpenEvent() = runTest {
+        val vm = viewModel()
+        vm.events.test {
+            for (text in listOf("javascript:alert(1)", "intent://x#Intent;end", "file:///sdcard/a", "https://paypal.com@evil.example/", "WIFI:T:WPA;S:Home;P:pass1234;;", "just text")) {
+                vm.paste(text)
+                vm.onOpenResult()
+            }
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun copyingAWifiCodeIsMarkedSensitiveButPlainTextIsNot() = runTest {
+        val vm = viewModel()
+        vm.events.test {
+            vm.paste("WIFI:T:WPA;S:Home;P:pass1234;;")
+            vm.onCopyResult()
+            assertEquals(QrEvent.Copy("WIFI:T:WPA;S:Home;P:pass1234;;", sensitive = true), awaitItem())
+
+            vm.paste("table 4")
+            vm.onCopyResult()
+            assertEquals(QrEvent.Copy("table 4", sensitive = false), awaitItem())
+        }
+    }
+
+    @Test
+    fun aWifiCodeIsOfferedToTheWriterAndOnlyPrefillsIt() = runTest {
+        val vm = viewModel()
+        vm.paste("WIFI:T:WPA;S:Home;P:pass1234;;")
+        vm.events.test {
+            vm.onUseResult()
+            assertEquals(QrEvent.OpenWrite("WIFI:T:WPA;S:Home;P:pass1234;;"), awaitItem())
+        }
+    }
+
+    @Test
+    fun theResultCanBeSavedAsATemplateWithTheRecordItDecodedTo() = runTest {
+        val vm = viewModel()
+        vm.paste("https://example.com/a")
+        vm.events.test {
+            vm.onSaveResultAsTemplate("Menu")
+
+            assertEquals(QrEvent.TemplateSaved("Menu"), awaitItem())
+        }
+        assertEquals(listOf<RecordSpec>(RecordSpec.Uri("https://example.com/a")), templates.observeAll().first().single().records)
+    }
+
+    // ---- creating --------------------------------------------------------------------------------------------
+
+    @Test
+    fun aWifiCodeCanBeCreatedOnceTheNetworkIsNamed() = runTest {
+        val vm = viewModel()
+        vm.onCreateKind(QrKind.WIFI)
+        assertEquals(false, vm.uiState.value.canCreate)
+
+        vm.onCreateSpec(RecordSpec.Wifi("Home", "pass1234"))
+        vm.onCreate()
+
+        assertEquals(true, vm.uiState.value.canCreate)
+        assertEquals("WIFI:T:WPA;S:Home;P:pass1234;;", vm.uiState.value.generatedText)
+        assertEquals(false, vm.uiState.value.fromTag)
+        assertNotNull(vm.uiState.value.generated)
+    }
+
+    @Test
+    fun changingTheKindClearsTheCodeShownBefore() = runTest {
+        val vm = viewModel()
+        vm.onCreateSpec(RecordSpec.Uri("https://example.com"))
+        vm.onCreate()
+        assertNotNull(vm.uiState.value.generated)
+
+        vm.onCreateKind(QrKind.TEXT)
+
+        assertNull(vm.uiState.value.generated)
+        assertEquals(false, vm.uiState.value.canCreate)
+    }
+
+    @Test
+    fun aTextTooLongForAnyQrReportsTheFailure() = runTest {
+        val vm = viewModel()
+        vm.onCreateKind(QrKind.TEXT)
+        vm.onCreateSpec(RecordSpec.Text("x".repeat(5000)))
+
+        vm.onCreate()
+
+        assertEquals(true, vm.uiState.value.generationFailed)
+        assertNull(vm.uiState.value.generated)
+    }
+
+    @Test
+    fun theCodeForTheWizardMessageIsFlaggedAsComingFromTheTag() = runTest {
+        assertEquals(true, viewModel(payload = "https://example.com").uiState.value.fromTag)
     }
 }

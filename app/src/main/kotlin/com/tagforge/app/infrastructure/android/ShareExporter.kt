@@ -34,6 +34,12 @@ object ExportFiles {
 
     fun sanitize(name: String): String = name.replace(UNSAFE, "_")
 
+    /** `tagforge-qr-20261017-120000.png`: only the time, nothing that identifies a tag or its content. */
+    fun qrFileName(epochMillis: Long): String {
+        val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date(epochMillis))
+        return sanitize("tagforge-qr-$stamp.png")
+    }
+
     /** The file for [name] inside [dir]; refuses anything that is not a plain file name directly in [dir]. */
     fun resolveInside(dir: File, name: String): File {
         require(name == sanitize(name) && name.isNotEmpty() && name != "." && name != "..") { "Not a plain file name: $name" }
@@ -65,6 +71,11 @@ class ShareExporter(private val context: Context) {
         share(name, "application/octet-stream", DumpFormats.toBinary(report.dump).toByteArray(), nowMillis)
     }
 
+    /** The QR picture as a PNG through the system share sheet (read grant on one cache file, MIME `image/png`). */
+    fun sharePng(png: ByteArray, nowMillis: Long = System.currentTimeMillis()) {
+        share(ExportFiles.qrFileName(nowMillis), "image/png", png, nowMillis)
+    }
+
     private fun share(name: String, mimeType: String, content: ByteArray, nowMillis: Long) {
         val dir = File(context.cacheDir, ExportFiles.SUBFOLDER).apply { mkdirs() }
         ExportFiles.sweep(dir, nowMillis, MAX_AGE_MILLIS)
@@ -77,7 +88,10 @@ class ShareExporter(private val context: Context) {
             clipData = ClipData.newRawUri(name, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
+        // The grant must also sit on the chooser itself: it is the chooser that hands the URI to the app the user picks.
         val chooser = Intent.createChooser(send, null).apply {
+            clipData = send.clipData
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             if (context !is Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(chooser)
