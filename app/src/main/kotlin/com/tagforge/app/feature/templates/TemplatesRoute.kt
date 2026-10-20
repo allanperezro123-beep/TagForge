@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 
 /** Container for the template list: owns the ViewModel and the delete-with-Undo snackbar. */
 @Composable
-fun TemplatesRoute(onBack: () -> Unit, onOpen: (Long) -> Unit, onGoToWrite: () -> Unit) {
+fun TemplatesRoute(onBack: () -> Unit, onOpen: (Long) -> Unit, onShowQr: (String) -> Unit, onGoToWrite: () -> Unit) {
     val container = rememberAppContainer()
     val viewModel = tagForgeViewModel { TemplatesViewModel(it.templateRepository, it.clock) }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -56,6 +56,7 @@ fun TemplatesRoute(onBack: () -> Unit, onOpen: (Long) -> Unit, onGoToWrite: () -
                 snackbarHostState.showSnackbar(resources.getString(message))
             }
         },
+        onShowQr = onShowQr,
         onGoToWrite = onGoToWrite,
     )
 }

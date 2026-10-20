@@ -81,4 +81,12 @@ class ShareExporterTest {
             dir.deleteRecursively()
         }
     }
+
+    @Test
+    fun aQrImageIsNamedAfterTheTimeAndNeverCarriesTagData() {
+        val name = ExportFiles.qrFileName(epochMillis = 1_792_240_800_000)
+
+        assertTrue(name.matches(Regex("tagforge-qr-\\d{8}-\\d{6}\\.png")), name)
+        assertEquals(name, ExportFiles.sanitize(name))
+    }
 }

@@ -1,5 +1,6 @@
 package com.tagforge.domain.exchange
 
+import com.tagforge.domain.ndef.ParsedRecord
 import com.tagforge.domain.ndef.spec.RecordSpec
 import com.tagforge.domain.ndef.spec.UriBuilders
 import com.tagforge.domain.ndef.spec.VCard
@@ -47,6 +48,15 @@ object QrPayloadMapper {
 
     /** A QR holds one payload: only a single-record message can be shown as one. */
     fun forMessage(records: List<RecordSpec>): String? = records.singleOrNull()?.let(::toQr)
+
+    /** The QR text for what a tag already holds (History detail): one text, link, smart poster or contact card; null otherwise. */
+    fun forParsed(records: List<ParsedRecord>): String? = when (val only = records.singleOrNull()) {
+        is ParsedRecord.Text -> only.text.takeIf { it.isNotEmpty() }
+        is ParsedRecord.Uri -> only.uri.takeIf { only.prefixKnown && it.isNotEmpty() }
+        is ParsedRecord.SmartPoster -> only.uri.takeIf { it.isNotEmpty() }
+        is ParsedRecord.VCard -> VCard.build(only.fields)
+        else -> null
+    }
 
     // ---- Wi-Fi -----------------------------------------------------------------------------------------------------
 

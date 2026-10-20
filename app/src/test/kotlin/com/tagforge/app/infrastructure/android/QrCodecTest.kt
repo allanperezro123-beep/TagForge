@@ -67,4 +67,23 @@ class QrCodecTest {
         const val WHITE = 0xFFFFFFFF.toInt()
         const val BLACK = 0xFF000000.toInt()
     }
+
+    @Test
+    fun `a code saved with a transparent background is read like any viewer shows it`() {
+        val matrix = assertNotNull(QrEncoder.encode("https://example.com/transparent"))
+        val image = QrEncoder.toPixels(matrix, scale = 6)
+        // Light pixels become fully transparent with RGB 0, which is what many PNG exporters write.
+        val transparent = IntArray(image.pixels.size) { if (image.pixels[it] == WHITE) 0x00000000 else image.pixels[it] }
+
+        assertEquals("https://example.com/transparent", QrDecoder.decode(transparent, image.width, image.height))
+    }
+
+    @Test
+    fun `the fast pass used on live camera frames reads a clean code`() {
+        val matrix = assertNotNull(QrEncoder.encode("WIFI:T:WPA;S:Home;P:pass1234;;"))
+        val image = QrEncoder.toPixels(matrix, scale = 8)
+        val source = com.google.zxing.RGBLuminanceSource(image.width, image.height, image.pixels)
+
+        assertEquals("WIFI:T:WPA;S:Home;P:pass1234;;", QrDecoder.decode(source, tryHarder = false))
+    }
 }

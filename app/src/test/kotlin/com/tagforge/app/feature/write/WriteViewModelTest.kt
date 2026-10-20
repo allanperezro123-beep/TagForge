@@ -23,7 +23,10 @@ import com.tagforge.domain.ndef.spec.RecordSpec
 import com.tagforge.domain.ndef.spec.SpecError
 import com.tagforge.domain.ndef.spec.SpecField
 import com.tagforge.domain.ntag.NtagModel
+import com.tagforge.domain.location.SharedText
+import com.tagforge.domain.location.SharedTextResult
 import com.tagforge.domain.scan.OperationPhase
+import com.tagforge.domain.scan.ScanState
 import com.tagforge.domain.ports.TagSession
 import com.tagforge.domain.ports.TagTransceiver
 import com.tagforge.domain.tag.TagTech
@@ -83,6 +86,7 @@ class WriteViewModelTest {
         templateId: Long? = null,
         initialRecords: List<RecordSpec> = emptyList(),
         armOnOpen: Boolean = false,
+        defaultLanguage: String = "en",
     ) = WriteViewModel(
         coordinator = coordinator,
         settings = settings,
@@ -94,6 +98,7 @@ class WriteViewModelTest {
         initialTemplateId = templateId,
         initialRecords = initialRecords,
         armOnOpen = armOnOpen,
+        defaultLanguage = defaultLanguage,
     )
 
     private fun WriteViewModel.addRecord(spec: RecordSpec) {
@@ -136,6 +141,15 @@ class WriteViewModelTest {
         assertEquals(WriteStep.FORM, state.step)
         assertEquals(RecordSpec.Wifi(), state.editing?.spec)
         assertNull(state.editing?.index, "a new record, not an edit")
+    }
+
+    @Test
+    fun aNewTextRecordStartsInThePhonesLanguageSoNobodyHasToPickOne() = runTest {
+        val vm = viewModel(defaultLanguage = "es-CO")
+
+        vm.onTypeSelected(RecordKind.TEXT)
+
+        assertEquals(RecordSpec.Text(languageCode = "es-CO"), vm.uiState.value.editing?.spec)
     }
 
     @Test
@@ -379,11 +393,71 @@ class WriteViewModelTest {
     }
 
     @Test
-    fun backFromTheReviewIsLeftToTheNavigationHost() = runTest {
-        val vm = viewModel()
-        vm.addRecord(uri)
+    fun backFromAReviewThatHasNoPreviousStepIsLeftToTheNavigationHost() = runTest {
+        val vm = viewModel(initialRecords = listOf(uri))
+        runCurrent()
+
+        assertFalse(vm.uiState.value.canStepBack)
         assertFalse(vm.onBack())
         assertEquals(WriteStep.REVIEW, vm.uiState.value.step)
+    }
+
+    @Test
+    fun backFromTheReviewReturnsToTheFilledFormAndThenToThePickerAndThenLeavesTheWizard() = runTest {
+        val vm = viewModel()
+        vm.addRecord(uri)
+        assertTrue(vm.uiState.value.canStepBack)
+
+        assertTrue(vm.onBack())
+        assertEquals(WriteStep.FORM, vm.uiState.value.step)
+        assertEquals(uri, vm.uiState.value.editing?.spec, "the form comes back with what the user had typed")
+        assertTrue(vm.uiState.value.records.isEmpty(), "the record only exists once the user continues again")
+
+        assertTrue(vm.onBack())
+        assertEquals(WriteStep.TYPE, vm.uiState.value.step)
+
+        assertFalse(vm.uiState.value.canStepBack)
+        assertFalse(vm.onBack(), "the first step hands back to the previous section")
+    }
+
+    @Test
+    fun goingBackToTheFormAndContinuingAgainAddsTheRecordOnlyOnce() = runTest {
+        val vm = viewModel()
+        vm.addRecord(uri)
+        vm.onBack()
+
+        vm.onContinue()
+
+        assertEquals(listOf<RecordSpec>(uri), vm.uiState.value.records)
+        assertEquals(WriteStep.REVIEW, vm.uiState.value.step)
+    }
+
+    @Test
+    fun backFromTheSecondRecordsFormReturnsToTheReviewOfTheFirst() = runTest {
+        val vm = viewModel()
+        vm.addRecord(uri)
+        vm.addRecord(RecordSpec.Text("hola", "es"))
+
+        assertTrue(vm.onBack())
+        assertEquals(WriteStep.FORM, vm.uiState.value.step)
+        assertTrue(vm.onBack())
+        assertEquals(WriteStep.TYPE, vm.uiState.value.step)
+        assertTrue(vm.onBack())
+        assertEquals(WriteStep.REVIEW, vm.uiState.value.step)
+        assertEquals(listOf<RecordSpec>(uri), vm.uiState.value.records)
+    }
+
+    @Test
+    fun afterRemovingARecordTheReviewIsTheFloorOfTheWizard() = runTest {
+        val vm = viewModel()
+        vm.addRecord(uri)
+        vm.addRecord(RecordSpec.Text("hola", "es"))
+
+        vm.onRemoveRecord(1)
+
+        assertFalse(vm.uiState.value.canStepBack, "going back must not bring the removed record to life")
+        assertFalse(vm.onBack())
+        assertEquals(listOf<RecordSpec>(uri), vm.uiState.value.records)
     }
 
     // ---- templates (HT-02) --------------------------------------------------------------------------------------------
@@ -438,6 +512,21 @@ class WriteViewModelTest {
 
         assertEquals(records, vm.uiState.value.records)
         assertEquals(WriteSheet.Waiting(messageSize = 16), vm.uiState.value.sheet)
+    }
+
+    @Test
+    fun textSharedFromAnotherAppOpensTheReviewPrefilledAndNeverArmsAWrite() = runTest {
+        val shared = (SharedText.parse("Plaza\nhttps://www.google.com/maps/@4.711,-74.072,15z") as SharedTextResult.Record).spec
+        val coordinator = coordinator()
+
+        val vm = viewModel(coordinator = coordinator, initialRecords = listOf(shared))
+        runCurrent()
+
+        assertEquals(RecordSpec.Geo("4.711", "-74.072", ""), shared)
+        assertEquals(WriteStep.REVIEW, vm.uiState.value.step)
+        assertEquals(listOf(shared), vm.uiState.value.records)
+        assertEquals(null, vm.uiState.value.sheet, "no scan sheet: nothing is waiting for a tag")
+        assertEquals(ScanState.Idle, coordinator.state.value, "the coordinator was never armed by the share")
     }
 
     @Test

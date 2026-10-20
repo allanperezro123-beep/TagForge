@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import com.tagforge.app.R
+import com.tagforge.app.ui.apps.AppPickerField
 import com.tagforge.app.ui.text.TaskText
 import com.tagforge.domain.task.BlockReason
 import com.tagforge.domain.task.HttpMethod
@@ -31,15 +32,21 @@ fun OpenUrlForm(action: TaskAction.OpenUrl, reason: BlockReason?, visibility: Fi
 
 @Composable
 fun LaunchAppForm(action: TaskAction.LaunchApp, reason: BlockReason?, visibility: FieldVisibility, onChange: (TaskAction) -> Unit) {
-    TaskTextField(
-        value = action.packageName,
-        onValueChange = { onChange(action.copy(packageName = it.trim())) },
-        label = stringResource(R.string.form_package),
-        visibility = visibility,
-        reason = reason,
-        placeholder = stringResource(R.string.form_package_hint),
-        keyboardType = KeyboardType.Uri,
-    )
+    AppPickerField(
+        packageName = action.packageName,
+        onPick = { onChange(action.copy(packageName = it)) },
+        errorText = reason?.takeIf { visibility.showAllErrors }?.let { stringResource(TaskText.blocked(it)) },
+    ) {
+        TaskTextField(
+            value = action.packageName,
+            onValueChange = { onChange(action.copy(packageName = it.trim())) },
+            label = stringResource(R.string.form_package),
+            visibility = visibility,
+            reason = reason,
+            placeholder = stringResource(R.string.form_package_hint),
+            keyboardType = KeyboardType.Uri,
+        )
+    }
     FormNote(stringResource(R.string.form_package_note))
 }
 

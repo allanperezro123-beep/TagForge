@@ -31,8 +31,12 @@ import com.tagforge.app.di.rememberAppContainer
 import com.tagforge.app.di.tagForgeViewModel
 import com.tagforge.app.ui.haptics.rememberHaptics
 import com.tagforge.domain.exchange.QrPayloadMapper
+import com.tagforge.domain.location.SharedText
+import com.tagforge.domain.location.SharedTextResult
+import com.tagforge.domain.ndef.spec.LanguageCodes
 import com.tagforge.domain.settings.AppSettings
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 /**
  * Container for the Write tab: owns the ViewModel, haptics, snackbars and system intents, and hands plain state and
@@ -43,8 +47,9 @@ fun WriteRoute(
     templateId: Long? = null,
     qrText: String? = null,
     armOnOpen: Boolean = false,
+    sharedText: String? = null,
     onShowQr: (String) -> Unit = {},
-    onBack: (() -> Unit)? = null,
+    onBack: () -> Unit = {},
 ) {
     val container = rememberAppContainer()
     val viewModel = tagForgeViewModel {
@@ -57,8 +62,10 @@ fun WriteRoute(
             appPackage = BuildConfig.APPLICATION_ID,
             availability = it.nfcAvailabilityMonitor.availability,
             initialTemplateId = templateId,
-            initialRecords = qrText?.let { text -> listOf(QrPayloadMapper.fromQr(text)) }.orEmpty(),
+            initialRecords = qrText?.let { text -> listOf(QrPayloadMapper.fromQr(text)) }
+                ?: (SharedText.parse(sharedText) as? SharedTextResult.Record)?.let { listOf(it.spec) }.orEmpty(),
             armOnOpen = armOnOpen,
+            defaultLanguage = LanguageCodes.fromDeviceTag(Locale.getDefault().toLanguageTag()),
         )
     }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -77,7 +84,8 @@ fun WriteRoute(
         onStopOrDispose { viewModel.onHidden() }
     }
 
-    BackHandler(enabled = state.sheet == null && (state.step == WriteStep.FORM || (state.step == WriteStep.TYPE && state.records.isNotEmpty()))) {
+    // Back steps through the wizard first (review -> form -> type); with no earlier step it falls through to the host.
+    BackHandler(enabled = state.sheet == null && state.canStepBack) {
         viewModel.onBack()
     }
 
@@ -128,7 +136,12 @@ fun WriteRoute(
         },
     )
 
-    WizardScreen(state = state, actions = actions, snackbarHostState = snackbarHostState, onBack = onBack)
+    WizardScreen(
+        state = state,
+        actions = actions,
+        snackbarHostState = snackbarHostState,
+        onBack = { if (!viewModel.onBack()) onBack() },
+    )
 
     if (showTemplateDialog) {
         SaveTemplateDialog(

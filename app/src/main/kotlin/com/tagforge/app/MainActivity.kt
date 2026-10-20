@@ -2,6 +2,7 @@ package com.tagforge.app
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -17,6 +18,8 @@ import com.tagforge.app.infrastructure.nfc.NfcAvailability
 import com.tagforge.app.infrastructure.nfc.NfcReaderController
 import com.tagforge.app.navigation.TagForgeApp
 import com.tagforge.app.ui.theme.TagForgeTheme
+import com.tagforge.domain.location.SharedText
+import com.tagforge.domain.location.SharedTextResult
 import com.tagforge.domain.settings.AppSettings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -31,6 +34,9 @@ class MainActivity : ComponentActivity() {
     /** A launcher shortcut or widget button asked for a screen. Consumed once the navigation has happened. */
     private val pendingShortcut = MutableStateFlow<ShortcutTarget?>(null)
 
+    /** Text another app shared to Tag Forge, already checked by [SharedText]. Consumed once the review is open. */
+    private val pendingShare = MutableStateFlow<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
@@ -39,6 +45,8 @@ class MainActivity : ComponentActivity() {
         val container = (application as TagForgeApplication).container
         openPermissionCenter.value = intent.getBooleanExtra(EXTRA_OPEN_PERMISSION_CENTER, false)
         resolveShortcut(intent)
+        // Only a fresh launch: a rotation re-delivers the same intent and must not open the review a second time.
+        if (savedInstanceState == null) resolveShare(intent)
 
         // Reader mode lives and dies with the resumed Activity (TS-01); no foreground dispatch.
         readerController = NfcReaderController(this, container.scanCoordinator, container.ndefCodec, container.dispatchers.io)
@@ -57,12 +65,15 @@ class MainActivity : ComponentActivity() {
             val settings by container.settingsStore.settings.collectAsStateWithLifecycle(AppSettings())
             val permissionCenterRequested by openPermissionCenter.collectAsStateWithLifecycle()
             val shortcut by pendingShortcut.collectAsStateWithLifecycle()
+            val shared by pendingShare.collectAsStateWithLifecycle()
             TagForgeTheme(themeMode = settings.themeMode, dynamicColor = settings.dynamicColor) {
                 TagForgeApp(
                     openPermissionCenter = permissionCenterRequested,
                     onPermissionCenterOpened = { openPermissionCenter.value = false },
                     shortcut = shortcut,
                     onShortcutOpened = { pendingShortcut.value = null },
+                    sharedText = shared,
+                    onSharedTextOpened = { pendingShare.value = null },
                 )
             }
         }
@@ -73,6 +84,21 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         if (intent.getBooleanExtra(EXTRA_OPEN_PERMISSION_CENTER, false)) openPermissionCenter.value = true
         resolveShortcut(intent)
+        resolveShare(intent)
+    }
+
+    /**
+     * "Share > Tag Forge". The sender is untrusted, so the text is capped and parsed by [SharedText]; what passes only opens the
+     * Write review pre-filled. Nothing is armed here and nothing runs: the user must press Write on that screen.
+     */
+    private fun resolveShare(intent: Intent) {
+        if (intent.action != Intent.ACTION_SEND || intent.type != "text/plain") return
+        val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+        when (SharedText.parse(text)) {
+            is SharedTextResult.Record -> pendingShare.value = text
+            SharedTextResult.TooLong -> Toast.makeText(this, R.string.share_text_too_long, Toast.LENGTH_LONG).show()
+            SharedTextResult.Empty -> Toast.makeText(this, R.string.share_text_empty, Toast.LENGTH_LONG).show()
+        }
     }
 
     /**

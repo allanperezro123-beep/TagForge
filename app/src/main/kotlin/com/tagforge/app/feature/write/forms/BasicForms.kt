@@ -34,14 +34,13 @@ fun TextForm(
             singleLine = false,
             minLines = 3,
         )
-        FormTextField(
-            value = spec.languageCode,
-            onValueChange = { onChange(spec.copy(languageCode = it)) },
-            label = stringResource(R.string.write_field_language),
-            field = SpecField.LANGUAGE,
-            errors = errors,
-            onTouched = onTouched,
-            imeAction = ImeAction.Done,
+        LanguageField(
+            code = spec.languageCode,
+            onPick = {
+                onChange(spec.copy(languageCode = it))
+                onTouched(SpecField.LANGUAGE)
+            },
+            errorText = errors.firstOrNull { it.field == SpecField.LANGUAGE }?.messageText(),
         )
     }
 }
@@ -160,47 +159,6 @@ fun SmsForm(
             onTouched = onTouched,
             singleLine = false,
             minLines = 3,
-            imeAction = ImeAction.Done,
-        )
-    }
-}
-
-@Composable
-fun GeoForm(
-    spec: RecordSpec.Geo,
-    errors: List<FieldError>,
-    onChange: (RecordSpec) -> Unit,
-    onTouched: (SpecField) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier, verticalArrangement = FormSpacing) {
-        FormTextField(
-            value = spec.latitude,
-            onValueChange = { onChange(spec.copy(latitude = it)) },
-            label = stringResource(R.string.write_field_latitude),
-            field = SpecField.LATITUDE,
-            errors = errors,
-            onTouched = onTouched,
-            placeholder = stringResource(R.string.write_hint_latitude),
-            keyboardType = KeyboardType.Decimal,
-        )
-        FormTextField(
-            value = spec.longitude,
-            onValueChange = { onChange(spec.copy(longitude = it)) },
-            label = stringResource(R.string.write_field_longitude),
-            field = SpecField.LONGITUDE,
-            errors = errors,
-            onTouched = onTouched,
-            placeholder = stringResource(R.string.write_hint_longitude),
-            keyboardType = KeyboardType.Decimal,
-        )
-        FormTextField(
-            value = spec.query,
-            onValueChange = { onChange(spec.copy(query = it)) },
-            label = stringResource(R.string.write_field_place),
-            field = null,
-            errors = errors,
-            onTouched = onTouched,
             imeAction = ImeAction.Done,
         )
     }

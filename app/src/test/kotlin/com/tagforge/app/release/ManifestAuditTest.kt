@@ -46,9 +46,9 @@ class ManifestAuditTest {
 
     @Test
     fun aPermissionOutsideTheAllowlistFails() {
-        val problems = ManifestAuditor.audit(manifest(permissions = listOf("android.permission.READ_CONTACTS")))
+        val problems = ManifestAuditor.audit(manifest(permissions = listOf("android.permission.READ_CALENDAR")))
 
-        assertEquals(listOf("permission outside the allowlist: android.permission.READ_CONTACTS"), problems)
+        assertEquals(listOf("permission outside the allowlist: android.permission.READ_CALENDAR"), problems)
     }
 
     @Test
@@ -76,6 +76,28 @@ class ManifestAuditTest {
 
         assertEquals(listOf("nfc feature must be required=false"), ManifestAuditor.audit(required))
         assertEquals(listOf("missing <uses-feature android.hardware.nfc>"), ManifestAuditor.audit(absent))
+    }
+
+    @Test
+    fun anyRequiredHardwareFeatureFailsTheAudit() {
+        val camera = manifest(
+            nfcFeature = """<uses-feature android:name="android.hardware.nfc" android:required="false" />""" +
+                """<uses-feature android:name="android.hardware.camera" android:required="true" />""",
+        )
+        val optional = manifest(
+            nfcFeature = """<uses-feature android:name="android.hardware.nfc" android:required="false" />""" +
+                """<uses-feature android:name="android.hardware.camera" android:required="false" />""",
+        )
+
+        assertEquals(listOf("android.hardware.camera feature must be required=false"), ManifestAuditor.audit(camera))
+        assertEquals(emptyList(), ManifestAuditor.audit(optional))
+    }
+
+    @Test
+    fun storageAndBackgroundLocationAreForbidden() {
+        for (name in listOf("READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE", "ACCESS_BACKGROUND_LOCATION")) {
+            assertTrue(ManifestAuditor.audit(manifest(permissions = listOf("android.permission.$name"))).any { "forbidden" in it }, name)
+        }
     }
 
     // ---- the real merged release manifest -----------------------------------------------------------------------------

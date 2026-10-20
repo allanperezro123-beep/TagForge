@@ -41,7 +41,7 @@ class FontScaleTest {
             val density = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 2f)) {
                 TagForgeTheme {
-                    WizardScreen(state, noActions(), SnackbarHostState(), onBack = null)
+                    WizardScreen(state, noActions(), SnackbarHostState(), onBack = {})
                 }
             }
         }

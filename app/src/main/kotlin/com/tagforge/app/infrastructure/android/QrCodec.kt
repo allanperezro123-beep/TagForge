@@ -4,6 +4,7 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.BinaryBitmap
 import com.google.zxing.DecodeHintType
 import com.google.zxing.EncodeHintType
+import com.google.zxing.LuminanceSource
 import com.google.zxing.MultiFormatReader
 import com.google.zxing.NotFoundException
 import com.google.zxing.RGBLuminanceSource
@@ -65,16 +66,44 @@ object QrEncoder {
 object QrDecoder {
 
     /** The text of the first QR code found (also in an inverted image), or null when there is none. */
-    fun decode(pixels: IntArray, width: Int, height: Int): String? {
-        val source = RGBLuminanceSource(width, height, pixels)
-        return read(BinaryBitmap(HybridBinarizer(source)))
-            ?: read(BinaryBitmap(HybridBinarizer(source.invert())))
+    fun decode(pixels: IntArray, width: Int, height: Int): String? =
+        decode(RGBLuminanceSource(width, height, flattenOnWhite(pixels)), tryHarder = true)
+
+    /**
+     * Live camera frames use the fast pass ([tryHarder] false): there is always another frame a moment later. A picked
+     * picture gets the slow, thorough one.
+     */
+    fun decode(source: LuminanceSource, tryHarder: Boolean): String? =
+        read(BinaryBitmap(HybridBinarizer(source)), tryHarder) ?: read(BinaryBitmap(HybridBinarizer(source.invert())), tryHarder)
+
+    /**
+     * A QR saved with a transparent background has RGB 0,0,0 under the clear pixels, which the luminance source would
+     * read as black. Compositing over white first is what any viewer shows.
+     */
+    internal fun flattenOnWhite(pixels: IntArray): IntArray = IntArray(pixels.size) { i ->
+        val pixel = pixels[i]
+        val alpha = pixel ushr ALPHA_SHIFT
+        if (alpha == OPAQUE) {
+            pixel
+        } else {
+            fun over(channel: Int) = (channel * alpha + OPAQUE * (OPAQUE - alpha)) / OPAQUE
+            val red = over((pixel shr RED_SHIFT) and CHANNEL)
+            val green = over((pixel shr GREEN_SHIFT) and CHANNEL)
+            val blue = over(pixel and CHANNEL)
+            (OPAQUE shl ALPHA_SHIFT) or (red shl RED_SHIFT) or (green shl GREEN_SHIFT) or blue
+        }
     }
 
-    private fun read(bitmap: BinaryBitmap): String? {
+    private const val ALPHA_SHIFT = 24
+    private const val RED_SHIFT = 16
+    private const val GREEN_SHIFT = 8
+    private const val CHANNEL = 0xFF
+    private const val OPAQUE = 0xFF
+
+    private fun read(bitmap: BinaryBitmap, tryHarder: Boolean): String? {
         val reader = MultiFormatReader()
         return try {
-            reader.decode(bitmap, HINTS).text
+            reader.decode(bitmap, if (tryHarder) HINTS else FAST_HINTS).text
         } catch (_: NotFoundException) {
             null
         } catch (_: com.google.zxing.ChecksumException) {
@@ -86,9 +115,10 @@ object QrDecoder {
         }
     }
 
-    private val HINTS = mapOf(
+    private val FAST_HINTS = mapOf(
         DecodeHintType.POSSIBLE_FORMATS to listOf(BarcodeFormat.QR_CODE),
-        DecodeHintType.TRY_HARDER to true,
         DecodeHintType.CHARACTER_SET to "UTF-8",
     )
+
+    private val HINTS = FAST_HINTS + (DecodeHintType.TRY_HARDER to true)
 }

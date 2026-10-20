@@ -160,6 +160,11 @@ dependencies {
     ksp(libs.room.compiler)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.zxing.core)
+    // Live QR scanning (UX-B): preview + frame analysis only; the camera permission is asked when the user taps Scan.
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
 
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)

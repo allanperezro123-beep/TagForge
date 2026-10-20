@@ -39,6 +39,7 @@ import com.tagforge.app.R
 import com.tagforge.app.feature.write.kind
 import com.tagforge.app.feature.write.titleRes
 import com.tagforge.app.ui.components.BackNavigationIcon
+import com.tagforge.domain.exchange.QrPayloadMapper
 import com.tagforge.app.ui.components.EmptyState
 import com.tagforge.app.ui.components.SkeletonList
 import com.tagforge.domain.template.Template
@@ -54,6 +55,7 @@ fun TemplatesScreen(
     onRename: (Long, String) -> Unit,
     onDelete: (Long) -> Unit,
     onPin: (Template) -> Unit,
+    onShowQr: (String) -> Unit,
     onGoToWrite: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -86,6 +88,7 @@ fun TemplatesScreen(
                             onOpen = { onOpen(template.id) },
                             onRename = { renaming = template.id },
                             onPin = { onPin(template) },
+                            onShowQr = QrPayloadMapper.forMessage(template.records)?.let { payload -> { onShowQr(payload) } },
                             onDelete = { onDelete(template.id) },
                         )
                         HorizontalDivider()
@@ -108,7 +111,7 @@ fun TemplatesScreen(
 }
 
 @Composable
-private fun TemplateRow(template: Template, onOpen: () -> Unit, onRename: () -> Unit, onPin: () -> Unit, onDelete: () -> Unit) {
+private fun TemplateRow(template: Template, onOpen: () -> Unit, onRename: () -> Unit, onPin: () -> Unit, onShowQr: (() -> Unit)?, onDelete: () -> Unit) {
     var menuOpen by rememberSaveable { mutableStateOf(false) }
     val kinds = template.records.map { stringResource(it.kind().titleRes()) }.distinct().joinToString(", ")
 
@@ -140,6 +143,15 @@ private fun TemplateRow(template: Template, onOpen: () -> Unit, onRename: () -> 
                             onPin()
                         },
                     )
+                    if (onShowQr != null) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.templates_show_qr)) },
+                            onClick = {
+                                menuOpen = false
+                                onShowQr()
+                            },
+                        )
+                    }
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.templates_delete)) },
                         onClick = {

@@ -13,9 +13,15 @@ sealed interface Route {
     /**
      * [templateId] opens the wizard prefilled from a saved template; [qrText] prefills it from a decoded QR code.
      * [armOnOpen] (pinned template shortcuts) starts waiting for a tag as soon as the template is loaded.
+     * [sharedText] is text another app shared to Tag Forge: it only prefills the review, it never arms a write.
      */
     @Serializable
-    data class Write(val templateId: Long? = null, val qrText: String? = null, val armOnOpen: Boolean = false) : Route
+    data class Write(
+        val templateId: Long? = null,
+        val qrText: String? = null,
+        val armOnOpen: Boolean = false,
+        val sharedText: String? = null,
+    ) : Route
 
     /** A QR code for the wizard message ([payload]) and a way to read one from a picture or pasted text. */
     @Serializable

@@ -47,6 +47,8 @@ fun TagForgeApp(
     onPermissionCenterOpened: () -> Unit = {},
     shortcut: ShortcutTarget? = null,
     onShortcutOpened: () -> Unit = {},
+    sharedText: String? = null,
+    onSharedTextOpened: () -> Unit = {},
 ) {
     val navController = rememberNavController()
     LaunchedEffect(openPermissionCenter) {
@@ -60,6 +62,12 @@ fun TagForgeApp(
             val route = ShortcutLinks.route(shortcut)
             if (shortcut is ShortcutTarget.WriteTemplate) navController.navigate(route) else navController.navigateToTopLevel(route)
             onShortcutOpened()
+        }
+    }
+    LaunchedEffect(sharedText) {
+        if (sharedText != null) {
+            navController.navigate(Route.Write(sharedText = sharedText))
+            onSharedTextOpened()
         }
     }
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -92,7 +100,9 @@ fun TagForgeNavHost(
                 templateId = route.templateId,
                 qrText = route.qrText,
                 armOnOpen = route.armOnOpen,
+                sharedText = route.sharedText,
                 onShowQr = { navController.navigate(Route.Qr(it)) },
+                onBack = { navController.popBackStack() },
             )
         }
         composable<Route.Qr> { entry ->
@@ -152,12 +162,17 @@ fun TagForgeNavHost(
             )
         }
         composable<Route.TagDetail> { entry ->
-            TagDetailRoute(historyId = entry.toRoute<Route.TagDetail>().historyId, onBack = { navController.popBackStack() })
+            TagDetailRoute(
+                historyId = entry.toRoute<Route.TagDetail>().historyId,
+                onBack = { navController.popBackStack() },
+                onShowQr = { navController.navigate(Route.Qr(it)) },
+            )
         }
         composable<Route.Templates> {
             TemplatesRoute(
                 onBack = { navController.popBackStack() },
                 onOpen = { navController.navigate(Route.Write(it)) },
+                onShowQr = { navController.navigate(Route.Qr(it)) },
                 onGoToWrite = { navController.navigateToTopLevel(Route.Write()) },
             )
         }

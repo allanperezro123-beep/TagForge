@@ -18,7 +18,10 @@ object ManifestAuditor {
         "android.permission.WRITE_SETTINGS",
         "com.android.alarm.permission.SET_ALARM",
         "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH",
         "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_NOTIFICATION_POLICY",
         "android.permission.CHANGE_WIFI_STATE",
     )
@@ -27,6 +30,11 @@ object ManifestAuditor {
         "android.permission.QUERY_ALL_PACKAGES",
         "android.permission.SEND_SMS",
         "android.permission.CALL_PHONE",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.READ_CONTACTS",
+        "android.permission.RECORD_AUDIO",
     )
 
     fun parse(xml: String): Document =
@@ -50,9 +58,17 @@ object ManifestAuditor {
             else if (permission !in ALLOWED_PERMISSIONS && !permission.startsWith("$ownPackage.")) problems += "permission outside the allowlist: $permission"
         }
 
-        val nfc = elements(doc, "uses-feature").firstOrNull { it.attr("name") == "android.hardware.nfc" }
+        val features = elements(doc, "uses-feature")
+        val nfc = features.firstOrNull { it.attr("name") == "android.hardware.nfc" }
         if (nfc == null) problems += "missing <uses-feature android.hardware.nfc>"
         else if (nfc.attr("required") != "false") problems += "nfc feature must be required=false"
+        // Any hardware feature the merged manifest declares must be optional, wherever the declaration came from.
+        for (feature in features) {
+            val name = feature.attr("name")
+            if (name != "android.hardware.nfc" && name.startsWith("android.hardware.") && feature.attr("required") != "false") {
+                problems += "$name feature must be required=false"
+            }
+        }
         return problems
     }
 

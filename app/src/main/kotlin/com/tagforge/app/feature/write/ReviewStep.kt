@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
@@ -164,8 +165,10 @@ private fun AarSwitch(checked: Boolean, onChange: (Boolean) -> Unit) {
 private fun TargetSelector(state: WriteUiState, onSelect: (WriteTarget) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(stringResource(R.string.write_target_title), style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.write_target_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // Four chips do not fit a 360 dp screen at a large font size: they scroll sideways instead of running off the edge.
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             NtagModel.entries.forEach { model ->

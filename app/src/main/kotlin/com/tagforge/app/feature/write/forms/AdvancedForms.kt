@@ -2,12 +2,15 @@ package com.tagforge.app.feature.write.forms
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.tagforge.app.R
+import com.tagforge.app.ui.apps.AppPickerField
 import com.tagforge.domain.ndef.spec.FieldError
 import com.tagforge.domain.ndef.spec.RecordSpec
 import com.tagforge.domain.ndef.spec.SpecField
@@ -23,16 +26,25 @@ fun AppLaunchForm(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier, verticalArrangement = FormSpacing) {
-        FormTextField(
-            value = spec.packageName,
-            onValueChange = { onChange(spec.copy(packageName = it)) },
-            label = stringResource(R.string.write_field_package),
-            field = SpecField.PACKAGE,
-            errors = errors,
-            onTouched = onTouched,
-            placeholder = stringResource(R.string.write_hint_package),
-            imeAction = ImeAction.Done,
-        )
+        AppPickerField(
+            packageName = spec.packageName,
+            onPick = {
+                onChange(spec.copy(packageName = it))
+                onTouched(SpecField.PACKAGE)
+            },
+            errorText = errors.firstOrNull { it.field == SpecField.PACKAGE }?.messageText(),
+        ) {
+            FormTextField(
+                value = spec.packageName,
+                onValueChange = { onChange(spec.copy(packageName = it)) },
+                label = stringResource(R.string.write_field_package),
+                field = SpecField.PACKAGE,
+                errors = errors,
+                onTouched = onTouched,
+                placeholder = stringResource(R.string.write_hint_package),
+                imeAction = ImeAction.Done,
+            )
+        }
     }
 }
 
@@ -45,6 +57,7 @@ fun MimeForm(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier, verticalArrangement = FormSpacing) {
+        AdvancedNote()
         FormTextField(
             value = spec.mimeType,
             onValueChange = { onChange(spec.copy(mimeType = it)) },
@@ -77,6 +90,7 @@ fun ExternalForm(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier, verticalArrangement = FormSpacing) {
+        AdvancedNote()
         FormTextField(
             value = spec.domain,
             onValueChange = { onChange(spec.copy(domain = it)) },
@@ -104,4 +118,13 @@ fun ExternalForm(
             imeAction = ImeAction.Done,
         )
     }
+}
+
+@Composable
+private fun AdvancedNote() {
+    Text(
+        stringResource(R.string.write_advanced_note),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }

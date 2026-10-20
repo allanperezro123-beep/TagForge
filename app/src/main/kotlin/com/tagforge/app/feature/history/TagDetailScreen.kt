@@ -14,6 +14,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -29,20 +30,21 @@ import com.tagforge.app.ui.components.BackNavigationIcon
 import com.tagforge.app.ui.components.EmptyState
 import com.tagforge.app.ui.components.RecordCard
 import com.tagforge.app.ui.components.SkeletonList
+import com.tagforge.domain.exchange.QrPayloadMapper
 import com.tagforge.domain.history.HistoryEntry
 
 /** Container: loads one stored entry by id. */
 @Composable
-fun TagDetailRoute(historyId: Long, onBack: () -> Unit) {
+fun TagDetailRoute(historyId: Long, onBack: () -> Unit, onShowQr: (String) -> Unit = {}) {
     val viewModel = tagForgeViewModel { TagDetailViewModel(historyId, it.historyRepository) }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    TagDetailScreen(state, onBack)
+    TagDetailScreen(state, onBack, onShowQr)
 }
 
 /** A stored history entry shown like a fresh read: what happened, to which tag, and the records it held. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TagDetailScreen(state: TagDetailUiState, onBack: () -> Unit, modifier: Modifier = Modifier) {
+fun TagDetailScreen(state: TagDetailUiState, onBack: () -> Unit, onShowQr: (String) -> Unit = {}, modifier: Modifier = Modifier) {
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -60,14 +62,14 @@ fun TagDetailScreen(state: TagDetailUiState, onBack: () -> Unit, modifier: Modif
                     title = stringResource(R.string.history_detail_not_found_title),
                     body = stringResource(R.string.history_detail_not_found_body),
                 )
-                is TagDetailUiState.Loaded -> LoadedDetail(state)
+                is TagDetailUiState.Loaded -> LoadedDetail(state, onShowQr)
             }
         }
     }
 }
 
 @Composable
-private fun LoadedDetail(state: TagDetailUiState.Loaded) {
+private fun LoadedDetail(state: TagDetailUiState.Loaded, onShowQr: (String) -> Unit) {
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -82,6 +84,13 @@ private fun LoadedDetail(state: TagDetailUiState.Loaded) {
             }
         }
         itemsIndexed(state.records) { index, parsed -> RecordCard(parsed, index) }
+        QrPayloadMapper.forParsed(state.records)?.let { payload ->
+            item {
+                OutlinedButton(onClick = { onShowQr(payload) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.templates_show_qr))
+                }
+            }
+        }
     }
 }
 
