@@ -22,7 +22,7 @@ fun SecuritySheet.toUi(): ToolSheetUi = when (this) {
     )
     is SecuritySheet.Success -> ToolSheetUi.Success(
         title = stringResource(action.doneTitle()),
-        detail = pack?.let { stringResource(R.string.security_sheet_done_unlock_detail, it.toHex(" ")) }
+        detail = pack?.let { stringResource(unlockDetail(packMatches), it.toHex(" ")) }
             ?: stringResource(R.string.security_sheet_done_detail),
     )
     is SecuritySheet.Failure -> {
@@ -34,6 +34,12 @@ fun SecuritySheet.toUi(): ToolSheetUi = when (this) {
             canRetry = canRetry,
         )
     }
+}
+
+private fun unlockDetail(packMatches: Boolean?): Int = when (packMatches) {
+    true -> R.string.security_sheet_done_unlock_match
+    false -> R.string.security_sheet_done_unlock_mismatch
+    null -> R.string.security_sheet_done_unlock_detail
 }
 
 private fun SecurityAction.doneTitle(): Int = when (this) {

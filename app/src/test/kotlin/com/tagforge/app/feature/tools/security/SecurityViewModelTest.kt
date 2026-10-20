@@ -14,6 +14,7 @@ import com.tagforge.domain.history.RecordHistoryUseCase
 import com.tagforge.domain.ntag.NtagModel
 import com.tagforge.domain.scan.ScanCoordinator
 import com.tagforge.domain.security.LockScope
+import com.tagforge.domain.security.PasswordMode
 import com.tagforge.domain.security.SecurityFailure
 import com.tagforge.domain.security.SecurityOperation
 import com.tagforge.domain.settings.AppSettings
@@ -92,7 +93,7 @@ class SecurityViewModelTest {
 
     private fun SecurityViewModel.fillSetPassword(stored: Boolean = true) {
         onChoose(SecurityAction.SET_PASSWORD)
-        onFormChange { it.copy(passwordHex = "12345678", packHex = "ABCD", storedAck = stored) }
+        onFormChange { it.copy(mode = PasswordMode.HEX, password = "12345678", pack = "ABCD", storedAck = stored) }
     }
 
     private suspend fun everythingTheHistoryKept(): String = history.observe().first().joinToString { "${it.summary}|${it.uid}|${it.ndef}|${it.tagType}" }
@@ -150,7 +151,7 @@ class SecurityViewModelTest {
         val kept = everythingTheHistoryKept()
         assertFalse(kept.contains("12345678"), kept)
         assertFalse(kept.contains("ABCD"), kept)
-        assertEquals("", vm.uiState.value.form.passwordHex, "the password is wiped from memory after the run")
+        assertEquals("", vm.uiState.value.form.password, "the password is wiped from memory after the run")
         assertNull(vm.uiState.value.plan)
     }
 
@@ -177,11 +178,11 @@ class SecurityViewModelTest {
         vm.onChoose(SecurityAction.SET_PASSWORD)
 
         for (bad in listOf("", "1234567", "123456789", "1234567G", "FFFFFFFF")) {
-            vm.onFormChange { it.copy(passwordHex = bad, packHex = "ABCD", storedAck = true) }
+            vm.onFormChange { it.copy(mode = PasswordMode.HEX, password = bad, pack = "ABCD", storedAck = true) }
             vm.onNext()
             assertEquals(FormProblem.PASSWORD_INVALID, vm.uiState.value.problem, "'$bad'")
         }
-        vm.onFormChange { it.copy(passwordHex = "12345678", packHex = "ABC") }
+        vm.onFormChange { it.copy(mode = PasswordMode.HEX, password = "12345678", pack = "ABC") }
         vm.onNext()
         assertEquals(FormProblem.PACK_INVALID, vm.uiState.value.problem)
     }
@@ -193,9 +194,14 @@ class SecurityViewModelTest {
 
         vm.onGeneratePassword()
 
-        assertEquals(8, vm.uiState.value.form.passwordHex.length)
-        assertEquals(4, vm.uiState.value.form.packHex.length)
+        assertEquals(4, vm.uiState.value.form.password.length, "plain text: 4 characters")
+        assertEquals(2, vm.uiState.value.form.pack.length, "plain text: 2 characters")
         assertFalse(vm.uiState.value.form.storedAck, "a fresh password has to be acknowledged again")
+
+        vm.onModeChange(PasswordMode.HEX)
+        vm.onGeneratePassword()
+        assertEquals(8, vm.uiState.value.form.password.length)
+        assertEquals(4, vm.uiState.value.form.pack.length)
     }
 
     // ---- NS-01: cancel, back, wrong text, other tag ---------------------------------------------------------------------
@@ -334,7 +340,7 @@ class SecurityViewModelTest {
         tap(coordinator, tag)   // the attempt limit is read first (W2) ...
         vm.onLimitUnderstood()  // ... and, being unreadable behind the password, acknowledged
         tag.powerCycle()
-        vm.onFormChange { it.copy(currentPasswordHex = "12345678") }
+        vm.onFormChange { it.copy(mode = PasswordMode.HEX, currentPassword = "12345678") }
         vm.onNext()
         tap(coordinator, tag)
         tag.powerCycle()
@@ -360,7 +366,7 @@ class SecurityViewModelTest {
         tap(coordinator, tag)
         vm.onLimitUnderstood()
         tag.powerCycle()
-        vm.onFormChange { it.copy(currentPasswordHex = "12345678", lockConfig = true, authLimit = 3) }
+        vm.onFormChange { it.copy(mode = PasswordMode.HEX, currentPassword = "12345678", lockConfig = true, authLimit = 3) }
         vm.onNext()
         tap(coordinator, tag)
         tag.powerCycle()
@@ -440,7 +446,7 @@ class SecurityViewModelTest {
         val tag = protectedTag().also { it.setPage(model.cfg1, "00 00 00 00".hex()) }
         vm.onChoose(SecurityAction.UNLOCK)
         tap(coordinator, tag)
-        vm.onFormChange { it.copy(currentPasswordHex = "00000001") }
+        vm.onFormChange { it.copy(mode = PasswordMode.HEX, currentPassword = "00000001") }
 
         vm.onNext()
         tap(coordinator, tag)
@@ -457,7 +463,7 @@ class SecurityViewModelTest {
         val tag = protectedTag().also { it.setPage(model.cfg1, "00 00 00 00".hex()) }
         vm.onChoose(SecurityAction.UNLOCK)
         tap(coordinator, tag)
-        vm.onFormChange { it.copy(currentPasswordHex = "12345678") }
+        vm.onFormChange { it.copy(mode = PasswordMode.HEX, currentPassword = "12345678") }
 
         vm.onNext()
         tap(coordinator, tag)
@@ -489,8 +495,9 @@ class SecurityViewModelTest {
         val generated = (1..8).map {
             productionDefaultViewModel().also { vm ->
                 vm.onChoose(SecurityAction.SET_PASSWORD)
+                vm.onModeChange(PasswordMode.HEX)
                 vm.onGeneratePassword()
-            }.uiState.value.form.passwordHex
+            }.uiState.value.form.password
         }
 
         assertTrue(generated.all { it.length == 8 }, "8 hex digits each: $generated")
@@ -519,7 +526,7 @@ class SecurityViewModelTest {
         val tag = protectedTag()
         vm.onChoose(SecurityAction.UNLOCK)
         vm.onSheetDismissed()   // walked away from the probe tap
-        vm.onFormChange { it.copy(currentPasswordHex = "00000001") }
+        vm.onFormChange { it.copy(mode = PasswordMode.HEX, currentPassword = "00000001") }
 
         vm.onNext()
         tap(coordinator, tag)
@@ -549,7 +556,7 @@ class SecurityViewModelTest {
         val vm = viewModel(coordinator)
         val tag = protectedTag()
         vm.fillSetPassword()
-        vm.onFormChange { it.copy(currentPasswordHex = "00000001") }
+        vm.onFormChange { it.copy(mode = PasswordMode.HEX, currentPassword = "00000001") }
 
         vm.onNext()
         tap(coordinator, tag)
@@ -572,7 +579,7 @@ class SecurityViewModelTest {
         vm.onLimitUnderstood()
         assertTrue(vm.uiState.value.passwordFieldEnabled)
         tag.powerCycle()
-        vm.onFormChange { it.copy(currentPasswordHex = "12345678") }
+        vm.onFormChange { it.copy(mode = PasswordMode.HEX, currentPassword = "12345678") }
         vm.onNext()
         tap(coordinator, tag)
 
@@ -605,11 +612,133 @@ class SecurityViewModelTest {
 
     @Test
     fun theFormAndTheStateThatHoldsItNeverPrintThePasswordOrThePack() = runTest {
-        val form = SecurityForm(passwordHex = "12345678", packHex = "ABCD", currentPasswordHex = "9ABCDEF0")
+        val form = SecurityForm(mode = PasswordMode.HEX, password = "12345678", pack = "ABCD", currentPassword = "9ABCDEF0")
         val state = SecurityUiState(form = form)
 
         for (text in listOf(form.toString(), state.toString())) {
             assertFalse("12345678" in text || "ABCD" in text.uppercase() || "9ABCDEF0" in text.uppercase(), text)
         }
+    }
+
+    // ---- UX-A1: passwords are typed as plain text; hexadecimal is the advanced alternative ----------------------------------
+
+    private fun tagWithTextPassword(): FakeNtag21x = protectedTag().also {
+        it.setPage(model.pwd, "61 62 63 64".hex())
+        it.setPage(model.cfg1, "00 00 00 00".hex())
+    }
+
+    private fun SecurityForm.secrets() = Triple(password, pack, currentPassword)
+
+    @Test
+    fun theFormStartsInTextModeWithTheReadableTfPack() = runTest {
+        val vm = viewModel(coordinator())
+        vm.onChoose(SecurityAction.SET_PASSWORD)
+
+        assertEquals(PasswordMode.TEXT, vm.uiState.value.form.mode)
+        assertEquals("TF", vm.uiState.value.form.pack)
+    }
+
+    @Test
+    fun aFourCharacterTextPasswordIsWrittenAsItsFourBytes() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.onChoose(SecurityAction.SET_PASSWORD)
+        vm.onFormChange { it.copy(password = "abcd", storedAck = true) }
+
+        vm.onNext()
+        tap(coordinator, blankTag())
+
+        val frames = listOf("A2 85 61 62 63 64", "A2 86 54 46 00 00", "A2 84 80 00 00 00", "A2 83 04 00 00 04").map { it.hex() }
+        assertEquals(frames, vm.uiState.value.plan!!.commands)
+    }
+
+    @Test
+    fun aTextPasswordThatIsShortLongOrNotPlainAsciiIsRefusedBeforeAnyTap() = runTest {
+        val vm = viewModel(coordinator())
+        vm.onChoose(SecurityAction.SET_PASSWORD)
+
+        for (bad in listOf("", "abc", "abcde", "añb1", "ab d")) {
+            vm.onFormChange { it.copy(password = bad, storedAck = true) }
+            vm.onNext()
+            assertEquals(FormProblem.PASSWORD_INVALID, vm.uiState.value.problem, "'$bad'")
+            assertNull(vm.uiState.value.sheet, "'$bad' arms nothing")
+        }
+        vm.onFormChange { it.copy(password = "abcd", pack = "T") }
+        vm.onNext()
+        assertEquals(FormProblem.PACK_INVALID, vm.uiState.value.problem)
+    }
+
+    @Test
+    fun switchingTheModeKeepsWhatWasTypedWhenItCanBeShownInTheOtherMode() = runTest {
+        val vm = viewModel(coordinator())
+        vm.onChoose(SecurityAction.SET_PASSWORD)
+        vm.onFormChange { it.copy(password = "abcd", pack = "TF", currentPassword = "wxyz") }
+
+        vm.onModeChange(PasswordMode.HEX)
+        assertEquals(PasswordMode.HEX, vm.uiState.value.form.mode)
+        assertEquals(Triple("61626364", "5446", "7778797A"), vm.uiState.value.form.secrets())
+
+        vm.onModeChange(PasswordMode.TEXT)
+        assertEquals(Triple("abcd", "TF", "wxyz"), vm.uiState.value.form.secrets())
+
+        vm.onFormChange { it.copy(mode = PasswordMode.HEX, password = "00000001") }
+        vm.onModeChange(PasswordMode.TEXT)
+        assertEquals("", vm.uiState.value.form.password, "bytes with no keyboard character cannot be shown as text")
+    }
+
+    @Test
+    fun aGeneratedTextPasswordHasNoLookAlikeCharactersAndCanBeUsed() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.onChoose(SecurityAction.SET_PASSWORD)
+        vm.onGeneratePassword()
+        vm.onFormChange { it.copy(storedAck = true) }
+
+        assertTrue(vm.uiState.value.form.password.none { it in "0O1lI" }, vm.uiState.value.form.password)
+        vm.onNext()
+        tap(coordinator, blankTag())
+
+        assertEquals(SecurityStep.DRY_RUN, vm.uiState.value.step)
+    }
+
+    private fun TestScope.unlockWith(tag: FakeNtag21x, change: (SecurityForm) -> SecurityForm): SecurityViewModel {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.onChoose(SecurityAction.UNLOCK)
+        tap(coordinator, tag)
+        vm.onFormChange(change)
+        vm.onNext()
+        tap(coordinator, tag)
+        return vm
+    }
+
+    @Test
+    fun unlockWithATextPasswordSendsItsBytesAndShowsThePack() = runTest {
+        val vm = unlockWith(tagWithTextPassword()) { it.copy(currentPassword = "abcd") }
+
+        val success = assertIs<SecuritySheet.Success>(vm.uiState.value.sheet)
+        assertEquals("AB CD".hex(), success.pack)
+        assertNull(success.packMatches, "no PACK was typed to compare")
+    }
+
+    @Test
+    fun unlockComparesAnOptionalExpectedPackAndFlagsADifferentOne() = runTest {
+        val different = unlockWith(tagWithTextPassword()) { it.copy(currentPassword = "abcd", expectedPack = "TF") }
+        assertEquals(false, assertIs<SecuritySheet.Success>(different.uiState.value.sheet).packMatches)
+
+        val same = unlockWith(tagWithTextPassword()) {
+            it.copy(mode = PasswordMode.HEX, currentPassword = "61626364", expectedPack = "ABCD")
+        }
+        assertEquals(true, assertIs<SecuritySheet.Success>(same.uiState.value.sheet).packMatches)
+    }
+
+    @Test
+    fun unlockRefusesAnExpectedPackThatIsNotTwoCharactersBeforeSendingAnyPassword() = runTest {
+        val tag = tagWithTextPassword()
+        val vm = unlockWith(tag) { it.copy(currentPassword = "abcd", expectedPack = "T") }
+
+        assertEquals(FormProblem.PACK_INVALID, vm.uiState.value.problem)
+        assertNull(vm.uiState.value.sheet)
+        assertEquals(0, tag.commandLog.count { it[0] == 0x1B }, "no authentication was sent")
     }
 }

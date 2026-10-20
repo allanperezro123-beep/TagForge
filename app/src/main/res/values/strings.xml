@@ -1057,7 +1057,7 @@
     <string name="security_title">Security</string>
     <string name="security_intro">Password protection and permanent locks for NTAG213, NTAG215 and NTAG216. Some changes are permanent and can leave a tag unusable. Practice on a spare tag.</string>
     <string name="security_action_set_password">Set or change password</string>
-    <string name="security_action_set_password_summary">Protect pages with a 32-bit password</string>
+    <string name="security_action_set_password_summary">Protect the tag with a 4-character password</string>
     <string name="security_action_remove_password">Remove password</string>
     <string name="security_action_remove_password_summary">Back to the factory state</string>
     <string name="security_action_unlock">Unlock</string>
@@ -1070,8 +1070,8 @@
     <string name="security_action_signature_summary">Read the 32-byte signature (not verified)</string>
     <string name="security_action_console">Raw command console</string>
     <string name="security_action_console_summary">Advanced: send hex frames to the tag</string>
-    <string name="security_form_password">Password (8 hex digits)</string>
-    <string name="security_form_pack">PACK (4 hex digits)</string>
+    <string name="security_form_password">Password</string>
+    <string name="security_form_pack">PACK</string>
     <string name="security_form_generate">Generate</string>
     <string name="security_form_show">Show</string>
     <string name="security_form_hide">Hide</string>
@@ -1082,14 +1082,14 @@
     <string name="security_form_auth0">First protected page: %1$d</string>
     <string name="security_form_auth0_hint">Page 4 protects all user memory.</string>
     <string name="security_form_protect_reads">Also require the password to read</string>
-    <string name="security_form_current">Current password (if the tag is protected)</string>
+    <string name="security_form_current">Current password (optional)</string>
     <string name="security_form_current_required">Current password</string>
     <string name="security_form_next">Read the tag</string>
     <string name="security_form_next_hint">The first tap only reads. Nothing is written until you confirm the exact changes.</string>
-    <string name="security_problem_password">The password must be exactly 8 hex digits and not FFFFFFFF.</string>
-    <string name="security_problem_pack">The PACK must be exactly 4 hex digits.</string>
+    <string name="security_problem_password">The password must be exactly 4 characters: letters, numbers or symbols, without accents or spaces.</string>
+    <string name="security_problem_pack">The PACK must be exactly 2 characters.</string>
     <string name="security_problem_stored">Confirm that you stored the password first.</string>
-    <string name="security_problem_current">Enter the current password as 8 hex digits.</string>
+    <string name="security_problem_current">Enter the current password: exactly 4 characters.</string>
     <string name="security_problem_nothing">Choose what to change first.</string>
     <string name="security_config_lock_cfglck">Lock the configuration forever (CFGLCK)</string>
     <string name="security_config_lock_authlim">Attempt limit: %1$d (0 leaves it unlimited)</string>
@@ -1165,4 +1165,24 @@
     <string name="tools_security">Security</string>
     <string name="tools_security_summary">Passwords, permanent locks and signature</string>
     <string name="tools_families_note">Works with NTAG21x, the MIFARE Ultralight family and NTAG210/212 (direct NfcA access), ISO 15693 (dump), MIFARE Classic (phones with an NXP chip, public keys only) and any NDEF tag through Android. FeliCa, NfcB and ISO 14443-4 cards are information only unless they hold NDEF. When a tag does not support a tool, the tool tells you why.</string>
+
+    <!-- UX-A -->
+    <string name="security_problem_password_hex">The password must be exactly 8 hex digits and not FFFFFFFF.</string>
+    <string name="security_problem_pack_hex">The PACK must be exactly 4 hex digits.</string>
+    <string name="security_problem_current_hex">Enter the current password as 8 hex digits.</string>
+    <string name="security_pw_count_text">%1$d/%2$d characters</string>
+    <string name="security_pw_count_hex">%1$d/%2$d hex digits</string>
+    <string name="security_pw_err_nonascii">Use only letters, numbers and symbols from a standard keyboard, without accents or ñ.</string>
+    <string name="security_pw_err_space">Do not use spaces.</string>
+    <string name="security_pw_err_nothex">In hexadecimal only 0-9 and A-F are allowed.</string>
+    <string name="security_pw_err_factory">FFFFFFFF is the factory value of an unprotected tag. Choose another one.</string>
+    <string name="security_adv_show">Advanced options</string>
+    <string name="security_adv_hide">Hide advanced options</string>
+    <string name="security_adv_hex_switch">Advanced: enter in hexadecimal</string>
+    <string name="security_adv_hex_hint">Only for tags protected by another app with a code that has no keyboard characters. The password then has 8 hex digits and the PACK 4.</string>
+    <string name="security_adv_pack_hint">The code the tag answers after a correct password. Leave it as TF unless you need a specific one.</string>
+    <string name="security_adv_expected_pack">Expected PACK (optional)</string>
+    <string name="security_adv_expected_pack_hint">If you fill it in and the tag answers a different one, it may be a copy.</string>
+    <string name="security_sheet_done_unlock_match">PACK answered by the tag: %1$s. It is the one you expected.</string>
+    <string name="security_sheet_done_unlock_mismatch">PACK answered by the tag: %1$s. It is NOT the one you expected: this tag may be a copy.</string>
 </resources>

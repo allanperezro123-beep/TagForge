@@ -9,7 +9,8 @@ import com.tagforge.domain.scan.ScanCoordinator
 import com.tagforge.domain.scan.ScanState
 import com.tagforge.domain.scan.TagOperation
 import com.tagforge.domain.security.ConfirmedPlan
-import com.tagforge.domain.security.Password
+import com.tagforge.domain.security.PasswordInput
+import com.tagforge.domain.security.PasswordMode
 import com.tagforge.domain.security.SecurityFailure
 import com.tagforge.domain.security.SecurityState
 import com.tagforge.domain.security.SecuritySummary
@@ -70,10 +71,28 @@ class SecurityViewModel(
         _state.update { it.copy(form = transform(it.form), problem = null, failure = null) }
     }
 
+    /** Flips between plain text and hexadecimal, keeping every typed value that has a form in the other mode. */
+    fun onModeChange(mode: PasswordMode) {
+        onFormChange { form ->
+            if (form.mode == mode) return@onFormChange form
+            fun convert(value: String) = PasswordInput.convert(form.mode, mode, value)
+            val password = convert(form.password)
+            form.copy(
+                mode = mode,
+                password = password,
+                pack = convert(form.pack).ifEmpty { PasswordInput.defaultPack(mode) },
+                currentPassword = convert(form.currentPassword),
+                expectedPack = convert(form.expectedPack),
+                storedAck = form.storedAck && password.isNotEmpty(),
+            )
+        }
+    }
+
+    /** A fresh password in the current mode. The PACK stays the readable default: a random one nobody sees helps nobody. */
     fun onGeneratePassword() {
-        val password = Password.random(random).hex
-        val pack = Password.randomPack(random).toHex()
-        onFormChange { it.copy(passwordHex = password, packHex = pack, storedAck = false) }
+        val mode = _state.value.form.mode
+        val password = PasswordInput.generate(mode, random)
+        onFormChange { it.copy(password = password, storedAck = false) }
     }
 
     /** Reads the tag's attempt limit (nothing is sent but reads) so a password may be typed (W2). */
@@ -216,7 +235,7 @@ class SecurityViewModel(
         val form = _state.value.form
         run(SecurityStage.EXECUTE, SecurityPlans.authenticate(form)) { scan ->
             val report = scan.value
-            _state.update { it.copy(sheet = SecuritySheet.Success(SecurityAction.UNLOCK, report.pack), form = SecurityForm()) }
+            _state.update { it.copy(sheet = SecuritySheet.Success(SecurityAction.UNLOCK, report.pack, report.packMatches), form = SecurityForm()) }
             eventChannel.trySend(SecurityEvent.Succeeded)
         }
         rerun = { onNext() }

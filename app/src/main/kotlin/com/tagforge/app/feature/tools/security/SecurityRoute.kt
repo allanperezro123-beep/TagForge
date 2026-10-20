@@ -67,6 +67,7 @@ fun SecurityRoute(
             form = SecurityFormActions(
                 onChange = viewModel::onFormChange,
                 onGenerate = viewModel::onGeneratePassword,
+                onModeChange = viewModel::onModeChange,
                 onLimitUnderstood = viewModel::onLimitUnderstood,
                 onProbeLimit = viewModel::onProbeLimit,
                 onNext = viewModel::onNext,
