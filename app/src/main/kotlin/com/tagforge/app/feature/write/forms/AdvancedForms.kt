@@ -8,6 +8,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.tagforge.app.R
+import com.tagforge.app.ui.apps.AppPickerField
 import com.tagforge.domain.ndef.spec.FieldError
 import com.tagforge.domain.ndef.spec.RecordSpec
 import com.tagforge.domain.ndef.spec.SpecField
@@ -23,16 +24,25 @@ fun AppLaunchForm(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier, verticalArrangement = FormSpacing) {
-        FormTextField(
-            value = spec.packageName,
-            onValueChange = { onChange(spec.copy(packageName = it)) },
-            label = stringResource(R.string.write_field_package),
-            field = SpecField.PACKAGE,
-            errors = errors,
-            onTouched = onTouched,
-            placeholder = stringResource(R.string.write_hint_package),
-            imeAction = ImeAction.Done,
-        )
+        AppPickerField(
+            packageName = spec.packageName,
+            onPick = {
+                onChange(spec.copy(packageName = it))
+                onTouched(SpecField.PACKAGE)
+            },
+            errorText = errors.firstOrNull { it.field == SpecField.PACKAGE }?.messageText(),
+        ) {
+            FormTextField(
+                value = spec.packageName,
+                onValueChange = { onChange(spec.copy(packageName = it)) },
+                label = stringResource(R.string.write_field_package),
+                field = SpecField.PACKAGE,
+                errors = errors,
+                onTouched = onTouched,
+                placeholder = stringResource(R.string.write_hint_package),
+                imeAction = ImeAction.Done,
+            )
+        }
     }
 }
 

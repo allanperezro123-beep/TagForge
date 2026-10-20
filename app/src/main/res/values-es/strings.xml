@@ -1,5 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- UX-B -->
+    <string name="lang_picker_title">Elige un idioma</string>
+    <string name="lang_picker_search">Buscar idiomas</string>
+    <string name="lang_picker_device">Idioma del teléfono</string>
+    <string name="lang_picker_empty">Ningún idioma coincide con tu búsqueda.</string>
+    <string name="lang_picker_change">Cambiar</string>
+    <string name="lang_picker_hint">Indica en qué idioma está escrito el texto.</string>
+    <string name="app_picker_title">Elige una aplicación</string>
+    <string name="app_picker_search">Buscar aplicaciones</string>
+    <string name="app_picker_empty">Ninguna aplicación coincide con tu búsqueda.</string>
+    <string name="app_picker_loading">Cargando aplicaciones…</string>
+    <string name="app_picker_none">Aún no has elegido ninguna aplicación</string>
+    <string name="app_picker_choose">Elegir</string>
+    <string name="app_picker_change">Cambiar</string>
+    <string name="app_picker_hint">Al acercar el tag se abrirá esta aplicación.</string>
+    <string name="app_picker_advanced">Avanzado: escribir el nombre del paquete</string>
+    <string name="app_picker_advanced_hide">Ocultar el nombre del paquete</string>
+
     <!-- App -->
     <string name="app_name">Tag Forge</string>
 

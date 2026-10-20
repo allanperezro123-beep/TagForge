@@ -1,5 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- UX-B -->
+    <string name="lang_picker_title">Choose a language</string>
+    <string name="lang_picker_search">Search languages</string>
+    <string name="lang_picker_device">Phone language</string>
+    <string name="lang_picker_empty">No language matches your search.</string>
+    <string name="lang_picker_change">Change</string>
+    <string name="lang_picker_hint">Tells readers which language the text is written in.</string>
+    <string name="app_picker_title">Choose an app</string>
+    <string name="app_picker_search">Search apps</string>
+    <string name="app_picker_empty">No app matches your search.</string>
+    <string name="app_picker_loading">Loading apps…</string>
+    <string name="app_picker_none">No app chosen yet</string>
+    <string name="app_picker_choose">Choose</string>
+    <string name="app_picker_change">Change</string>
+    <string name="app_picker_hint">Tapping the tag will open this app.</string>
+    <string name="app_picker_advanced">Advanced: type the package name</string>
+    <string name="app_picker_advanced_hide">Hide the package name</string>
+
     <!-- App -->
     <string name="app_name">Tag Forge</string>
 
