@@ -20,12 +20,14 @@ import com.tagforge.domain.ndef.NdefRecord
 import com.tagforge.domain.ndef.Type2Tlv
 import com.tagforge.domain.ntag.NtagModel
 import com.tagforge.domain.scan.ScanCoordinator
+import com.tagforge.domain.settings.AppSettings
 import com.tagforge.domain.tag.TagError
 import com.tagforge.domain.tag.TagFamily
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -70,10 +72,11 @@ class CloneViewModelTest {
 
     private fun TestScope.coordinator() = ScanCoordinator(this, StandardTestDispatcher(testScheduler))
 
-    private fun viewModel(coordinator: ScanCoordinator) = CloneViewModel(
+    private fun viewModel(coordinator: ScanCoordinator, appSettings: AppSettings = AppSettings()) = CloneViewModel(
         coordinator = coordinator,
         recordHistory = RecordHistoryUseCase(history, settings, clock),
         availability = availability,
+        settings = flowOf(appSettings),
     )
 
     private fun tag(model: NtagModel, uid: Bytes, content: NdefMessage? = null): FakeNtag21x =
@@ -269,6 +272,23 @@ class CloneViewModelTest {
         assertNull(vm.uiState.value.overwrite)
         assertEquals(writes, target.writeCount)
         assertEquals(0, history.observe().first().size, "a declined overwrite is not an attempt")
+    }
+
+    @Test
+    fun withTheQuestionTurnedOffInSettingsANonEmptyDestinationIsReplacedWithoutAsking() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator, AppSettings(confirmOverwrite = false))
+        capture(vm, coordinator, tag(NtagModel.NTAG213, sourceUid, message))
+        val target = tag(NtagModel.NTAG215, targetUid, old)
+
+        vm.onScanTarget()
+        coordinator.onTagDiscovered(session(target))
+        runCurrent()
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.overwrite, "no question was shown")
+        assertIs<CloneSheet.Success>(vm.uiState.value.sheet)
+        assertEquals(DefaultNdefCodec.encode(message), contentOf(target))
     }
 
     @Test

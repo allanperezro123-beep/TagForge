@@ -12,6 +12,7 @@ import com.tagforge.domain.ndef.NdefMessage
 import com.tagforge.domain.scan.ScanCoordinator
 import com.tagforge.domain.scan.ScanState
 import com.tagforge.domain.scan.TagOperation
+import com.tagforge.domain.settings.AppSettings
 import com.tagforge.domain.tag.TagError
 import com.tagforge.domain.tools.CloneReport
 import com.tagforge.domain.tools.CloneSource
@@ -23,6 +24,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -37,6 +40,7 @@ class CloneViewModel(
     private val coordinator: ScanCoordinator,
     private val recordHistory: RecordHistoryUseCase,
     availability: Flow<NfcAvailability>,
+    private val settings: Flow<AppSettings> = flowOf(AppSettings()),
 ) : ViewModel() {
 
     private val clone = CloneTagUseCase()
@@ -215,6 +219,7 @@ class CloneViewModel(
 
     /** Runs inside the clone operation: suspends until the user answers the dialog. */
     private suspend fun askToOverwrite(existing: NdefMessage?): Boolean {
+        if (!settings.first().confirmOverwrite) return true // the user turned the question off in Settings
         val decision = CompletableDeferred<Boolean>()
         pendingDecision = decision
         val summary = existing?.let(HistorySummarizer::summarize)?.ifEmpty { null }

@@ -6,6 +6,7 @@ import com.tagforge.app.feature.write.OverwritePrompt
 import com.tagforge.app.feature.write.WriteSheet
 import com.tagforge.app.feature.write.WriteTarget
 import com.tagforge.app.infrastructure.nfc.NfcAvailability
+import com.tagforge.domain.common.Outcome
 import com.tagforge.domain.history.HistorySummarizer
 import com.tagforge.domain.history.RecordHistoryUseCase
 import com.tagforge.domain.ndef.DefaultNdefCodec
@@ -21,6 +22,8 @@ import com.tagforge.domain.task.Task
 import com.tagforge.domain.task.TaskAction
 import com.tagforge.domain.task.TaskDraft
 import com.tagforge.domain.task.TaskMessageBuilder
+import com.tagforge.domain.task.TaskPayload
+import com.tagforge.domain.task.TaskTrust
 import com.tagforge.domain.template.TemplateNames
 import com.tagforge.domain.write.WriteNdefUseCase
 import com.tagforge.domain.write.WriteReport
@@ -172,6 +175,7 @@ class TaskBuilderViewModel(
                 lastRunAt = existing?.lastRunAt,
             )
             val id = tasks.upsert(saved)
+            rememberAsMine(saved.payload)
             mutate { it.copy(taskId = id, name = name) }
             eventChannel.trySend(TaskBuilderEvent.Saved(name))
         }
@@ -252,6 +256,7 @@ class TaskBuilderViewModel(
 
     /** Runs inside the write operation: suspends until the user answers the dialog. */
     private suspend fun askToOverwrite(existing: NdefMessage?): Boolean {
+        if (!settings.settings.first().confirmOverwrite) return true // the user turned the question off in Settings
         val decision = CompletableDeferred<Boolean>()
         pendingDecision = decision
         val summary = existing?.let(HistorySummarizer::summarize)?.ifEmpty { null }
@@ -272,6 +277,8 @@ class TaskBuilderViewModel(
             is ScanState.Success -> {
                 mutate { it.copy(sheet = WriteSheet.Success(scan.value), target = capacityTarget(it.target, scan.tag.ndef?.maxSize)) }
                 eventChannel.trySend(TaskBuilderEvent.WriteSucceeded)
+                // Read back what is now on the tag: that is exactly what a later scan will decode.
+                (TaskMessageBuilder.extract(message) as? Outcome.Ok)?.let { rememberAsMine(it.value) }
                 recordHistory.recordWrite(scan.tag, message, error = null)
             }
             is ScanState.Failure -> {
@@ -291,6 +298,11 @@ class TaskBuilderViewModel(
                 recordHistory.recordWrite(scan.tag, message, error)
             }
         }
+    }
+
+    /** A task created here is remembered by its fingerprint, so "run my own tasks without asking" can recognise it later. */
+    private suspend fun rememberAsMine(payload: TaskPayload) {
+        settings.update { TaskTrust.trust(it, payload.name, payload.actions) }
     }
 
     /** After a successful write the meter keeps measuring against the tag that was just used, when its size is known. */

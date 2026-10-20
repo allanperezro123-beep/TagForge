@@ -22,6 +22,7 @@ fun CloneRoute(onBack: () -> Unit) {
             coordinator = it.scanCoordinator,
             recordHistory = it.recordHistory,
             availability = it.nfcAvailabilityMonitor.availability,
+            settings = it.settingsStore.settings,
         )
     }
     val state by viewModel.uiState.collectAsStateWithLifecycle()

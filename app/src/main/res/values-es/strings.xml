@@ -435,7 +435,7 @@
     <string name="more_templates_summary">Reutiliza mensajes guardados</string>
 
     <!-- Phase 3: Tools -->
-    <string name="nav_tools">Herramientas</string>
+    <string name="nav_tools">Útiles</string>
     <string name="tools_title">Herramientas</string>
     <string name="tools_section_change">Modificar una etiqueta</string>
     <string name="tools_section_inspect">Inspeccionar y copiar</string>
@@ -1031,7 +1031,7 @@
     <string name="typed_confirm_after">Después: %1$s</string>
     <string name="typed_confirm_uid">UID de la etiqueta: %1$s</string>
     <string name="typed_confirm_prompt">Escribe los últimos 4 caracteres del UID para habilitar Confirmar.</string>
-    <string name="typed_confirm_field">Últimos 4 caracteres hex del UID</string>
+    <string name="typed_confirm_field">Últimos 4 caracteres</string>
     <string name="typed_confirm_understood">Entiendo que esto no se puede deshacer</string>
     <string name="typed_confirm_action">Confirmar</string>
     <string name="typed_confirm_next">Tras confirmar, acerca de nuevo la MISMA etiqueta para ejecutarlo.</string>
@@ -1175,4 +1175,29 @@
     <string name="security_adv_expected_pack_hint">Si lo rellenas y la etiqueta responde otro distinto, puede ser una copia.</string>
     <string name="security_sheet_done_unlock_match">PACK respondido por la etiqueta: %1$s. Es el que esperabas.</string>
     <string name="security_sheet_done_unlock_mismatch">PACK respondido por la etiqueta: %1$s. NO es el que esperabas: esta etiqueta puede ser una copia.</string>
+    <string name="settings_section_confirmations">Confirmaciones</string>
+    <string name="settings_confirm_irreversible">Las operaciones irreversibles sobre la etiqueta (bloqueos permanentes, poner o quitar contraseña, AUTH0, CFGLCK y escrituras en páginas reservadas) siempre piden que escribas el ID de la etiqueta. Esto no se puede desactivar.</string>
+    <string name="settings_confirm_overwrite">Preguntar antes de sobrescribir una etiqueta</string>
+    <string name="settings_confirm_overwrite_desc">Si lo desactivas, una etiqueta que ya tiene contenido se reemplaza sin preguntar.</string>
+    <string name="settings_confirm_erase">Preguntar antes de borrar o formatear</string>
+    <string name="settings_confirm_erase_desc">Si lo desactivas, Borrar y Formatear empiezan en cuanto los eliges.</string>
+    <string name="settings_tasks_title">Ejecutar tareas de etiquetas</string>
+    <string name="settings_tasks_ask">Preguntar siempre</string>
+    <string name="settings_tasks_ask_desc">Recomendado. Una etiqueta que no conoces nunca hace nada sin tu permiso.</string>
+    <string name="settings_tasks_own">Ejecutar sin preguntar las tareas que yo creé en este teléfono</string>
+    <string name="settings_tasks_own_desc">Solo las tareas idénticas a las que escribiste en una etiqueta o guardaste aquí. Cualquier otra etiqueta sigue preguntando, y también cualquier tarea con una petición http://.</string>
+    <string name="settings_tasks_never">Ejecutar siempre sin preguntar (bajo tu propio riesgo)</string>
+    <string name="settings_tasks_never_desc">Todas las tareas de todas las etiquetas se ejecutan en cuanto se escanean.</string>
+    <string name="settings_tasks_never_active">Activo: cualquier etiqueta que acerques al teléfono ejecutará sus acciones sin preguntar. Alguien podría dejarte una etiqueta maliciosa.</string>
+    <string name="settings_tasks_back_to_ask">Volver a Preguntar siempre</string>
+    <string name="settings_tasks_trusted_count">Tareas recordadas como tuyas: %1$d</string>
+    <string name="settings_tasks_forget">Olvidar las tareas recordadas</string>
+    <string name="settings_tasks_risk_title">¿Ejecutar todas las tareas sin preguntar?</string>
+    <string name="settings_tasks_risk_body">Cualquier etiqueta que acerques a este teléfono ejecutará sus acciones sin preguntarte antes: abrir enlaces, enviar peticiones, cambiar ajustes. Cualquiera podría dejar una pegatina con una tarea maliciosa donde vayas a escanear. Actívalo solo si aceptas ese riesgo.</string>
+    <string name="settings_tasks_risk_accept">Entiendo, activar bajo mi propio riesgo</string>
+    <string name="task_runner_ran_automatically">Se ejecutó sin preguntar, como indicaste en Ajustes.</string>
+    <string name="task_runner_untrust">Dejar de confiar en esta tarea</string>
+    <string name="task_runner_untrusted">Esta tarea volverá a preguntar.</string>
+    <string name="task_runner_ask_again">Preguntar siempre desde ahora</string>
+    <string name="task_runner_ask_again_done">Las tareas preguntarán antes de ejecutarse.</string>
 </resources>

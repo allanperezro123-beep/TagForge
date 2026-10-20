@@ -25,6 +25,7 @@ fun ToolsRoute(onOpenDump: () -> Unit, onOpenClone: () -> Unit, onOpenTech: () -
             coordinator = it.scanCoordinator,
             recordHistory = it.recordHistory,
             availability = it.nfcAvailabilityMonitor.availability,
+            settings = it.settingsStore.settings,
         )
     }
     val state by viewModel.uiState.collectAsStateWithLifecycle()

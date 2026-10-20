@@ -21,6 +21,7 @@ import com.tagforge.domain.ntag.NtagModel
 import com.tagforge.domain.ports.TagSession
 import com.tagforge.domain.scan.OperationPhase
 import com.tagforge.domain.scan.ScanCoordinator
+import com.tagforge.domain.settings.AppSettings
 import com.tagforge.domain.tag.TagError
 import com.tagforge.domain.tag.TagFamily
 import kotlinx.coroutines.CompletableDeferred
@@ -72,10 +73,11 @@ class ToolsViewModelTest {
 
     private fun TestScope.coordinator() = ScanCoordinator(this, StandardTestDispatcher(testScheduler))
 
-    private fun viewModel(coordinator: ScanCoordinator) = ToolsViewModel(
+    private fun viewModel(coordinator: ScanCoordinator, appSettings: AppSettings = AppSettings()) = ToolsViewModel(
         coordinator = coordinator,
         recordHistory = RecordHistoryUseCase(history, settings, clock),
         availability = availability,
+        settings = MutableStateFlow(appSettings),
     )
 
     private fun tagWithMessage(model: NtagModel = NtagModel.NTAG213): FakeNtag21x =
@@ -102,6 +104,28 @@ class ToolsViewModelTest {
         assertEquals(DestructiveTool.ERASE, vm.uiState.value.confirm)
         assertNull(vm.uiState.value.sheet)
         assertEquals(writes, tag.writeCount, "a tag tapped while the question is open is not touched")
+    }
+
+    @Test
+    fun withTheQuestionTurnedOffInSettingsEraseArmsAtOnceAndFormatToo() = runTest {
+        for (tool in DestructiveTool.entries) {
+            val vm = viewModel(coordinator(), AppSettings(confirmEraseFormat = false))
+
+            vm.onRequest(tool)
+
+            assertNull(vm.uiState.value.confirm, "no dialog for $tool")
+            assertEquals(ToolSheet.Waiting(tool), vm.uiState.value.sheet)
+        }
+    }
+
+    @Test
+    fun theQuestionStaysOnByDefaultForBothTools() = runTest {
+        for (tool in DestructiveTool.entries) {
+            val vm = viewModel(coordinator())
+            vm.onRequest(tool)
+            assertEquals(tool, vm.uiState.value.confirm)
+            assertNull(vm.uiState.value.sheet)
+        }
     }
 
     @Test

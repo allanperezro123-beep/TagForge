@@ -18,6 +18,7 @@ import com.tagforge.domain.security.PasswordMode
 import com.tagforge.domain.security.SecurityFailure
 import com.tagforge.domain.security.SecurityOperation
 import com.tagforge.domain.settings.AppSettings
+import com.tagforge.domain.settings.TaskExecutionPolicy
 import com.tagforge.domain.tag.TagError
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -68,11 +69,19 @@ class SecurityViewModelTest {
 
     private fun TestScope.coordinator() = ScanCoordinator(this, StandardTestDispatcher(testScheduler))
 
-    private fun viewModel(coordinator: ScanCoordinator, advanced: Boolean = false) = SecurityViewModel(
+    /** [relaxed] switches every Settings confirmation off and "never ask for tasks" on: none of it may reach this screen. */
+    private fun viewModel(coordinator: ScanCoordinator, advanced: Boolean = false, relaxed: Boolean = false) = SecurityViewModel(
         coordinator = coordinator,
         recordHistory = RecordHistoryUseCase(history, settingsStore, clock),
         availability = availability,
-        settings = MutableStateFlow(AppSettings(advancedMode = advanced)),
+        settings = MutableStateFlow(
+            AppSettings(
+                advancedMode = advanced,
+                confirmOverwrite = !relaxed,
+                confirmEraseFormat = !relaxed,
+                taskExecution = if (relaxed) TaskExecutionPolicy.NEVER_ASK else TaskExecutionPolicy.ASK_ALWAYS,
+            ),
+        ),
         random = Random(42),
     )
 
@@ -618,6 +627,30 @@ class SecurityViewModelTest {
         for (text in listOf(form.toString(), state.toString())) {
             assertFalse("12345678" in text || "ABCD" in text.uppercase() || "9ABCDEF0" in text.uppercase(), text)
         }
+    }
+
+    // ---- UX-A2: irreversible operations ignore every relaxed confirmation ------------------------------------------------------
+
+    @Test
+    fun withEveryConfirmationRelaxedTheTypedUidAndTheAcknowledgementAreStillRequired() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator, relaxed = true)
+        val tag = blankTag()
+        vm.fillSetPassword()
+        vm.onNext()
+        tap(coordinator, tag)
+
+        assertFalse(vm.uiState.value.canConfirm, "nothing typed yet")
+        vm.onConfirm()
+        assertNull(vm.uiState.value.sheet, "no write was armed")
+        vm.onTypedChange("E5F6")
+        assertFalse(vm.uiState.value.canConfirm, "the irreversible effects still need acknowledging")
+        vm.onConfirm()
+        assertNull(vm.uiState.value.sheet)
+        assertEquals(emptyList(), tag.writeCommands)
+
+        vm.onUnderstoodChange(true)
+        assertTrue(vm.uiState.value.canConfirm)
     }
 
     // ---- UX-A1: passwords are typed as plain text; hexadecimal is the advanced alternative ----------------------------------

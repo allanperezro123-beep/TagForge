@@ -619,6 +619,24 @@ class WriteViewModelTest {
     }
 
     @Test
+    fun withTheQuestionTurnedOffInSettingsExistingContentIsReplacedWithoutAsking() = runTest {
+        settings.update { it.copy(confirmOverwrite = false) }
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.addRecord(uri)
+        val tag = blankTag()
+        runBlockingSeed(tag, NdefMessage(listOf(NdefRecord.text("old note", "en"))))
+
+        vm.onWrite()
+        coordinator.onTagDiscovered(session(tag))
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.overwrite, "no question was shown")
+        assertIs<WriteSheet.Success>(vm.uiState.value.sheet)
+        assertEquals(NdefMessage(listOf(NdefRecord.uri("https://example.com"))), userContent(tag))
+    }
+
+    @Test
     fun decliningTheOverwriteLeavesTheTagUntouchedAndClosesTheSheetQuietly() = runTest {
         val coordinator = coordinator()
         val vm = viewModel(coordinator)
