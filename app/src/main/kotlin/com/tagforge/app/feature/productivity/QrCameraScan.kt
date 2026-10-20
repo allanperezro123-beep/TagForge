@@ -4,6 +4,8 @@ import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.lifecycle.awaitInstance
 import androidx.camera.view.PreviewView
@@ -46,6 +48,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.tagforge.app.R
 import java.util.concurrent.Executors
 
+private const val ANALYSIS_WIDTH = 1280
+private const val ANALYSIS_HEIGHT = 720
+
 /**
  * The live camera with a square viewfinder, a torch button and a one-line instruction. The camera runs only while this is on
  * screen and is released when it leaves; [onScanned] receives the first QR text found.
@@ -67,7 +72,12 @@ fun QrCameraScan(onScanned: (String) -> Unit, modifier: Modifier = Modifier) {
             val cameraProvider = ProcessCameraProvider.awaitInstance(context)
             provider = cameraProvider
             val preview = Preview.Builder().build().also { it.surfaceProvider = previewView.surfaceProvider }
+            // 720p gives a small or distant code enough pixels; the default 480p often loses dense codes.
+            val resolution = ResolutionSelector.Builder()
+                .setResolutionStrategy(ResolutionStrategy(android.util.Size(ANALYSIS_WIDTH, ANALYSIS_HEIGHT), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER))
+                .build()
             val analysis = ImageAnalysis.Builder()
+                .setResolutionSelector(resolution)
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
                 .also { analysis ->

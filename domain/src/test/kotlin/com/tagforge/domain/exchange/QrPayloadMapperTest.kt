@@ -1,5 +1,7 @@
 package com.tagforge.domain.exchange
 
+import com.tagforge.domain.ndef.NdefRecord
+import com.tagforge.domain.ndef.ParsedRecord
 import com.tagforge.domain.ndef.spec.RecordSpec
 import com.tagforge.domain.ndef.spec.WifiAuth
 import com.tagforge.domain.ndef.spec.WifiEncryption
@@ -120,6 +122,18 @@ class QrPayloadMapperTest {
         assertNull(QrPayloadMapper.toQr(RecordSpec.AppLaunch("com.example")))
         assertNull(QrPayloadMapper.toQr(RecordSpec.Mime("text/x-a", "b")))
         assertNull(QrPayloadMapper.toQr(RecordSpec.Geo("north", "west")))
+    }
+
+    @Test
+    fun `a record already on a tag gives a qr only when it is one text or link`() {
+        val text = ParsedRecord.Text(NdefRecord.text("hola", "es"), "es", "hola")
+        val link = ParsedRecord.Uri(NdefRecord.text("x", "en"), "https://example.com")
+
+        assertEquals("hola", QrPayloadMapper.forParsed(listOf(text)))
+        assertEquals("https://example.com", QrPayloadMapper.forParsed(listOf(link)))
+        assertNull(QrPayloadMapper.forParsed(listOf(text, link)))
+        assertNull(QrPayloadMapper.forParsed(emptyList()))
+        assertNull(QrPayloadMapper.forParsed(listOf(ParsedRecord.Unknown(NdefRecord.text("x", "en")))))
     }
 
     @Test

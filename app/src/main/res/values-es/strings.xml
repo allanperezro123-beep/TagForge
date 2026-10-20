@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- UX-B -->
+    <string name="write_target_hint">Elige el chip de tu etiqueta. Si no estás seguro, NTAG213 es el más común y el más pequeño.</string>
+    <string name="write_advanced_note">Esto es para desarrolladores. La mayoría de las etiquetas no necesita datos personalizados.</string>
+    <string name="templates_show_qr">Mostrar como código QR</string>
     <string name="bt_pick_button">Elegir dispositivo emparejado</string>
     <string name="bt_pick_hint">Primero empareja el dispositivo en los ajustes de Bluetooth del teléfono y luego elígelo aquí.</string>
     <string name="bt_manual_title">O escribe la dirección a mano</string>
@@ -291,7 +294,7 @@
     <string name="record_type_bluetooth">Bluetooth</string>
     <string name="record_type_contact">Contacto</string>
     <string name="record_type_aar">Abrir aplicación</string>
-    <string name="record_type_smart_poster">Póster inteligente</string>
+    <string name="record_type_smart_poster">Póster inteligente (enlace con título)</string>
     <string name="record_field_security">Seguridad</string>
     <string name="record_field_encryption">Cifrado</string>
     <string name="record_field_password">Contraseña</string>
@@ -301,7 +304,7 @@
     <string name="record_field_org">Organización</string>
     <string name="record_field_url">Sitio web</string>
     <string name="record_field_note">Nota</string>
-    <string name="record_field_package">Paquete de la aplicación</string>
+    <string name="record_field_package">Aplicación</string>
     <string name="record_wifi_open">Red abierta, sin contraseña</string>
     <string name="record_wifi_password_not_stored">Contraseña no guardada</string>
     <string name="wifi_auth_open">Abierta</string>
@@ -322,12 +325,12 @@
     <!-- Asistente de escritura -->
     <string name="write_title">Escribir etiqueta</string>
     <string name="write_step_type">¿Qué quieres escribir?</string>
-    <string name="write_step_type_hint">Elige un tipo. Puedes combinar varios registros en una misma etiqueta.</string>
+    <string name="write_step_type_hint">Elige qué debe pasar al acercar la etiqueta. Puedes combinar varias acciones en una misma etiqueta.</string>
     <string name="write_group_basic">Básico</string>
     <string name="write_group_communication">Comunicación</string>
     <string name="write_group_people">Lugares y personas</string>
     <string name="write_group_connectivity">Conectividad</string>
-    <string name="write_group_advanced">Avanzado</string>
+    <string name="write_group_advanced">Datos personalizados (avanzado)</string>
     <string name="write_type_text">Texto</string>
     <string name="write_type_url">Enlace</string>
     <string name="write_type_email">Correo</string>
@@ -337,9 +340,9 @@
     <string name="write_type_contact">Contacto</string>
     <string name="write_type_wifi">WiFi</string>
     <string name="write_type_bluetooth">Bluetooth</string>
-    <string name="write_type_app">Aplicación</string>
-    <string name="write_type_mime">MIME personalizado</string>
-    <string name="write_type_external">Tipo externo</string>
+    <string name="write_type_app">Abrir una aplicación</string>
+    <string name="write_type_mime">Datos personalizados</string>
+    <string name="write_type_external">Tipo de registro propio</string>
     <string name="write_type_text_desc">Una nota corta</string>
     <string name="write_type_url_desc">Abre una dirección web</string>
     <string name="write_type_email_desc">Empieza un correo nuevo</string>
@@ -349,12 +352,12 @@
     <string name="write_type_contact_desc">Guarda una tarjeta de contacto</string>
     <string name="write_type_wifi_desc">Conecta a una red WiFi</string>
     <string name="write_type_bluetooth_desc">Comparte un dispositivo Bluetooth</string>
-    <string name="write_type_app_desc">Abre una aplicación instalada</string>
-    <string name="write_type_mime_desc">Cualquier tipo de medio y contenido</string>
-    <string name="write_type_external_desc">Tu propio tipo de registro</string>
+    <string name="write_type_app_desc">Abre una aplicación del teléfono</string>
+    <string name="write_type_mime_desc">Para desarrolladores: cualquier tipo de datos</string>
+    <string name="write_type_external_desc">Para desarrolladores: tu propio tipo de registro</string>
 
     <string name="write_field_text">Texto</string>
-    <string name="write_field_language">Código de idioma</string>
+    <string name="write_field_language">Idioma</string>
     <string name="write_field_url">Dirección web</string>
     <string name="write_field_to">Dirección de correo</string>
     <string name="write_field_subject">Asunto (opcional)</string>
@@ -369,17 +372,17 @@
     <string name="write_field_org">Organización (opcional)</string>
     <string name="write_field_site">Sitio web (opcional)</string>
     <string name="write_field_note">Nota (opcional)</string>
-    <string name="write_field_ssid">Nombre de la red (SSID)</string>
+    <string name="write_field_ssid">Nombre de la red</string>
     <string name="write_field_password">Contraseña</string>
     <string name="write_field_security">Seguridad</string>
     <string name="write_field_encryption">Cifrado</string>
     <string name="write_field_mac">Dirección Bluetooth</string>
     <string name="write_field_device">Nombre del dispositivo (opcional)</string>
-    <string name="write_field_package">Nombre del paquete</string>
-    <string name="write_field_mime">Tipo MIME</string>
+    <string name="write_field_package">Nombre del paquete de la app (avanzado)</string>
+    <string name="write_field_mime">Tipo de datos (MIME)</string>
     <string name="write_field_payload_text">Contenido</string>
-    <string name="write_field_domain">Dominio</string>
-    <string name="write_field_ext_type">Tipo</string>
+    <string name="write_field_domain">Dominio del propietario</string>
+    <string name="write_field_ext_type">Tipo de registro</string>
     <string name="write_field_payload_hex">Contenido en hex (opcional)</string>
     <string name="write_password_show">Mostrar contraseña</string>
     <string name="write_password_hide">Ocultar contraseña</string>
@@ -411,7 +414,7 @@
     <string name="write_preview_bytes">%1$d bytes</string>
     <string name="write_preview_show_hex">Mostrar bytes</string>
     <string name="write_preview_hide_hex">Ocultar bytes</string>
-    <string name="write_preview_hex_title">Bytes NDEF</string>
+    <string name="write_preview_hex_title">Bytes sin procesar</string>
 
     <string name="write_review_title">Revisión</string>
     <string name="write_empty_title">Aún no hay nada que escribir</string>
@@ -424,10 +427,10 @@
     <string name="write_record_invalid">Requiere atención</string>
     <string name="write_record_removed">Registro quitado</string>
     <string name="write_undo">Deshacer</string>
-    <string name="write_include_aar">Abrir Tag Forge al acercar</string>
-    <string name="write_include_aar_desc">Añade un registro de aplicación de Android (34 bytes) para que esta app se abra al acercar la etiqueta.</string>
+    <string name="write_include_aar">Abrir también Tag Forge al acercar</string>
+    <string name="write_include_aar_desc">Añade un registro pequeño (34 bytes) para que esta app se abra cuando alguien acerque la etiqueta.</string>
 
-    <string name="write_target_title">Etiqueta de destino</string>
+    <string name="write_target_title">¿Qué etiqueta usas?</string>
     <string name="write_target_detected">Última etiqueta (%1$d B)</string>
     <string name="write_budget_value">%1$d / %2$d bytes</string>
     <string name="write_budget_overhead">Estructura de la etiqueta: %1$d bytes (no se cuenta)</string>

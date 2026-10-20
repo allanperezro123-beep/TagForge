@@ -162,12 +162,17 @@ fun TagForgeNavHost(
             )
         }
         composable<Route.TagDetail> { entry ->
-            TagDetailRoute(historyId = entry.toRoute<Route.TagDetail>().historyId, onBack = { navController.popBackStack() })
+            TagDetailRoute(
+                historyId = entry.toRoute<Route.TagDetail>().historyId,
+                onBack = { navController.popBackStack() },
+                onShowQr = { navController.navigate(Route.Qr(it)) },
+            )
         }
         composable<Route.Templates> {
             TemplatesRoute(
                 onBack = { navController.popBackStack() },
                 onOpen = { navController.navigate(Route.Write(it)) },
+                onShowQr = { navController.navigate(Route.Qr(it)) },
                 onGoToWrite = { navController.navigateToTopLevel(Route.Write()) },
             )
         }

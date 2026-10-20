@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- UX-B -->
+    <string name="write_target_hint">Pick the chip of your tag. If you are not sure, NTAG213 is the most common and the smallest.</string>
+    <string name="write_advanced_note">This is for developers. Most tags never need custom data.</string>
+    <string name="templates_show_qr">Show as QR code</string>
     <string name="bt_pick_button">Choose a paired device</string>
     <string name="bt_pick_hint">Pair the device first in your phone\'s Bluetooth settings, then pick it here.</string>
     <string name="bt_manual_title">Or type the address by hand</string>
@@ -291,7 +294,7 @@
     <string name="record_type_bluetooth">Bluetooth</string>
     <string name="record_type_contact">Contact</string>
     <string name="record_type_aar">App launch</string>
-    <string name="record_type_smart_poster">Smart poster</string>
+    <string name="record_type_smart_poster">Smart poster (link with a title)</string>
     <string name="record_field_security">Security</string>
     <string name="record_field_encryption">Encryption</string>
     <string name="record_field_password">Password</string>
@@ -301,7 +304,7 @@
     <string name="record_field_org">Organization</string>
     <string name="record_field_url">Website</string>
     <string name="record_field_note">Note</string>
-    <string name="record_field_package">App package</string>
+    <string name="record_field_package">App</string>
     <string name="record_wifi_open">Open network, no password</string>
     <string name="record_wifi_password_not_stored">Password not stored</string>
     <string name="wifi_auth_open">Open</string>
@@ -322,12 +325,12 @@
     <!-- Write wizard -->
     <string name="write_title">Write tag</string>
     <string name="write_step_type">What do you want to write?</string>
-    <string name="write_step_type_hint">Pick a type. You can combine several records on one tag.</string>
+    <string name="write_step_type_hint">Pick what should happen when someone taps the tag. You can combine several actions on one tag.</string>
     <string name="write_group_basic">Basic</string>
     <string name="write_group_communication">Communication</string>
     <string name="write_group_people">Places and people</string>
     <string name="write_group_connectivity">Connectivity</string>
-    <string name="write_group_advanced">Advanced</string>
+    <string name="write_group_advanced">Custom data (advanced)</string>
     <string name="write_type_text">Text</string>
     <string name="write_type_url">Link</string>
     <string name="write_type_email">Email</string>
@@ -337,9 +340,9 @@
     <string name="write_type_contact">Contact</string>
     <string name="write_type_wifi">WiFi</string>
     <string name="write_type_bluetooth">Bluetooth</string>
-    <string name="write_type_app">App</string>
-    <string name="write_type_mime">Custom MIME</string>
-    <string name="write_type_external">External type</string>
+    <string name="write_type_app">Open an app</string>
+    <string name="write_type_mime">Custom data</string>
+    <string name="write_type_external">Own record type</string>
     <string name="write_type_text_desc">A short note</string>
     <string name="write_type_url_desc">Opens a web address</string>
     <string name="write_type_email_desc">Starts a new email</string>
@@ -349,12 +352,12 @@
     <string name="write_type_contact_desc">Saves a contact card</string>
     <string name="write_type_wifi_desc">Joins a WiFi network</string>
     <string name="write_type_bluetooth_desc">Shares a Bluetooth device</string>
-    <string name="write_type_app_desc">Launches an installed app</string>
-    <string name="write_type_mime_desc">Any media type and content</string>
-    <string name="write_type_external_desc">Your own record type</string>
+    <string name="write_type_app_desc">Opens an app on the phone</string>
+    <string name="write_type_mime_desc">For developers: any kind of data</string>
+    <string name="write_type_external_desc">For developers: your own kind of record</string>
 
     <string name="write_field_text">Text</string>
-    <string name="write_field_language">Language code</string>
+    <string name="write_field_language">Language</string>
     <string name="write_field_url">Web address</string>
     <string name="write_field_to">Email address</string>
     <string name="write_field_subject">Subject (optional)</string>
@@ -369,18 +372,18 @@
     <string name="write_field_org">Organization (optional)</string>
     <string name="write_field_site">Website (optional)</string>
     <string name="write_field_note">Note (optional)</string>
-    <string name="write_field_ssid">Network name (SSID)</string>
+    <string name="write_field_ssid">Network name</string>
     <string name="write_field_password">Password</string>
     <string name="write_field_security">Security</string>
     <string name="write_field_encryption">Encryption</string>
     <string name="write_field_mac">Bluetooth address</string>
     <string name="write_field_device">Device name (optional)</string>
-    <string name="write_field_package">Package name</string>
-    <string name="write_field_mime">MIME type</string>
+    <string name="write_field_package">App package name (advanced)</string>
+    <string name="write_field_mime">Data type (MIME)</string>
     <string name="write_field_payload_text">Content</string>
-    <string name="write_field_domain">Domain</string>
-    <string name="write_field_ext_type">Type</string>
-    <string name="write_field_payload_hex">Payload in hex (optional)</string>
+    <string name="write_field_domain">Owner domain</string>
+    <string name="write_field_ext_type">Record type</string>
+    <string name="write_field_payload_hex">Content in hex (optional)</string>
     <string name="write_password_show">Show password</string>
     <string name="write_password_hide">Hide password</string>
     <string name="write_wifi_open_hint">Open networks have no password.</string>
@@ -411,7 +414,7 @@
     <string name="write_preview_bytes">%1$d bytes</string>
     <string name="write_preview_show_hex">Show bytes</string>
     <string name="write_preview_hide_hex">Hide bytes</string>
-    <string name="write_preview_hex_title">NDEF bytes</string>
+    <string name="write_preview_hex_title">Raw bytes</string>
 
     <string name="write_review_title">Review</string>
     <string name="write_empty_title">Nothing to write yet</string>
@@ -424,10 +427,10 @@
     <string name="write_record_invalid">Needs attention</string>
     <string name="write_record_removed">Record removed</string>
     <string name="write_undo">Undo</string>
-    <string name="write_include_aar">Open Tag Forge when tapped</string>
-    <string name="write_include_aar_desc">Adds an Android Application Record (34 bytes) so this app launches on tap.</string>
+    <string name="write_include_aar">Also open Tag Forge when tapped</string>
+    <string name="write_include_aar_desc">Adds a small record (34 bytes) so this app opens when someone taps the tag.</string>
 
-    <string name="write_target_title">Target tag</string>
+    <string name="write_target_title">Which tag are you using?</string>
     <string name="write_target_detected">Last tag (%1$d B)</string>
     <string name="write_budget_value">%1$d / %2$d bytes</string>
     <string name="write_budget_overhead">Tag framing: %1$d bytes (not counted)</string>
