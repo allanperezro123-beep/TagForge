@@ -41,6 +41,7 @@ fun SettingsScreen(
     onHapticsChanged: (Boolean) -> Unit,
     onSaveHistoryChanged: (Boolean) -> Unit,
     onAdvancedChanged: (Boolean) -> Unit,
+    confirmations: ConfirmationActions,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -83,6 +84,9 @@ fun SettingsScreen(
                 checked = state.settings.saveHistory,
                 onCheckedChange = onSaveHistoryChanged,
             )
+
+            SectionHeader(stringResource(R.string.settings_section_confirmations))
+            ConfirmationsSection(state, confirmations)
 
             SectionHeader(stringResource(R.string.settings_section_advanced))
             SwitchRow(

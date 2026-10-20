@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * Entry point of a scanned task tag (TK-05). A translucent, singleTop Activity: the system starts it for an
  * `application/x-tf` tag from the home screen or any other app, `onNewIntent` replaces a pending task, and it shows
- * the confirmation sheet over whatever was underneath. It never shows over the lock screen and never auto-runs.
+ * the confirmation sheet over whatever was underneath. It never shows over the lock screen. A task runs without the sheet only when the user chose that in Settings (see TaskTrust).
  *
  * Other entries: the Read tab hands it the bytes of a task it just read ([EXTRA_NDEF_BYTES]) and the task list asks
  * to run a saved task ([EXTRA_TASK_ID]); both end up on the same confirmation sheet. They go through the NON-exported
@@ -44,7 +44,7 @@ open class TaskRunnerActivity : ComponentActivity() {
         val flag = onScreen
         viewModelFactory {
             initializer {
-                TaskRunnerViewModel(container.taskExecutor, container.taskRepository, container.clock, isForeground = { flag.get() })
+                TaskRunnerViewModel(container.taskExecutor, container.taskRepository, container.clock, container.settingsStore, isForeground = { flag.get() })
             }
         }
     }
@@ -69,6 +69,8 @@ open class TaskRunnerActivity : ComponentActivity() {
                     onCancel = viewModel::onCancel,
                     onClose = viewModel::onClose,
                     onFix = ::openPermissionCenter,
+                    onUntrust = viewModel::onUntrust,
+                    onAskAlways = viewModel::onAskAlways,
                 )
             }
         }

@@ -1,8 +1,8 @@
 package com.tagforge.app.feature.tools.security
 
-import com.tagforge.domain.common.Hex
+import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.common.Outcome
-import com.tagforge.domain.ntag.NtagCommands
+import com.tagforge.domain.common.getOrNull
 import com.tagforge.domain.scan.TagOperation
 import com.tagforge.domain.security.AuthLimitInfo
 import com.tagforge.domain.security.AuthReport
@@ -13,10 +13,12 @@ import com.tagforge.domain.security.ConfirmedPlan
 import com.tagforge.domain.security.LockRequest
 import com.tagforge.domain.security.LockTagUseCase
 import com.tagforge.domain.security.Password
+import com.tagforge.domain.security.PasswordInput
 import com.tagforge.domain.security.PasswordRequest
 import com.tagforge.domain.security.ReadAuthLimitUseCase
 import com.tagforge.domain.security.ReadSecurityStateUseCase
 import com.tagforge.domain.security.RemovePasswordUseCase
+import com.tagforge.domain.security.SecretKind
 import com.tagforge.domain.security.SecurityFailure
 import com.tagforge.domain.security.SecurityPlan
 import com.tagforge.domain.security.SecurityReport
@@ -28,17 +30,22 @@ internal object SecurityPlans {
 
     /** A problem found in [form] before any tag is touched, or null. */
     fun validate(action: SecurityAction, form: SecurityForm): FormProblem? {
-        val currentTyped = form.currentPasswordHex.isNotBlank()
-        val currentValid = Password.fromHex(form.currentPasswordHex) != null
+        val currentTyped = form.currentPassword.isNotBlank()
+        val currentValid = current(form) != null
         return when (action) {
             SecurityAction.SET_PASSWORD -> when {
-                Password.fromHex(form.passwordHex) == null -> FormProblem.PASSWORD_INVALID
+                password(form) == null -> FormProblem.PASSWORD_INVALID
                 pack(form) == null -> FormProblem.PACK_INVALID
                 !form.storedAck -> FormProblem.STORED_NOT_ACKNOWLEDGED
                 currentTyped && !currentValid -> FormProblem.CURRENT_PASSWORD_INVALID
                 else -> null
             }
-            SecurityAction.REMOVE_PASSWORD, SecurityAction.UNLOCK -> if (currentValid) null else FormProblem.CURRENT_PASSWORD_INVALID
+            SecurityAction.REMOVE_PASSWORD -> if (currentValid) null else FormProblem.CURRENT_PASSWORD_INVALID
+            SecurityAction.UNLOCK -> when {
+                !currentValid -> FormProblem.CURRENT_PASSWORD_INVALID
+                form.expectedPack.isNotBlank() && expectedPack(form) == null -> FormProblem.PACK_INVALID
+                else -> null
+            }
             SecurityAction.CONFIG_LOCK -> when {
                 !form.lockConfig && form.authLimit == 0 -> FormProblem.NOTHING_SELECTED
                 currentTyped && !currentValid -> FormProblem.CURRENT_PASSWORD_INVALID
@@ -48,22 +55,26 @@ internal object SecurityPlans {
         }
     }
 
-    private fun pack(form: SecurityForm) = Hex.parse(form.packHex)?.takeIf { it.size == NtagCommands.PACK_SIZE }
+    private fun password(form: SecurityForm): Password? = PasswordInput.password(form.mode, form.password).getOrNull()
 
-    private fun current(form: SecurityForm): Password? = Password.fromHex(form.currentPasswordHex)
+    private fun pack(form: SecurityForm): Bytes? = PasswordInput.parse(form.mode, SecretKind.PACK, form.pack).getOrNull()
+
+    private fun expectedPack(form: SecurityForm): Bytes? = PasswordInput.parse(form.mode, SecretKind.PACK, form.expectedPack).getOrNull()
+
+    private fun current(form: SecurityForm): Password? = PasswordInput.password(form.mode, form.currentPassword).getOrNull()
 
     /** The read that comes first: it gives the exact current content the dry-run is built from. */
     fun readOperation(form: SecurityForm): TagOperation<SecurityState> = ReadSecurityStateUseCase(current(form))
 
     fun limitProbe(): TagOperation<AuthLimitInfo> = ReadAuthLimitUseCase()
 
-    fun authenticate(form: SecurityForm): TagOperation<AuthReport> = AuthenticateUseCase(current(form)!!)
+    fun authenticate(form: SecurityForm): TagOperation<AuthReport> = AuthenticateUseCase(current(form)!!, expectedPack(form))
 
     fun plan(action: SecurityAction, form: SecurityForm, state: SecurityState, advanced: Boolean): Outcome<SecurityPlan, SecurityFailure> =
         when (action) {
             SecurityAction.SET_PASSWORD -> SetPasswordUseCase.plan(
                 state,
-                PasswordRequest(Password.fromHex(form.passwordHex)!!, pack(form)!!, form.auth0, form.protectReads, current(form)),
+                PasswordRequest(password(form)!!, pack(form)!!, form.auth0, form.protectReads, current(form)),
             )
             SecurityAction.REMOVE_PASSWORD -> RemovePasswordUseCase.plan(state, current(form)!!)
             SecurityAction.CONFIG_LOCK -> ConfigLockUseCase.plan(state, ConfigLockRequest(form.lockConfig, form.authLimit, current(form)))

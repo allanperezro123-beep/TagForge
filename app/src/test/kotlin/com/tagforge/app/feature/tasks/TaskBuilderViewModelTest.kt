@@ -30,6 +30,7 @@ import com.tagforge.domain.task.Task
 import com.tagforge.domain.task.TaskAction
 import com.tagforge.domain.task.TaskBlock
 import com.tagforge.domain.task.TaskCodec
+import com.tagforge.domain.task.TaskFingerprint
 import com.tagforge.domain.task.TaskMessageBuilder
 import com.tagforge.domain.task.TaskPayload
 import kotlinx.coroutines.Dispatchers
@@ -279,6 +280,18 @@ class TaskBuilderViewModelTest {
     }
 
     @Test
+    fun aSavedTaskIsRememberedAsMineByItsFingerprint() = runTest {
+        val vm = viewModel()
+        vm.add(ActionKind.RINGER, ringer)
+        vm.onNameChanged("Night mode")
+
+        vm.onSave()
+
+        val expected = TaskFingerprint.of("Night mode", listOf(ringer))
+        assertEquals(setOf(expected), settings.current.trustedTaskFingerprints)
+    }
+
+    @Test
     fun savingAgainUpdatesTheSameTaskInsteadOfDuplicatingIt() = runTest {
         val vm = viewModel()
         vm.onNameChanged("Night")
@@ -371,6 +384,24 @@ class TaskBuilderViewModelTest {
         val back = (TaskMessageBuilder.extract(userContent(tag)) as Outcome.Ok).value
         assertEquals(TaskPayload("Night", listOf(ringer, url)), back)
         assertEquals(NdefRecord.aar("com.tagforge.app"), userContent(tag).records.last(), "the AAR is last")
+    }
+
+    @Test
+    fun aVerifiedWriteRemembersTheTaskAsMineAndAFailedOneDoesNot() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.onNameChanged("Night")
+        vm.add(ActionKind.RINGER, ringer)
+
+        vm.onWrite()
+        coordinator.onTagDiscovered(session(blankTag().apply { loseTagAfter(3) }))
+        advanceUntilIdle()
+        assertEquals(emptySet(), settings.current.trustedTaskFingerprints, "a failed write trusts nothing")
+
+        vm.onRetry()
+        coordinator.onTagDiscovered(session(blankTag()))
+        advanceUntilIdle()
+        assertEquals(setOf(TaskFingerprint.of("Night", listOf(ringer))), settings.current.trustedTaskFingerprints)
     }
 
     @Test

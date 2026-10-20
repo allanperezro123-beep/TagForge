@@ -5,6 +5,8 @@ import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.scan.OperationPhase
 import com.tagforge.domain.security.AuthLimitInfo
 import com.tagforge.domain.security.LockScope
+import com.tagforge.domain.security.PasswordInput
+import com.tagforge.domain.security.PasswordMode
 import com.tagforge.domain.security.SecurityFailure
 import com.tagforge.domain.security.SecurityPlan
 import com.tagforge.domain.security.UidConfirmation
@@ -25,15 +27,20 @@ enum class FormProblem { PASSWORD_INVALID, PACK_INVALID, STORED_NOT_ACKNOWLEDGED
  * Everything the user types. Secrets live only here, in memory: they are wiped after a run and never reach the history.
  */
 data class SecurityForm(
-    val passwordHex: String = "",
-    val packHex: String = "",
+    /** How the secrets below are typed: ordinary text by default, hexadecimal as the advanced alternative. */
+    val mode: PasswordMode = PasswordMode.TEXT,
+    val password: String = "",
+    /** The PACK the tag will answer after a correct password; "TF" unless the user changes it under the advanced options. */
+    val pack: String = PasswordInput.defaultPack(PasswordMode.TEXT),
     /** First protected page; defaults to the first user page. */
     val auth0: Int = 4,
     /** PROT: reads need the password too. */
     val protectReads: Boolean = true,
     /** "I stored it": the write button stays disabled until the shown password was saved. */
     val storedAck: Boolean = false,
-    val currentPasswordHex: String = "",
+    val currentPassword: String = "",
+    /** Unlock only, optional: the PACK this tag should answer. A different one means the tag may be a clone. */
+    val expectedPack: String = "",
     val lockConfig: Boolean = false,
     val authLimit: Int = 0,
     val lockScope: LockScope = LockScope.NDEF_READ_ONLY,
@@ -47,8 +54,8 @@ sealed interface SecuritySheet {
     data class Waiting(val stage: SecurityStage) : SecuritySheet
     data class Working(val stage: SecurityStage, val phase: OperationPhase) : SecuritySheet
 
-    /** [pack] is the PACK the tag answered after an unlock. */
-    data class Success(val action: SecurityAction, val pack: Bytes? = null) : SecuritySheet
+    /** [pack] is the PACK the tag answered after an unlock; [packMatches] is null unless the user typed one to compare. */
+    data class Success(val action: SecurityAction, val pack: Bytes? = null, val packMatches: Boolean? = null) : SecuritySheet
 
     data class Failure(val error: TagError, val canRetry: Boolean) : SecuritySheet
 }
@@ -94,7 +101,7 @@ data class SecurityUiState(
 
     /** The flow will send a password to the tag on its first tap. */
     val willSendPassword: Boolean
-        get() = action == SecurityAction.UNLOCK || action == SecurityAction.REMOVE_PASSWORD || form.currentPasswordHex.isNotBlank()
+        get() = action == SecurityAction.UNLOCK || action == SecurityAction.REMOVE_PASSWORD || form.currentPassword.isNotBlank()
 
     /** "Next" is allowed: a flow that sends a password needs the attempt limit settled first. */
     val canGoNext: Boolean get() = !willSendPassword || passwordFieldEnabled

@@ -3,6 +3,7 @@ package com.tagforge.app.feature.taskrunner
 import app.cash.turbine.test
 import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.common.Outcome
+import com.tagforge.domain.fakes.FakeSettingsStore
 import com.tagforge.domain.fakes.FakeTaskActionExecutor
 import com.tagforge.domain.fakes.FixedClock
 import com.tagforge.domain.fakes.InMemoryTaskRepository
@@ -10,6 +11,7 @@ import com.tagforge.domain.ndef.DefaultNdefCodec
 import com.tagforge.domain.ndef.NdefMessage
 import com.tagforge.domain.ndef.NdefRecord
 import com.tagforge.domain.ports.TaskActionExecutor
+import com.tagforge.domain.settings.TaskExecutionPolicy
 import com.tagforge.domain.task.ActionCheck
 import com.tagforge.domain.task.ActionOutcome
 import com.tagforge.domain.task.BlockReason
@@ -23,7 +25,9 @@ import com.tagforge.domain.task.Task
 import com.tagforge.domain.task.TaskAction
 import com.tagforge.domain.task.TaskError
 import com.tagforge.domain.task.TaskMessageBuilder
+import com.tagforge.domain.task.TaskFingerprint
 import com.tagforge.domain.task.TaskPayload
+import com.tagforge.domain.task.TaskTrust
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -50,6 +54,7 @@ class TaskRunnerViewModelTest {
 
     private val executor = FakeTaskActionExecutor()
     private val repository = InMemoryTaskRepository()
+    private val settingsStore = FakeSettingsStore()
     private val clock = FixedClock(Instant.fromEpochMilliseconds(7_000))
     private var foreground = true
 
@@ -63,7 +68,7 @@ class TaskRunnerViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     private fun viewModel(taskExecutor: TaskActionExecutor = executor) =
-        TaskRunnerViewModel(taskExecutor, repository, clock, isForeground = { foreground }, runGuardMillis = 0)
+        TaskRunnerViewModel(taskExecutor, repository, clock, settingsStore, isForeground = { foreground }, runGuardMillis = 0)
 
     private fun messageBytes(vararg actions: TaskAction, name: String? = null): Bytes {
         val message = (TaskMessageBuilder.build(TaskPayload(name, actions.toList()), "com.tagforge.app") as Outcome.Ok).value
@@ -468,7 +473,7 @@ class TaskRunnerViewModelTest {
 
     // ---- W5: the Run button stays disabled just after the sheet content changed --------------------------------------------
 
-    private fun productionViewModel() = TaskRunnerViewModel(executor, repository, clock, isForeground = { foreground })
+    private fun productionViewModel() = TaskRunnerViewModel(executor, repository, clock, settingsStore, isForeground = { foreground })
 
     @Test
     fun runIsIgnoredUntilTheSheetHasBeenOnScreenFor600Ms() = runTest {
@@ -510,5 +515,106 @@ class TaskRunnerViewModelTest {
         assertTrue(vm.confirming().canRun)
         vm.onRun()
         assertEquals(listOf<TaskAction>(url), executor.executed)
+    }
+
+    // ---- UX-A2: running without the sheet only when the user chose it in Settings -------------------------------------------
+
+    private val insecure = TaskAction.HttpRequest(url = "http://example.com/hook", method = HttpMethod.GET)
+
+    private suspend fun choose(policy: TaskExecutionPolicy, vararg mine: List<TaskAction>) {
+        settingsStore.update { current ->
+            mine.fold(current.copy(taskExecution = policy)) { acc, actions -> TaskTrust.trust(acc, null, actions) }
+        }
+    }
+
+    @Test
+    fun byDefaultATaskIAlreadyTrustedStillAsks() = runTest {
+        choose(TaskExecutionPolicy.ASK_ALWAYS, listOf(ringer))
+        val vm = viewModel()
+
+        vm.onNdefBytes(messageBytes(ringer))
+
+        vm.confirming()
+        assertEquals(0, executor.executeCalls)
+    }
+
+    @Test
+    fun ownTasksRunsMyTaskWithoutTheSheetAndLeavesASummaryWithAWayBack() = runTest {
+        choose(TaskExecutionPolicy.OWN_TASKS, listOf(ringer, url))
+        val vm = viewModel()
+
+        vm.onNdefBytes(messageBytes(ringer, url))
+
+        val done = assertIs<TaskRunnerUiState.Finished>(vm.uiState.value)
+        assertEquals(2, executor.executeCalls)
+        assertEquals(listOf(ringer, url), done.results.map { it.action })
+        assertEquals(TaskExecutionPolicy.OWN_TASKS, done.auto!!.policy)
+        assertEquals(TaskFingerprint.of(null, listOf(ringer, url)), done.auto!!.fingerprint)
+    }
+
+    @Test
+    fun ownTasksStillAskForAModifiedTaskAForeignTagAndPlainHttp() = runTest {
+        choose(TaskExecutionPolicy.OWN_TASKS, listOf(ringer), listOf(insecure))
+        val vm = viewModel()
+
+        vm.onNdefBytes(messageBytes(ringer, url))
+        vm.confirming()
+        vm.onNdefBytes(messageBytes(TaskAction.OpenUrl("https://other.example")))
+        vm.confirming()
+        vm.onNdefBytes(messageBytes(insecure))
+        vm.confirming()
+
+        assertEquals(0, executor.executeCalls)
+    }
+
+    @Test
+    fun neverAskRunsAnyTaskEvenFromAnUnknownTagAndOffersTheWayBack() = runTest {
+        choose(TaskExecutionPolicy.NEVER_ASK)
+        val vm = viewModel()
+
+        vm.onNdefBytes(messageBytes(ringer, insecure))
+
+        val done = assertIs<TaskRunnerUiState.Finished>(vm.uiState.value)
+        assertEquals(2, executor.executeCalls)
+        assertEquals(TaskExecutionPolicy.NEVER_ASK, done.auto!!.policy)
+        assertEquals(null, done.auto!!.fingerprint, "nothing to stop trusting: every task runs")
+
+        vm.onAskAlways()
+        assertEquals(TaskExecutionPolicy.ASK_ALWAYS, settingsStore.current.taskExecution)
+        assertEquals(AutoRunNotice.WILL_ASK, (vm.uiState.value as TaskRunnerUiState.Finished).auto!!.notice)
+
+        vm.onNdefBytes(messageBytes(ringer))
+        vm.confirming()
+    }
+
+    @Test
+    fun stopTrustingAMyTaskMakesTheNextScanAskAgain() = runTest {
+        choose(TaskExecutionPolicy.OWN_TASKS, listOf(ringer))
+        val vm = viewModel()
+        vm.onNdefBytes(messageBytes(ringer))
+        assertIs<TaskRunnerUiState.Finished>(vm.uiState.value)
+
+        vm.onUntrust()
+
+        assertEquals(emptySet(), settingsStore.current.trustedTaskFingerprints)
+        assertEquals(AutoRunNotice.UNTRUSTED, (vm.uiState.value as TaskRunnerUiState.Finished).auto!!.notice)
+        vm.onNdefBytes(messageBytes(ringer))
+        vm.confirming()
+        assertEquals(1, executor.executeCalls, "only the first scan ran")
+    }
+
+    @Test
+    fun theSavedTaskRunNowPathFollowsTheSamePolicy() = runTest {
+        val id = repository.upsert(Task(name = "Mine", actions = listOf(ringer), createdAt = clock.now(), updatedAt = clock.now()))
+        val vm = viewModel()
+        vm.onTaskId(id)
+        vm.confirming()
+
+        settingsStore.update { TaskTrust.trust(it.copy(taskExecution = TaskExecutionPolicy.OWN_TASKS), "Mine", listOf(ringer)) }
+        vm.onCancel()
+        vm.onTaskId(id)
+
+        assertIs<TaskRunnerUiState.Finished>(vm.uiState.value)
+        assertEquals(1, executor.executeCalls)
     }
 }

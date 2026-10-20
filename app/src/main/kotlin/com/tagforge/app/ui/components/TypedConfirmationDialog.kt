@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -54,8 +55,9 @@ fun TypedConfirmationDialog(
                 OutlinedTextField(
                     value = typed,
                     onValueChange = { onTypedChange(it.take(MAX_TYPED)) },
-                    label = { Text(stringResource(R.string.typed_confirm_field)) },
+                    label = { Text(stringResource(R.string.typed_confirm_field), maxLines = 1) },
                     singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
                 )
                 if (needsUnderstood) {

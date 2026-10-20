@@ -8,6 +8,7 @@ import com.tagforge.domain.history.RecordHistoryUseCase
 import com.tagforge.domain.scan.ScanCoordinator
 import com.tagforge.domain.scan.ScanState
 import com.tagforge.domain.scan.TagOperation
+import com.tagforge.domain.settings.AppSettings
 import com.tagforge.domain.tag.TagError
 import com.tagforge.domain.tools.EraseTagUseCase
 import com.tagforge.domain.tools.FormatTagUseCase
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -34,6 +36,7 @@ class ToolsViewModel(
     private val coordinator: ScanCoordinator,
     private val recordHistory: RecordHistoryUseCase,
     availability: Flow<NfcAvailability>,
+    settings: Flow<AppSettings> = flowOf(AppSettings()),
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ToolsUiState())
@@ -46,14 +49,24 @@ class ToolsViewModel(
     private var lastTool: DestructiveTool? = null
     private var armedOperation: TagOperation<*>? = null
 
+    /** The Settings switch "ask before erasing or formatting". Asking is the default until the setting says otherwise. */
+    private var askFirst = true
+
     init {
         viewModelScope.launch { availability.collect { value -> _state.update { it.copy(availability = value) } } }
+        viewModelScope.launch { settings.collect { value -> askFirst = value.confirmEraseFormat } }
     }
 
     // ---- the question ------------------------------------------------------------------------------------------------
 
     fun onRequest(tool: DestructiveTool) {
         if (!_state.value.canStart || _state.value.sheet != null) return
+        if (!askFirst) {
+            // The user turned the question off in Settings: the tap that arms the tool is the only step left.
+            lastTool = tool
+            arm(tool)
+            return
+        }
         _state.update { it.copy(confirm = tool) }
     }
 

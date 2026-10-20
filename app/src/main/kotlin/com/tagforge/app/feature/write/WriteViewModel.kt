@@ -256,6 +256,7 @@ class WriteViewModel(
 
     /** Runs inside the write operation: suspends until the user answers the dialog. */
     private suspend fun askToOverwrite(existing: NdefMessage?): Boolean {
+        if (!settings.settings.first().confirmOverwrite) return true // the user turned the question off in Settings
         val decision = CompletableDeferred<Boolean>()
         pendingDecision = decision
         val summary = existing?.let(HistorySummarizer::summarize)?.ifEmpty { null }

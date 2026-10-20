@@ -24,6 +24,8 @@ import com.tagforge.app.R
 import com.tagforge.app.ui.text.SecurityErrorText
 import com.tagforge.app.ui.text.messageText
 import com.tagforge.domain.security.LockScope
+import com.tagforge.domain.security.PasswordMode
+import com.tagforge.domain.security.SecretKind
 import com.tagforge.domain.security.SecurityFailure
 
 /** Everything the forms can do, as lambdas so the screen renders without a ViewModel (AS-05). */
@@ -35,6 +37,7 @@ data class SecurityFormActions(
     val onNext: () -> Unit,
     val onCopy: (String) -> Unit,
     val onShare: (String) -> Unit,
+    val onModeChange: (PasswordMode) -> Unit,
 )
 
 @Composable
@@ -46,12 +49,15 @@ fun SecurityFormContent(state: SecurityUiState, actions: SecurityFormActions, mo
     ) {
         when (action) {
             SecurityAction.SET_PASSWORD -> SetPasswordFields(state, actions)
-            SecurityAction.REMOVE_PASSWORD -> CurrentPasswordField(state, actions, R.string.security_form_current_required)
+            SecurityAction.REMOVE_PASSWORD -> {
+                CurrentPasswordField(state, actions, R.string.security_form_current_required)
+                PasswordAdvancedSection(state.form.mode, actions.onModeChange)
+            }
             SecurityAction.UNLOCK -> UnlockFields(state, actions)
             SecurityAction.CONFIG_LOCK -> ConfigLockFields(state, actions)
             SecurityAction.LOCK -> LockFields(state, actions)
         }
-        FormProblemText(state.problem, state.failure)
+        FormProblemText(state.problem, state.failure, state.form.mode)
         Text(
             stringResource(R.string.security_form_next_hint),
             style = MaterialTheme.typography.bodySmall,
@@ -68,19 +74,23 @@ fun SecurityFormContent(state: SecurityUiState, actions: SecurityFormActions, mo
 @Composable
 private fun SetPasswordFields(state: SecurityUiState, actions: SecurityFormActions) {
     PasswordFields(state.form, state.problem, actions.onChange, actions.onGenerate, actions.onCopy, actions.onShare)
-    Auth0Stepper(state.form.auth0) { value -> actions.onChange { it.copy(auth0 = value) } }
     SwitchRow(state.form.protectReads, { v -> actions.onChange { it.copy(protectReads = v) } }, R.string.security_form_protect_reads)
     CurrentPasswordField(state, actions, R.string.security_form_current)
+    PasswordAdvancedSection(state.form.mode, actions.onModeChange) {
+        PackField(state.form, state.problem, actions.onChange)
+        Auth0Stepper(state.form.auth0) { value -> actions.onChange { it.copy(auth0 = value) } }
+    }
 }
 
 @Composable
 private fun CurrentPasswordField(state: SecurityUiState, actions: SecurityFormActions, @StringRes label: Int) {
     AttemptLimitSection(state, actions)
-    HexSecretField(
-        value = state.form.currentPasswordHex,
-        onValueChange = { v -> actions.onChange { it.copy(currentPasswordHex = v) } },
+    SecretField(
+        value = state.form.currentPassword,
+        onValueChange = { v -> actions.onChange { it.copy(currentPassword = v) } },
         labelRes = label,
-        maxChars = MAX_PASSWORD_CHARS,
+        mode = state.form.mode,
+        kind = SecretKind.PASSWORD,
         enabled = state.passwordFieldEnabled,
         isError = state.problem == FormProblem.CURRENT_PASSWORD_INVALID,
     )
@@ -120,6 +130,9 @@ private fun AttemptLimitSection(state: SecurityUiState, actions: SecurityFormAct
 @Composable
 private fun UnlockFields(state: SecurityUiState, actions: SecurityFormActions) {
     CurrentPasswordField(state, actions, R.string.security_form_current_required)
+    PasswordAdvancedSection(state.form.mode, actions.onModeChange) {
+        ExpectedPackField(state.form, state.problem, actions.onChange)
+    }
 }
 
 @Composable
@@ -136,6 +149,7 @@ private fun ConfigLockFields(state: SecurityUiState, actions: SecurityFormAction
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     CurrentPasswordField(state, actions, R.string.security_form_current)
+    PasswordAdvancedSection(state.form.mode, actions.onModeChange)
 }
 
 @Composable
@@ -162,12 +176,13 @@ private fun LockFields(state: SecurityUiState, actions: SecurityFormActions) {
         )
     }
     CurrentPasswordField(state, actions, R.string.security_form_current)
+    PasswordAdvancedSection(state.form.mode, actions.onModeChange)
 }
 
 @Composable
-private fun FormProblemText(problem: FormProblem?, failure: SecurityFailure?) {
+private fun FormProblemText(problem: FormProblem?, failure: SecurityFailure?, mode: PasswordMode) {
     val text = when {
-        problem != null -> stringResource(problem.messageRes())
+        problem != null -> stringResource(problem.messageRes(mode))
         failure != null -> SecurityErrorText.of(failure).messageText()
         else -> null
     }
@@ -175,16 +190,15 @@ private fun FormProblemText(problem: FormProblem?, failure: SecurityFailure?) {
 }
 
 @StringRes
-private fun FormProblem.messageRes(): Int = when (this) {
-    FormProblem.PASSWORD_INVALID -> R.string.security_problem_password
-    FormProblem.PACK_INVALID -> R.string.security_problem_pack
+private fun FormProblem.messageRes(mode: PasswordMode): Int = when (this) {
+    FormProblem.PASSWORD_INVALID -> if (mode == PasswordMode.TEXT) R.string.security_problem_password else R.string.security_problem_password_hex
+    FormProblem.PACK_INVALID -> if (mode == PasswordMode.TEXT) R.string.security_problem_pack else R.string.security_problem_pack_hex
     FormProblem.STORED_NOT_ACKNOWLEDGED -> R.string.security_problem_stored
-    FormProblem.CURRENT_PASSWORD_INVALID -> R.string.security_problem_current
+    FormProblem.CURRENT_PASSWORD_INVALID -> if (mode == PasswordMode.TEXT) R.string.security_problem_current else R.string.security_problem_current_hex
     FormProblem.NOTHING_SELECTED -> R.string.security_problem_nothing
 }
 
 private const val MAX_LIMIT = 7
-private const val MAX_PASSWORD_CHARS = 8
 
 private val LOCK_OPTIONS = listOf(
     LockScope.NDEF_READ_ONLY to R.string.security_lock_scope_ndef,

@@ -20,5 +20,13 @@ fun SettingsRoute(onBack: () -> Unit) {
         onHapticsChanged = viewModel::onHapticsChanged,
         onSaveHistoryChanged = viewModel::onSaveHistoryChanged,
         onAdvancedChanged = viewModel::onAdvancedChanged,
+        confirmations = ConfirmationActions(
+            onOverwriteChanged = viewModel::onConfirmOverwriteChanged,
+            onEraseFormatChanged = viewModel::onConfirmEraseFormatChanged,
+            onPolicySelected = viewModel::onTaskExecutionSelected,
+            onRiskAccepted = viewModel::onRiskAccepted,
+            onRiskDismissed = viewModel::onRiskDismissed,
+            onForgetTrusted = viewModel::onForgetTrustedTasks,
+        ),
     )
 }

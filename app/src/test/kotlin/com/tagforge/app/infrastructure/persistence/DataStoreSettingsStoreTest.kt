@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.tagforge.domain.ntag.NtagModel
 import com.tagforge.domain.settings.AppSettings
+import com.tagforge.domain.settings.TaskExecutionPolicy
 import com.tagforge.domain.settings.ThemeMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -156,5 +157,33 @@ class DataStoreSettingsStoreTest {
         secondJob.cancelAndJoin()
 
         assertEquals(AppSettings(themeMode = ThemeMode.DARK, hapticsEnabled = false), reopened)
+    }
+
+    @Test
+    fun confirmationSettingsDefaultToAskingAndPersistAcrossStores() = runBlocking {
+        val data = InMemoryPreferences()
+        val fresh = DataStoreSettingsStore(data).settings.first()
+        assertEquals(true, fresh.confirmOverwrite)
+        assertEquals(true, fresh.confirmEraseFormat)
+        assertEquals(TaskExecutionPolicy.ASK_ALWAYS, fresh.taskExecution)
+        assertEquals(emptySet(), fresh.trustedTaskFingerprints)
+
+        DataStoreSettingsStore(data).update {
+            it.copy(confirmOverwrite = false, confirmEraseFormat = false, taskExecution = TaskExecutionPolicy.OWN_TASKS, trustedTaskFingerprints = setOf("ab", "cd"))
+        }
+
+        val reopened = DataStoreSettingsStore(data).settings.first()
+        assertEquals(false, reopened.confirmOverwrite)
+        assertEquals(false, reopened.confirmEraseFormat)
+        assertEquals(TaskExecutionPolicy.OWN_TASKS, reopened.taskExecution)
+        assertEquals(setOf("ab", "cd"), reopened.trustedTaskFingerprints)
+    }
+
+    @Test
+    fun anUnknownStoredTaskPolicyFallsBackToAskingAlways() = runBlocking {
+        val data = InMemoryPreferences()
+        data.edit { it[stringPreferencesKey("task_execution")] = "whatever" }
+
+        assertEquals(TaskExecutionPolicy.ASK_ALWAYS, DataStoreSettingsStore(data).settings.first().taskExecution)
     }
 }
