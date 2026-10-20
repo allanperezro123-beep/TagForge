@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.tagforge.app.R
 import com.tagforge.app.feature.taskrunner.RiskBadge
@@ -105,7 +106,7 @@ private fun TaskRow(task: Task, onOpen: () -> Unit, onRun: () -> Unit, onDuplica
     val name = task.name.ifBlank { stringResource(R.string.tasks_unnamed) }
     ListItem(
         modifier = Modifier.clickable(onClick = onOpen),
-        headlineContent = { Text(name, maxLines = 1) },
+        headlineContent = { Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(pluralStringResource(R.plurals.tasks_actions, task.actions.size, task.actions.size))
