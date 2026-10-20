@@ -35,6 +35,10 @@
     <!-- "Use my current location" in the Location record. One-shot, foreground only. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- CameraX pulls in media3-common, which asks for ACCESS_NETWORK_STATE. Nothing here plays media: not requested. -->
+    <uses-permission
+        android:name="android.permission.ACCESS_NETWORK_STATE"
+        tools:node="remove" />
 
     <!-- NFC is optional: devices without it get the Unsupported state instead of being filtered out. -->
     <uses-feature
@@ -83,6 +87,16 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!--
+                Share target (UX-B): "Share > Tag Forge" from a maps app, browser or notes app opens the Write review with the
+                shared text as a record. The sender is untrusted: the text is capped and parsed defensively (SharedText), only
+                prefills, and nothing is armed or run until the user presses Write on the review step.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
             </intent-filter>
             <meta-data
                 android:name="android.app.shortcuts"

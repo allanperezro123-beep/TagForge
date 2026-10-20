@@ -23,7 +23,10 @@ import com.tagforge.domain.ndef.spec.RecordSpec
 import com.tagforge.domain.ndef.spec.SpecError
 import com.tagforge.domain.ndef.spec.SpecField
 import com.tagforge.domain.ntag.NtagModel
+import com.tagforge.domain.location.SharedText
+import com.tagforge.domain.location.SharedTextResult
 import com.tagforge.domain.scan.OperationPhase
+import com.tagforge.domain.scan.ScanState
 import com.tagforge.domain.ports.TagSession
 import com.tagforge.domain.ports.TagTransceiver
 import com.tagforge.domain.tag.TagTech
@@ -509,6 +512,21 @@ class WriteViewModelTest {
 
         assertEquals(records, vm.uiState.value.records)
         assertEquals(WriteSheet.Waiting(messageSize = 16), vm.uiState.value.sheet)
+    }
+
+    @Test
+    fun textSharedFromAnotherAppOpensTheReviewPrefilledAndNeverArmsAWrite() = runTest {
+        val shared = (SharedText.parse("Plaza\nhttps://www.google.com/maps/@4.711,-74.072,15z") as SharedTextResult.Record).spec
+        val coordinator = coordinator()
+
+        val vm = viewModel(coordinator = coordinator, initialRecords = listOf(shared))
+        runCurrent()
+
+        assertEquals(RecordSpec.Geo("4.711", "-74.072", ""), shared)
+        assertEquals(WriteStep.REVIEW, vm.uiState.value.step)
+        assertEquals(listOf(shared), vm.uiState.value.records)
+        assertEquals(null, vm.uiState.value.sheet, "no scan sheet: nothing is waiting for a tag")
+        assertEquals(ScanState.Idle, coordinator.state.value, "the coordinator was never armed by the share")
     }
 
     @Test

@@ -31,6 +31,8 @@ import com.tagforge.app.di.rememberAppContainer
 import com.tagforge.app.di.tagForgeViewModel
 import com.tagforge.app.ui.haptics.rememberHaptics
 import com.tagforge.domain.exchange.QrPayloadMapper
+import com.tagforge.domain.location.SharedText
+import com.tagforge.domain.location.SharedTextResult
 import com.tagforge.domain.ndef.spec.LanguageCodes
 import com.tagforge.domain.settings.AppSettings
 import kotlinx.coroutines.launch
@@ -45,6 +47,7 @@ fun WriteRoute(
     templateId: Long? = null,
     qrText: String? = null,
     armOnOpen: Boolean = false,
+    sharedText: String? = null,
     onShowQr: (String) -> Unit = {},
     onBack: () -> Unit = {},
 ) {
@@ -59,7 +62,8 @@ fun WriteRoute(
             appPackage = BuildConfig.APPLICATION_ID,
             availability = it.nfcAvailabilityMonitor.availability,
             initialTemplateId = templateId,
-            initialRecords = qrText?.let { text -> listOf(QrPayloadMapper.fromQr(text)) }.orEmpty(),
+            initialRecords = qrText?.let { text -> listOf(QrPayloadMapper.fromQr(text)) }
+                ?: (SharedText.parse(sharedText) as? SharedTextResult.Record)?.let { listOf(it.spec) }.orEmpty(),
             armOnOpen = armOnOpen,
             defaultLanguage = LanguageCodes.fromDeviceTag(Locale.getDefault().toLanguageTag()),
         )

@@ -16,10 +16,21 @@ class ManifestPermissionsTest {
         .first { it.exists() }
         .readText()
 
-    private val requested: Set<String> = Regex("""<uses-permission(?:-sdk-23)?\s+[^>]*?android:name="([^"]+)"""")
-        .findAll(manifest)
-        .map { it.groupValues[1] }
+    /** The elements this app declares, minus the ones that only exist to strip a permission a library would add. */
+    private val declared: List<String> = Regex("""<uses-permission(?:-sdk-23)?\s[^>]*>""").findAll(manifest).map { it.value }.toList()
+
+    private val requested: Set<String> = declared
+        .filterNot { """tools:node="remove"""" in it }
+        .mapNotNull { Regex("""android:name="([^"]+)"""").find(it)?.groupValues?.get(1) }
         .toSet()
+
+    @Test
+    fun aPermissionACameraXDependencyWouldAddIsStrippedBecauseNothingHereUsesIt() {
+        assertTrue(
+            declared.any { "android.permission.ACCESS_NETWORK_STATE" in it && """tools:node="remove"""" in it },
+            "media3-common (via CameraX) adds ACCESS_NETWORK_STATE; the merged manifest must not carry it",
+        )
+    }
 
     /** RB-04 allowlist; Phase 4 uses the subset below it. */
     private val allowlist = setOf(
@@ -120,5 +131,17 @@ class ManifestPermissionsTest {
     @Test
     fun noPermissionIsDeclaredForBackgroundLocation() {
         assertFalse("ACCESS_BACKGROUND_LOCATION" in manifest.replace(Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL), ""))
+    }
+
+    /** The share target is the one public entry that carries user content, so it is pinned: plain text only, no write is armed. */
+    @Test
+    fun mainActivityReceivesPlainTextSharesAndNothingElse() {
+        val main = manifest.replace(Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL), "")
+            .substringAfter("""android:name=".MainActivity"""").substringBefore("</activity>")
+        assertTrue("android.intent.action.SEND" in main)
+        assertTrue("""<data android:mimeType="text/plain" />""" in main)
+        assertTrue("android.intent.category.DEFAULT" in main)
+        assertFalse("SEND_MULTIPLE" in main, "only a single text is accepted")
+        assertFalse(Regex("""android:mimeType="(?!text/plain)""").containsMatchIn(main), "no other MIME type is accepted")
     }
 }
