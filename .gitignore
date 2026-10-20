@@ -28,3 +28,6 @@ Thumbs.db
 
 # Archived release builds (signed APK + R8 mapping)
 apks/
+
+# IDE output
+/domain/bin/
