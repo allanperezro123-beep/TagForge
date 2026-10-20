@@ -29,7 +29,6 @@ object RecordSpecValidator {
     private const val MAX_LATITUDE = 90.0
     private const val MAX_LONGITUDE = 180.0
 
-    private val LANGUAGE = Regex("^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$")
     private val EMAIL = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
     private val PHONE = Regex("^\\+?[0-9 ()\\-.]+$")
     private val SCHEME = Regex("^([A-Za-z][A-Za-z0-9+.\\-]*):(.*)$", RegexOption.DOT_MATCHES_ALL)
@@ -42,7 +41,7 @@ object RecordSpecValidator {
         when (spec) {
             is RecordSpec.Text -> {
                 if (spec.text.isBlank()) add(SpecField.TEXT, SpecError.REQUIRED)
-                if (!LANGUAGE.matches(spec.languageCode.trim())) add(SpecField.LANGUAGE, SpecError.INVALID_LANGUAGE)
+                if (!LanguageCodes.isValid(spec.languageCode.trim())) add(SpecField.LANGUAGE, SpecError.INVALID_LANGUAGE)
             }
             is RecordSpec.Uri -> checkUrl(SpecField.URI, spec.uri, required = true)
             is RecordSpec.Email -> checkEmail(SpecField.TO, spec.to, required = true)

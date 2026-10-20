@@ -83,6 +83,7 @@ class WriteViewModelTest {
         templateId: Long? = null,
         initialRecords: List<RecordSpec> = emptyList(),
         armOnOpen: Boolean = false,
+        defaultLanguage: String = "en",
     ) = WriteViewModel(
         coordinator = coordinator,
         settings = settings,
@@ -94,6 +95,7 @@ class WriteViewModelTest {
         initialTemplateId = templateId,
         initialRecords = initialRecords,
         armOnOpen = armOnOpen,
+        defaultLanguage = defaultLanguage,
     )
 
     private fun WriteViewModel.addRecord(spec: RecordSpec) {
@@ -136,6 +138,15 @@ class WriteViewModelTest {
         assertEquals(WriteStep.FORM, state.step)
         assertEquals(RecordSpec.Wifi(), state.editing?.spec)
         assertNull(state.editing?.index, "a new record, not an edit")
+    }
+
+    @Test
+    fun aNewTextRecordStartsInThePhonesLanguageSoNobodyHasToPickOne() = runTest {
+        val vm = viewModel(defaultLanguage = "es-CO")
+
+        vm.onTypeSelected(RecordKind.TEXT)
+
+        assertEquals(RecordSpec.Text(languageCode = "es-CO"), vm.uiState.value.editing?.spec)
     }
 
     @Test

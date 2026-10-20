@@ -55,6 +55,8 @@ class WriteViewModel(
     initialRecords: List<RecordSpec> = emptyList(),
     /** A pinned-template shortcut: once the template is loaded, wait for a tag straight away if it can be written. */
     armOnOpen: Boolean = false,
+    /** Language tag a new Text record starts with: the phone's language, so nobody has to pick or type it. */
+    private val defaultLanguage: String = "en",
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(derive(WriteUiState(analysis = WriteDraft().analyse(0, appPackage))))
@@ -88,7 +90,7 @@ class WriteViewModel(
     // ---- wizard ---------------------------------------------------------------------------------------------
 
     fun onTypeSelected(kind: RecordKind) = mutate {
-        it.copy(step = WriteStep.FORM, editing = EditingRecord(index = null, spec = kind.newSpec()), trail = it.trailWithCurrent())
+        it.copy(step = WriteStep.FORM, editing = EditingRecord(index = null, spec = kind.newSpec(defaultLanguage)), trail = it.trailWithCurrent())
     }
 
     fun onDraftChanged(spec: RecordSpec) = mutate { state -> state.editing?.let { state.copy(editing = it.copy(spec = spec)) } ?: state }

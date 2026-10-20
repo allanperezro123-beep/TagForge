@@ -34,14 +34,13 @@ fun TextForm(
             singleLine = false,
             minLines = 3,
         )
-        FormTextField(
-            value = spec.languageCode,
-            onValueChange = { onChange(spec.copy(languageCode = it)) },
-            label = stringResource(R.string.write_field_language),
-            field = SpecField.LANGUAGE,
-            errors = errors,
-            onTouched = onTouched,
-            imeAction = ImeAction.Done,
+        LanguageField(
+            code = spec.languageCode,
+            onPick = {
+                onChange(spec.copy(languageCode = it))
+                onTouched(SpecField.LANGUAGE)
+            },
+            errorText = errors.firstOrNull { it.field == SpecField.LANGUAGE }?.messageText(),
         )
     }
 }

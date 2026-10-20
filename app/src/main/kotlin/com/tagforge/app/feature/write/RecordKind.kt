@@ -20,9 +20,9 @@ enum class RecordKind(val group: RecordGroup) {
     EXTERNAL(RecordGroup.ADVANCED),
 }
 
-/** An empty form of this kind. */
-fun RecordKind.newSpec(): RecordSpec = when (this) {
-    RecordKind.TEXT -> RecordSpec.Text()
+/** An empty form of this kind; a new Text record starts in [defaultLanguage] (the phone's language). */
+fun RecordKind.newSpec(defaultLanguage: String = "en"): RecordSpec = when (this) {
+    RecordKind.TEXT -> RecordSpec.Text(languageCode = defaultLanguage)
     RecordKind.URL -> RecordSpec.Uri()
     RecordKind.EMAIL -> RecordSpec.Email()
     RecordKind.PHONE -> RecordSpec.Phone()

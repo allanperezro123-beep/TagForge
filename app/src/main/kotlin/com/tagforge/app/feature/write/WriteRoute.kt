@@ -31,8 +31,10 @@ import com.tagforge.app.di.rememberAppContainer
 import com.tagforge.app.di.tagForgeViewModel
 import com.tagforge.app.ui.haptics.rememberHaptics
 import com.tagforge.domain.exchange.QrPayloadMapper
+import com.tagforge.domain.ndef.spec.LanguageCodes
 import com.tagforge.domain.settings.AppSettings
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 /**
  * Container for the Write tab: owns the ViewModel, haptics, snackbars and system intents, and hands plain state and
@@ -59,6 +61,7 @@ fun WriteRoute(
             initialTemplateId = templateId,
             initialRecords = qrText?.let { text -> listOf(QrPayloadMapper.fromQr(text)) }.orEmpty(),
             armOnOpen = armOnOpen,
+            defaultLanguage = LanguageCodes.fromDeviceTag(Locale.getDefault().toLanguageTag()),
         )
     }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
