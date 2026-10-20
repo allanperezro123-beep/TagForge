@@ -46,7 +46,7 @@ private val ListMaxHeight = 480.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LanguagePickerSheet(selected: String, onPick: (String) -> Unit, onDismiss: () -> Unit) {
-    val display = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
+    val display = LocalConfiguration.current.locales.let { if (it.isEmpty) Locale.ROOT else it[0] }
     var query by rememberSaveable { mutableStateOf("") }
     val options = remember(display, query) { LanguageOptions.search(query, display) }
     val deviceCode = remember { LanguageCodes.fromDeviceTag(Locale.getDefault().toLanguageTag()) }

@@ -28,7 +28,7 @@ import java.util.Locale
 /** The language of a Text record as a readable choice ("Spanish (es)") that opens [LanguagePickerSheet]; nobody types a code. */
 @Composable
 fun LanguageField(code: String, onPick: (String) -> Unit, modifier: Modifier = Modifier, errorText: String? = null) {
-    val display = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
+    val display = LocalConfiguration.current.locales.let { if (it.isEmpty) Locale.ROOT else it[0] }
     val option = remember(code, display) { LanguageOptions.describe(code.trim(), display) }
     var showSheet by rememberSaveable { mutableStateOf(false) }
 

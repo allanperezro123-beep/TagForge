@@ -88,13 +88,14 @@ fun CurrentLocationSection(onFound: (latitude: String, longitude: String) -> Uni
 @Composable
 fun MapsAppSection(modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    val chooserTitle = stringResource(R.string.loc_maps_chooser)
     var missing by remember { mutableStateOf(false) }
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         OutlinedButton(
             onClick = {
                 val maps = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q="))
                 try {
-                    context.startActivity(Intent.createChooser(maps, context.getString(R.string.loc_maps_chooser)))
+                    context.startActivity(Intent.createChooser(maps, chooserTitle))
                 } catch (_: ActivityNotFoundException) {
                     missing = true
                 }
