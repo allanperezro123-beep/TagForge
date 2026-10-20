@@ -2,6 +2,8 @@ package com.tagforge.app.feature.write.forms
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -55,6 +57,7 @@ fun MimeForm(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier, verticalArrangement = FormSpacing) {
+        AdvancedNote()
         FormTextField(
             value = spec.mimeType,
             onValueChange = { onChange(spec.copy(mimeType = it)) },
@@ -87,6 +90,7 @@ fun ExternalForm(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier, verticalArrangement = FormSpacing) {
+        AdvancedNote()
         FormTextField(
             value = spec.domain,
             onValueChange = { onChange(spec.copy(domain = it)) },
@@ -114,4 +118,13 @@ fun ExternalForm(
             imeAction = ImeAction.Done,
         )
     }
+}
+
+@Composable
+private fun AdvancedNote() {
+    Text(
+        stringResource(R.string.write_advanced_note),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }

@@ -176,7 +176,7 @@ private fun RawRecord(record: NdefRecord) {
 private fun FieldRow(label: String, value: String) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.bodyMedium)
+        Text(value, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f, fill = false))
     }
 }
 
