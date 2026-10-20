@@ -30,7 +30,10 @@ class ManifestPermissionsTest {
         "android.permission.WRITE_SETTINGS",
         "com.android.alarm.permission.SET_ALARM",
         "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH",
         "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_NOTIFICATION_POLICY",
         "android.permission.CHANGE_WIFI_STATE",
     )
@@ -47,6 +50,12 @@ class ManifestPermissionsTest {
                 "android.permission.ACCESS_NOTIFICATION_POLICY",
                 "com.android.alarm.permission.SET_ALARM",
                 "android.permission.CHANGE_WIFI_STATE",
+                // UX-B: all four are requested at runtime, only when the user taps the matching button.
+                "android.permission.CAMERA",
+                "android.permission.BLUETOOTH_CONNECT",
+                "android.permission.BLUETOOTH",
+                "android.permission.ACCESS_FINE_LOCATION",
+                "android.permission.ACCESS_COARSE_LOCATION",
             ),
             requested,
         )
@@ -59,7 +68,10 @@ class ManifestPermissionsTest {
 
     @Test
     fun theThreeForbiddenPermissionsAreNeverRequested() {
-        listOf("QUERY_ALL_PACKAGES", "SEND_SMS", "CALL_PHONE").forEach { name ->
+        listOf(
+            "QUERY_ALL_PACKAGES", "SEND_SMS", "CALL_PHONE", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE",
+            "ACCESS_BACKGROUND_LOCATION", "READ_CONTACTS", "RECORD_AUDIO",
+        ).forEach { name ->
             assertFalse(requested.any { it.endsWith(".$name") }, "$name must never be requested")
         }
     }
@@ -86,5 +98,27 @@ class ManifestPermissionsTest {
         assertTrue("android.intent.action.MAIN" in manifest.substringAfter("<queries>").substringBefore("</queries>"))
         assertTrue("android.intent.category.LAUNCHER" in manifest.substringAfter("<queries>").substringBefore("</queries>"))
         assertTrue("android.intent.action.TTS_SERVICE" in manifest.substringAfter("<queries>").substringBefore("</queries>"))
+    }
+
+    @Test
+    fun legacyBluetoothPermissionStopsWhereTheConnectPermissionBegins() {
+        assertTrue(
+            Regex("""android\.permission\.BLUETOOTH"[^>]*android:maxSdkVersion="30"""").containsMatchIn(manifest),
+            "BLUETOOTH is only needed up to Android 11; Android 12+ uses BLUETOOTH_CONNECT",
+        )
+    }
+
+    @Test
+    fun cameraBluetoothAndLocationHardwareAreOptional() {
+        val features = Regex("""<uses-feature\s+([^>]*?)/>""", RegexOption.DOT_MATCHES_ALL).findAll(manifest).map { it.groupValues[1] }.toList()
+        listOf("android.hardware.camera", "android.hardware.bluetooth", "android.hardware.location").forEach { name ->
+            val feature = features.firstOrNull { """android:name="$name"""" in it }
+            assertTrue(feature != null && """android:required="false"""" in feature, "$name must be declared required=false")
+        }
+    }
+
+    @Test
+    fun noPermissionIsDeclaredForBackgroundLocation() {
+        assertFalse("ACCESS_BACKGROUND_LOCATION" in manifest.replace(Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL), ""))
     }
 }
