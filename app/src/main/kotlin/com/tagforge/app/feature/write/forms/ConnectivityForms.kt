@@ -184,36 +184,6 @@ fun WifiForm(
 }
 
 @Composable
-fun BluetoothForm(
-    spec: RecordSpec.Bluetooth,
-    errors: List<FieldError>,
-    onChange: (RecordSpec) -> Unit,
-    onTouched: (SpecField) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier, verticalArrangement = FormSpacing) {
-        FormTextField(
-            value = spec.mac,
-            onValueChange = { onChange(spec.copy(mac = it)) },
-            label = stringResource(R.string.write_field_mac),
-            field = SpecField.MAC,
-            errors = errors,
-            onTouched = onTouched,
-            placeholder = stringResource(R.string.write_hint_mac),
-        )
-        FormTextField(
-            value = spec.name,
-            onValueChange = { onChange(spec.copy(name = it)) },
-            label = stringResource(R.string.write_field_device),
-            field = SpecField.DEVICE_NAME,
-            errors = errors,
-            onTouched = onTouched,
-            imeAction = ImeAction.Done,
-        )
-    }
-}
-
-@Composable
 private fun ChipGroup(label: String, content: @Composable () -> Unit) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
