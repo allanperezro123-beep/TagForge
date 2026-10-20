@@ -95,5 +95,5 @@ APK: `dist/tag-forge-p5-debug.apk` (versión 0.5.0-debug, versionCode 500, paque
 ## Notas conocidas
 
 - El filtro de fechas usa ventanas móviles (Hoy / Semana / Mes), sin selector de fechas personalizado.
-- La lectura de QR es desde imagen o texto pegado; no hay lector con cámara a propósito (sin permiso de CÁMARA).
+- (Histórico, versión 0.5.0) La lectura de QR era solo desde imagen o texto pegado. Desde la 1.1.5 también hay lector con cámara; ver `1.1.5-device-checklist.md`.
 - Las pruebas instrumentadas (Room, FontScale) están compiladas pero se ejecutan solo en dispositivo.
