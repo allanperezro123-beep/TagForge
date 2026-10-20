@@ -37,6 +37,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.tagforge.app.R
 import com.tagforge.app.ui.text.TaskText
+import com.tagforge.domain.settings.TaskExecutionPolicy
 import com.tagforge.domain.task.PlanItem
 import com.tagforge.domain.task.TaskPlan
 
@@ -54,6 +55,8 @@ fun TaskConfirmationSheet(
     onClose: () -> Unit,
     onFix: () -> Unit,
     modifier: Modifier = Modifier,
+    onUntrust: () -> Unit = {},
+    onAskAlways: () -> Unit = {},
 ) {
     if (state == TaskRunnerUiState.Idle) return
     val running = state is TaskRunnerUiState.Running
@@ -73,9 +76,10 @@ fun TaskConfirmationSheet(
                 is TaskRunnerUiState.Confirming -> ConfirmContent(state, onRun, onCancel, onFix)
                 is TaskRunnerUiState.Running -> {
                     Header(state.plan)
+                    if (state.auto != null) AutoRunNote()
                     Rows(state.rows.map { it.item }, state.rows.map { it.status }, onFix)
                 }
-                is TaskRunnerUiState.Finished -> FinishedContent(state, onClose, onFix)
+                is TaskRunnerUiState.Finished -> FinishedContent(state, onClose, onFix, onUntrust, onAskAlways)
             }
         }
     }
@@ -149,15 +153,52 @@ private fun InsecureWarning(armed: Boolean) {
 }
 
 @Composable
-private fun FinishedContent(state: TaskRunnerUiState.Finished, onClose: () -> Unit, onFix: () -> Unit) {
+private fun FinishedContent(
+    state: TaskRunnerUiState.Finished,
+    onClose: () -> Unit,
+    onFix: () -> Unit,
+    onUntrust: () -> Unit,
+    onAskAlways: () -> Unit,
+) {
     Header(state.plan)
+    if (state.auto != null) AutoRunNote()
     Text(
         stringResource(if (state.needsAttention) R.string.task_runner_finished_attention else R.string.task_runner_finished_ok),
         style = MaterialTheme.typography.titleMedium,
         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
     )
     Rows(state.plan.items, state.results.map { RowStatus.Finished(it.outcome) }, onFix)
+    state.auto?.let { AutoRunActions(it, onUntrust, onAskAlways) }
     Button(onClick = onClose, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { Text(stringResource(R.string.common_close)) }
+}
+
+@Composable
+private fun AutoRunNote() {
+    Text(
+        stringResource(R.string.task_runner_ran_automatically),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+/** The way back from a task that ran by itself: stop trusting that task, or go back to always asking. */
+@Composable
+private fun AutoRunActions(auto: AutoRun, onUntrust: () -> Unit, onAskAlways: () -> Unit) {
+    val notice = when (auto.notice) {
+        AutoRunNotice.UNTRUSTED -> R.string.task_runner_untrusted
+        AutoRunNotice.WILL_ASK -> R.string.task_runner_ask_again_done
+        null -> null
+    }
+    if (notice != null) {
+        Text(stringResource(notice), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+        return
+    }
+    if (auto.fingerprint != null) {
+        OutlinedButton(onClick = onUntrust, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.task_runner_untrust)) }
+    }
+    if (auto.policy == TaskExecutionPolicy.NEVER_ASK) {
+        OutlinedButton(onClick = onAskAlways, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.task_runner_ask_again)) }
+    }
 }
 
 @Composable
