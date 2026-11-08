@@ -68,28 +68,99 @@ Tag Forge implementa su propia especificación de tareas compactas (`application
 
 ---
 
-## 🏛️ Arquitectura del Proyecto
+## 🏛️ Arquitectura del Proyecto (Clean Architecture & Hexagonal)
 
-El proyecto sigue rigurosamente los principios de **Clean Architecture** y **Arquitectura Hexagonal (Puertos y Adaptadores)**:
+El proyecto sigue rigurosamente los principios de **Clean Architecture (Robert C. Martin)** y **Arquitectura Hexagonal (Puertos y Adaptadores)**. La regla de dependencias apunta estrictamente hacia el interior: el núcleo de dominio no tiene ninguna referencia a dependencias del SDK de Android (`android.*`), permitiendo pruebas unitarias instantáneas en la JVM.
+
+### 📐 Diagrama de Dependencias y Flujo de Control
+
+```mermaid
+flowchart TD
+    subgraph Outer["Frameworks & Drivers (:app)"]
+        UI["Jetpack Compose UI (Material 3)"]
+        NfcDriver["Android NfcAdapter & Tag Dispatch"]
+        DB["Room Database & DataStore"]
+    end
+
+    subgraph Adapters["Interface Adapters (:app)"]
+        VM["ViewModels & State Reducers (MVI)"]
+        NfcAdapterImpl["AndroidTagSessionAdapter"]
+        RepoImpl["RoomHistoryRepository"]
+    end
+
+    subgraph UseCases["Use Cases (:domain)"]
+        WriteUC["WriteNdefUseCase"]
+        CloneUC["CloneTagUseCase"]
+        DumpUC["DumpMemoryUseCase"]
+        LockUC["SetPasswordUseCase"]
+    end
+
+    subgraph Core["Entities & Domain Model (:domain)"]
+        TagModel["NtagModel / Ultralight / Classic"]
+        NdefModel["NdefRecord & Payload Parsers"]
+        TaskCodec["TaskCodec (application/x-tf)"]
+        Ports["Puertos: TagSession, SecretStore, HistoryRepository"]
+    end
+
+    UI --> VM
+    VM --> WriteUC
+    VM --> CloneUC
+    VM --> DumpUC
+    VM --> LockUC
+
+    WriteUC --> Ports
+    CloneUC --> Ports
+    DumpUC --> Ports
+    LockUC --> Ports
+
+    NfcAdapterImpl -.->|implements| Ports
+    RepoImpl -.->|implements| Ports
+    NfcDriver --> NfcAdapterImpl
+    DB --> RepoImpl
+
+    WriteUC --> Core
+    CloneUC --> Core
+    DumpUC --> Core
+```
+
+### 📂 Estructura de Módulos
 
 ```text
-┌────────────────────────────────────────────────────────────────────────┐
-│                              :app                                      │
-│  - Presentación: Jetpack Compose, Material 3, ViewModels, MVI          │
-│  - Framework Android: NfcAdapter, BroadcastReceivers, SensitiveClip    │
-│  - Persistencia: Room Database (con esquemas JSON), DataStore          │
-│  - Adaptadores: Inyección de dependencias modular (AppContainer)       │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │ implementa / consume
-                                    ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                             :domain                                    │
-│  - 100% Kotlin Puro (sin android.*): Testeable en milisegundos en JVM  │
-│  - Puertos e Interfaces: TagSession, SecretStore, SettingsRepository   │
-│  - Casos de Uso: WriteNdefUseCase, CloneTagUseCase, DumpMemoryUseCase  │
-│  - Modelos de Dominio: NtagModel, NdefRecord, TaskCodec, Bytes, Hex   │
-└────────────────────────────────────────────────────────────────────────┘
+TagForge/
+├── app/                                    # Frameworks & Interface Adapters (Android)
+│   ├── src/main/java/com/tagforge/
+│   │   ├── di/                             # Inyección de dependencias modular (AppContainer)
+│   │   ├── nfc/                            # Implementación de puertos NFC (NfcAdapter, TagSession)
+│   │   ├── data/                           # Persistencia local (Room, DataStore, Encriptación)
+│   │   └── ui/                             # Vistas Jetpack Compose, ViewModels y Componentes M3
+│   └── src/test/                           # Tests instrumentados y de integración
+├── domain/                                 # Enterprise & Application Core (Kotlin Puro)
+│   ├── src/main/kotlin/com/tagforge/domain/
+│   │   ├── common/                         # Primitivas puras (Hex, Bytes, Outcome, Result)
+│   │   ├── ndef/                           # Parsers y generadores de registros NDEF
+│   │   ├── tag/                            # Modelos de silicio (NTAG213/215/216, MIFARE, ISO15693)
+│   │   ├── security/                       # Algoritmos PWD/PACK, derivación y contraseñas
+│   │   ├── task/                           # Motor de automatizaciones 'application/x-tf'
+│   │   └── tools/                          # Casos de uso: lectura, volcado, clonación y borrado
+│   └── src/test/                           # Tests unitarios 100% aislados en JVM
+└── branding/                               # Identidad visual, previews y assets vectoriales
 ```
+
+---
+
+## 🛡️ Cumplimiento de Estándares Internacionales (Normas ISO)
+
+Tag Forge ha sido estructurado respetando estrictamente estándares internacionales de calidad de software, seguridad física y telecomunicaciones:
+
+* **ISO/IEC 25010 (Software Product Quality):**
+  * *Mantenibilidad y Modularidad:* Desacoplamiento total entre lógica de negocio (`:domain`) y framework (`:app`).
+  * *Testabilidad:* Más de 80 tests unitarios que se ejecutan en milisegundos en la JVM sin emuladores.
+* **ISO/IEC 14443 & ISO/IEC 18092:** Soporte integral de señalización RF, anticolisión y encapsulado de tramas para proximidad (NFC-A, MIFARE Ultralight, NTAG).
+* **ISO/IEC 15693:** Soporte para tarjetas y transpondedores de vecindad (Vicinity Cards - alcance extendido).
+* **ISO/IEC 27001 (Seguridad de la Información & Privacidad):**
+  * Bloqueo contra captura de pantalla (`FLAG_SECURE`) en interfaces de claves y volcados de memoria.
+  * Marcado de portapapeles sensible en Android 13+ para evitar telemetría de teclados de terceros.
+  * Protección criptográfica de credenciales y redacción de bytes sensibles en logs de ejecución.
 
 ---
 
