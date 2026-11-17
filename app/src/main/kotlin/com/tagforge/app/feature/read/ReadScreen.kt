@@ -97,7 +97,7 @@ fun ReadScreen(
                     ReadDetail(state.scan)
                 }
                 is ReadUiState.Error -> ErrorPanel(state.error, onRetry)
-                is ReadUiState.Protected -> ProtectedPanel(state.tag, onUnlock)
+                is ReadUiState.Protected -> ProtectedPanel(state.tag, state.rejectedRemembered, onUnlock)
             }
         }
     }
@@ -170,7 +170,7 @@ private fun ErrorPanel(error: TagError, onRetry: () -> Unit) {
 }
 
 @Composable
-private fun ProtectedPanel(tag: TagInfo?, onUnlock: () -> Unit) {
+private fun ProtectedPanel(tag: TagInfo?, rejectedRemembered: Boolean, onUnlock: () -> Unit) {
     val rows = if (tag != null) tagInfoRows(tag, hasMessage = false) else emptyList()
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -179,8 +179,15 @@ private fun ProtectedPanel(tag: TagInfo?, onUnlock: () -> Unit) {
     ) {
         item {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Icon(Icons.Outlined.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                StatusText(stringResource(R.string.read_protected_title), stringResource(R.string.read_protected_body))
+                Icon(
+                    Icons.Outlined.Lock,
+                    contentDescription = null,
+                    tint = if (rejectedRemembered) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                )
+                StatusText(
+                    stringResource(if (rejectedRemembered) R.string.read_auth_rejected_title else R.string.read_protected_title),
+                    stringResource(if (rejectedRemembered) R.string.read_auth_rejected_body else R.string.read_protected_body),
+                )
                 OutlinedButton(onClick = onUnlock) { Text(stringResource(R.string.read_unlock)) }
             }
         }

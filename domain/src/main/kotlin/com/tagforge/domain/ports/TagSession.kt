@@ -12,6 +12,13 @@ interface TagTransceiver {
     val tech: TagTech
     val maxTransceiveLength: Int
 
+    /**
+     * False when the RF link is down and the next [transceive] has to connect again. Connecting re-selects the tag, which
+     * ends a PWD_AUTH session, so a caller that authenticated must authenticate again. Adapters that cannot tell keep the
+     * default (true) and rely on [reconnect] and on errors.
+     */
+    val isConnected: Boolean get() = true
+
     /** Sends [command] and returns the raw response (a lone 4-bit NAK arrives as a 1-byte response). */
     suspend fun transceive(command: Bytes): TagResult<Bytes>
 

@@ -72,11 +72,12 @@ internal object Type2Io {
     }
 
     /**
-     * Runs [steps] in order. A refusal on the very first write means the tag is write-protected (nothing changed yet),
-     * so it becomes [TagError.ReadOnly]. Some NFC controllers swallow the 4-bit ACK and return nothing: that counts as
+     * Runs [steps] in order. A refusal on the very first write means nothing changed yet; [WriteRefusal] tells a locked tag
+     * ([TagError.ReadOnly]) from one that is protected by a password ([TagError.AuthRequired]), using [area] (what the caller
+     * already read) when given. A refusal on a later step stays a plain NAK: the tag was partly written. Some NFC controllers swallow the 4-bit ACK and return nothing: that counts as
      * acknowledged, because every caller proves the result by reading the tag back.
      */
-    suspend fun execute(transceiver: TagTransceiver, steps: List<PageWrite>): TagResult<Unit> {
+    suspend fun execute(transceiver: TagTransceiver, steps: List<PageWrite>, layout: Type2Layout? = null, area: CcAndUserArea? = null): TagResult<Unit> {
         for ((index, step) in steps.withIndex()) {
             val response = when (val sent = transceiver.transceive(NtagCommands.write(step.page, step.data))) {
                 is Outcome.Err -> return sent
@@ -84,7 +85,8 @@ internal object Type2Io {
             }
             val acknowledged = if (response.isEmpty()) Outcome.Ok(Unit) else NtagResponses.checkAck(response)
             if (acknowledged is Outcome.Err) {
-                return if (index == 0 && acknowledged.error is TagError.Nak) Outcome.Err(TagError.ReadOnly) else acknowledged
+                if (index != 0 || acknowledged.error !is TagError.Nak) return acknowledged
+                return Outcome.Err(WriteRefusal.diagnose(transceiver, layout, area, step.page))
             }
         }
         return Outcome.Ok(Unit)

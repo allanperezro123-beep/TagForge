@@ -50,11 +50,22 @@ class FakeNtag21x(
     /** Only the WRITE (A2) commands of [commandLog]. */
     val writeCommands: List<Bytes> get() = log.filter { it[0] == NtagCommands.WRITE }
 
+    /** Like the Android adapter: false after the field dropped until the next command connects again. */
+    override var isConnected: Boolean = true
+        private set
+
     /** The field drops and returns: authentication is forgotten and a pending CFGLCK becomes active. */
     fun powerCycle() {
         authenticated = false
+        isConnected = false
         cfgLockLatched = (pages[model.cfg1][0].toInt() and CFGLCK_BIT) != 0
     }
+
+    /**
+     * Some phones report the NAK of a refused PWD_AUTH as a dropped link instead of a NAK frame. When set, the tag still
+     * receives and counts the frame (including the failed attempt against AUTHLIM) but the caller sees this error.
+     */
+    var dropLinkOnRefusedAuth: TagError? = null
 
     /** Simulates tags that NAK GET_VERSION (e.g. Ultralight look-alikes). */
     var getVersionNaks: Boolean = false
@@ -101,6 +112,7 @@ class FakeNtag21x(
     }
 
     override suspend fun transceive(command: Bytes): TagResult<Bytes> {
+        isConnected = true
         transceiveCount++
         if (lost) return Outcome.Err(TagError.TagLost)
         delayedFailure?.let { (at, error) ->
@@ -117,6 +129,7 @@ class FakeNtag21x(
         if (command.size > maxTransceiveLength) return Outcome.Err(TagError.Io("Transceive length exceeds supported maximum"))
         log += command
         val response = respond(command)
+        if (command[0] == NtagCommands.PWD_AUTH && response.size == 1) dropLinkOnRefusedAuth?.let { return Outcome.Err(it) }
         if (response.size > maxTransceiveLength) return Outcome.Err(TagError.Io("Transceive response exceeds supported maximum"))
         return Outcome.Ok(response)
     }

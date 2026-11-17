@@ -27,7 +27,7 @@ sealed interface ReadUiState {
     data class Error(val error: TagError, val tag: TagInfo?) : ReadUiState
 
     /** Password-protected NTAG: identity from pages 0-3 plus an Unlock action (TS-06). */
-    data class Protected(val tag: TagInfo?) : ReadUiState
+    data class Protected(val tag: TagInfo?, val rejectedRemembered: Boolean = false) : ReadUiState
 }
 
 /** A Tag Forge task found on a scanned tag. [Invalid] tags are shown with the reason and cannot be run. */

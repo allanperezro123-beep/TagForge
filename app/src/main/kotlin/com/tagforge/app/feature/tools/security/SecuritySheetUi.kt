@@ -22,8 +22,12 @@ fun SecuritySheet.toUi(): ToolSheetUi = when (this) {
     )
     is SecuritySheet.Success -> ToolSheetUi.Success(
         title = stringResource(action.doneTitle()),
-        detail = pack?.let { stringResource(unlockDetail(packMatches), it.toHex(" ")) }
-            ?: stringResource(R.string.security_sheet_done_detail),
+        detail = when {
+            pack != null -> stringResource(unlockDetail(packMatches, remembered), pack.toHex(" "))
+            action == SecurityAction.SET_PASSWORD && remembered -> stringResource(R.string.security_sheet_done_set_password_remembered)
+            else -> stringResource(R.string.security_sheet_done_detail)
+        },
+        extraLabel = if (remembered) stringResource(R.string.security_forget_password) else null,
     )
     is SecuritySheet.Failure -> {
         val text = TagErrorText.of(error)
@@ -36,10 +40,10 @@ fun SecuritySheet.toUi(): ToolSheetUi = when (this) {
     }
 }
 
-private fun unlockDetail(packMatches: Boolean?): Int = when (packMatches) {
-    true -> R.string.security_sheet_done_unlock_match
+private fun unlockDetail(packMatches: Boolean?, remembered: Boolean): Int = when (packMatches) {
+    true -> if (remembered) R.string.security_sheet_done_unlock_match_remembered else R.string.security_sheet_done_unlock_match
     false -> R.string.security_sheet_done_unlock_mismatch
-    null -> R.string.security_sheet_done_unlock_detail
+    null -> if (remembered) R.string.security_sheet_done_unlock_remembered else R.string.security_sheet_done_unlock_detail
 }
 
 private fun SecurityAction.doneTitle(): Int = when (this) {

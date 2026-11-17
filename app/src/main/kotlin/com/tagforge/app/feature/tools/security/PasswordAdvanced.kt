@@ -57,7 +57,7 @@ fun PackField(form: SecurityForm, problem: FormProblem?, onChange: ((SecurityFor
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         SecretField(
             form.pack, { v -> onChange { it.copy(pack = v) } }, R.string.security_form_pack, form.mode, SecretKind.PACK,
-            isError = problem == FormProblem.PACK_INVALID, startVisible = true,
+            isError = problem == FormProblem.PACK_INVALID,
         )
         Text(stringResource(R.string.security_adv_pack_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -69,7 +69,7 @@ fun ExpectedPackField(form: SecurityForm, problem: FormProblem?, onChange: ((Sec
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         SecretField(
             form.expectedPack, { v -> onChange { it.copy(expectedPack = v) } }, R.string.security_adv_expected_pack, form.mode, SecretKind.PACK,
-            isError = problem == FormProblem.PACK_INVALID, startVisible = true,
+            isError = problem == FormProblem.PACK_INVALID,
         )
         Text(stringResource(R.string.security_adv_expected_pack_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }

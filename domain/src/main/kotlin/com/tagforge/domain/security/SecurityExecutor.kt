@@ -93,7 +93,19 @@ internal object SecurityExecutor {
         val maybeApplied = error is TagError.TagLost || error is TagError.Io || error is TagError.Timeout
         val authStep = step is PlanStep.Authenticate
         if (!maybeApplied && completed == 0 || authStep && completed == 0) return Outcome.Err(error)
-        return fail(SecurityFailure.Partial(plan.operation, error, completed, total))
+        val inFlight = step != null && !authStep && maybeApplied
+        val progress = PartialProgress.of(plan, completed, inFlightMayHaveLanded = inFlight)
+        return fail(
+            SecurityFailure.Partial(
+                operation = plan.operation,
+                cause = error,
+                completedWrites = completed,
+                totalWrites = total,
+                failedStep = if (step == null) null else completed,
+                protection = progress.protection,
+                passwordPage = progress.passwordPage,
+            ),
+        )
     }
 
     private fun fail(failure: SecurityFailure): TagResult<Nothing> = Outcome.Err(TagError.Security(failure))

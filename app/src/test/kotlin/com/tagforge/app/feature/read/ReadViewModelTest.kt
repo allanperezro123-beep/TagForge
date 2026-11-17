@@ -13,6 +13,7 @@ import com.tagforge.domain.fakes.InMemoryHistoryRepository
 import com.tagforge.domain.fakes.hex
 import com.tagforge.domain.ndef.NdefMessage
 import com.tagforge.domain.ndef.NdefRecord
+import com.tagforge.domain.ntag.NtagCommands
 import com.tagforge.domain.ntag.NtagModel
 import com.tagforge.domain.ports.TagSession
 import com.tagforge.domain.read.ReadFullTagUseCase
@@ -21,6 +22,9 @@ import com.tagforge.domain.scan.OperationKind
 import com.tagforge.domain.scan.OperationPhase
 import com.tagforge.domain.scan.ScanCoordinator
 import com.tagforge.domain.scan.TagOperation
+import com.tagforge.domain.security.Password
+import com.tagforge.domain.security.SessionCredentials
+import com.tagforge.domain.tag.TagTech
 import com.tagforge.domain.task.RingerMode
 import com.tagforge.domain.task.TaskAction
 import com.tagforge.domain.task.TaskError
@@ -46,8 +50,10 @@ import org.junit.After
 import org.junit.Before
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReadViewModelTest {
@@ -486,6 +492,76 @@ class ReadViewModelTest {
                 vm.onRunTask()
                 expectNoEvents()
             }
+        }
+    }
+
+    // ---- WU3: remembered credentials on Read --------------------------------------------------------------------
+
+    private fun protectedNtag(message: NdefMessage? = null): FakeNtag21x = FakeNtag21x(NtagModel.NTAG215).apply {
+        if (message != null) {
+            check(kotlinx.coroutines.runBlocking { FakeTagSession.ntag(this@apply).writeNdef(message) } is Outcome.Ok)
+        }
+        setPage(NtagModel.NTAG215.pwd, "12 34 56 78".hex())
+        setPage(NtagModel.NTAG215.pack, "AB CD 00 00".hex())
+        setPage(NtagModel.NTAG215.cfg1, "80 00 00 00".hex())
+        setPage(NtagModel.NTAG215.cfg0, "04 00 00 04".hex())
+    }
+
+    @Test
+    fun whenARememberedPasswordIsRejectedOnReadItIsForgottenAndReadReportsRejected() = runTest {
+        val store = SessionCredentials(FixedClock())
+        val coordinator = ScanCoordinator(this, StandardTestDispatcher(testScheduler), credentials = store)
+        val vm = viewModel(coordinator)
+        val tag = protectedNtag()
+        store.remember(tag.uid, Password.fromHex("00000001")!!)
+        vm.onVisible()
+
+        vm.uiState.test {
+            awaitItem()
+            coordinator.onTagDiscovered(FakeTagSession.ntag(tag, identified = false))
+            advanceUntilIdle()
+
+            val rejected = assertIs<ReadUiState.Protected>(expectMostRecentItem())
+            assertTrue(rejected.rejectedRemembered)
+            assertEquals(NtagModel.NTAG215, rejected.tag?.ntag)
+            assertNull(store.credentialFor(tag.uid), "the rejected password was forgotten")
+            assertEquals(1, tag.commandLog.count { it[0] == NtagCommands.PWD_AUTH })
+
+            tag.powerCycle()
+            coordinator.onTagDiscovered(FakeTagSession.ntag(tag, identified = false))
+            advanceUntilIdle()
+
+            val plainProtected = assertIs<ReadUiState.Protected>(expectMostRecentItem())
+            assertFalse(plainProtected.rejectedRemembered)
+            assertEquals(1, tag.commandLog.count { it[0] == NtagCommands.PWD_AUTH }, "never re-sent")
+        }
+    }
+
+    @Test
+    fun whenTheRightPasswordIsRememberedReadUnlocksAndShowsTheMessageWithoutNdefTech() = runTest {
+        val store = SessionCredentials(FixedClock())
+        val coordinator = ScanCoordinator(this, StandardTestDispatcher(testScheduler), credentials = store)
+        val vm = viewModel(coordinator)
+        val expected = NdefMessage(listOf(NdefRecord.text("secret note", "en")))
+        val tag = protectedNtag(expected)
+        store.remember(tag.uid, Password.fromHex("12345678")!!)
+        val noNdef = FakeTagSession(
+            FakeTagSession.ntag(tag, identified = false).info.copy(
+                techs = setOf(TagTech.NFC_A, TagTech.MIFARE_ULTRALIGHT),
+                ndef = null,
+            ),
+            tag,
+        )
+        vm.onVisible()
+
+        vm.uiState.test {
+            awaitItem()
+            coordinator.onTagDiscovered(noNdef)
+            advanceUntilIdle()
+
+            val success = assertIs<ReadUiState.Success>(expectMostRecentItem())
+            assertEquals(expected, success.scan.readout.message)
+            assertNull(success.scan.dump?.unreadable)
         }
     }
 }

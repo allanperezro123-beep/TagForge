@@ -17,6 +17,9 @@ enum class ReservedReason {
 
     /** A write when the chip model is not known, so reserved pages cannot be told from user pages. */
     CHIP_UNKNOWN,
+
+    /** An opcode the app does not know: it may change the tag for good (counter increment, vendor command). */
+    UNKNOWN_OPCODE,
 }
 
 enum class InvalidReason { EMPTY, BAD_LENGTH, PAGE_OUT_OF_RANGE }
@@ -25,10 +28,10 @@ sealed interface RawClass {
     /** Runs without any confirmation. */
     data object ReadClass : RawClass
 
-    /** Writes a user page (or is an unknown frame): needs the lightweight confirm. */
+    /** Writes a user page of a known chip (WRITE or COMPATIBILITY_WRITE): needs the lightweight confirm. */
     data object UserWrite : RawClass
 
-    /** Goes through NS-01: dry-run, typed UID confirmation, UID re-check. [page] is null for PWD_AUTH. */
+    /** Goes through NS-01: dry-run, typed UID confirmation, UID re-check. [page] is null for PWD_AUTH and for an unknown opcode. */
     data class Reserved(val page: Int?, val reason: ReservedReason) : RawClass
 
     data class Invalid(val reason: InvalidReason) : RawClass
@@ -74,7 +77,9 @@ object RawCommandGuard {
             NtagCommands.WRITE -> classifyWrite(frame, WRITE_LENGTH, model)
             NtagCommands.COMPATIBILITY_WRITE -> classifyWrite(frame, COMPAT_WRITE_LENGTH, model)
             NtagCommands.PWD_AUTH -> classifyAuth(frame, authLimit)
-            else -> RawClass.UserWrite
+            // The app cannot tell what an opcode it does not know does (a counter increment or a vendor command can be
+            // irreversible), so it gets the strongest confirmation there is.
+            else -> RawClass.Reserved(null, ReservedReason.UNKNOWN_OPCODE)
         }
     }
 

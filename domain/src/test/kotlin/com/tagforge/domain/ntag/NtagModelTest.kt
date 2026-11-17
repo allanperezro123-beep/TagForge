@@ -104,4 +104,11 @@ class NtagModelTest {
             assertEquals((model.userEnd - model.userStart + 1) * 4, model.userBytes)
         }
     }
+
+    @Test
+    fun auth0RangeRunsFromTheFirstUserPageToCfg0() {
+        assertEquals(4..41, NtagModel.NTAG213.auth0Range)
+        assertEquals(4..131, NtagModel.NTAG215.auth0Range)
+        assertEquals(4..227, NtagModel.NTAG216.auth0Range)
+    }
 }

@@ -28,6 +28,7 @@ class TagErrorTextTest {
         TagError.Unsupported(TagError.Unsupported.CLASSIC_TRAILER),
         TagError.Unsupported(TagError.Unsupported.CLASSIC_MANUFACTURER_BLOCK),
         TagError.Unsupported(TagError.Unsupported.FORMAT),
+        TagError.Unsupported(TagError.Unsupported.MAKE_READ_ONLY),
         TagError.SameTag,
         TagError.CapacityExceeded(required = 147, available = 137),
         TagError.AuthFailed(attemptsLeft = 2),

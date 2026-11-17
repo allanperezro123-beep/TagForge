@@ -30,7 +30,8 @@ import com.tagforge.domain.security.PasswordMode
 import com.tagforge.domain.security.SecretKind
 
 /**
- * One secret (password or PACK) typed as plain text by default. It shows a live counter ("3/4 characters"), explains in
+ * One secret (password or PACK), hidden as dots until the user taps Show (S6: never visible by default, no caller may
+ * force a real secret to start in the clear). It shows a live counter ("3/4 characters"), explains in
  * plain language what is wrong as soon as it is certain, and keeps the whole value visible at large font sizes.
  */
 @Composable

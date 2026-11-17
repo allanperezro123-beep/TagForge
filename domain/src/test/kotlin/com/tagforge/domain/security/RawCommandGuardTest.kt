@@ -73,9 +73,20 @@ class RawCommandGuardTest {
     }
 
     @Test
-    fun anythingElseIsAUserLevelRisk() {
-        assertEquals(RawClass.UserWrite, classify("50 00"))
-        assertEquals(RawClass.UserWrite, classify("00 11 22 33 44 55 66 77 88 99 AA BB CC DD EE FF"))
+    fun anOpcodeTheAppDoesNotKnowIsReservedBecauseItMayBeIrreversible() {
+        val unknown = RawClass.Reserved(null, ReservedReason.UNKNOWN_OPCODE)
+        for (frame in listOf("50 00", "00 11 22 33 44 55 66 77 88 99 AA BB CC DD EE FF", "FF", "A1 02", "C2 00 11")) {
+            assertEquals(unknown, classify(frame), frame)
+            assertEquals(unknown, classify(frame, model = null, authLimit = null), "$frame on an unidentified chip")
+        }
+    }
+
+    @Test
+    fun knownOpcodesAreNeverClassifiedAsUnknown() {
+        val known = listOf("30 04", "3A 04 07", "60", "39 02", "3C 00", "A2 10 01 02 03 04", "A0 10", "1B 12 34 56 78")
+        for (frame in known) {
+            assertEquals(false, (classify(frame) as? RawClass.Reserved)?.reason == ReservedReason.UNKNOWN_OPCODE, frame)
+        }
     }
 
     // ---- invalid input ---------------------------------------------------------------------------------------------
@@ -143,6 +154,29 @@ class RawCommandGuardTest {
         ).confirmed()
         val mismatch = RawCommandGuard.authorize(frame, ntag215, 0, advanced = true, plan = other)
         assertEquals(com.tagforge.domain.common.Outcome.Err(RawRefusal.NeedsTypedConfirmation), mismatch)
+    }
+
+    @Test
+    fun anUnknownOpcodeIsRefusedWithTheLightweightConfirmAndNeedsTheTypedPlanForThatExactFrame() {
+        val frame = "50 00".hex()
+
+        val light = RawCommandGuard.authorize(frame, ntag215, 0, advanced = true, lightweightFor = probed)
+        assertEquals(com.tagforge.domain.common.Outcome.Err(RawRefusal.NeedsTypedConfirmation), light)
+        assertEquals(
+            com.tagforge.domain.common.Outcome.Err(RawRefusal.NeedsTypedConfirmation),
+            RawCommandGuard.authorize(frame, ntag215, 0, advanced = true),
+        )
+
+        val other = SecurityPlan(SecurityOperation.RAW_WRITE, SPEC_UID, ntag215, listOf(PlanStep.Raw("50 01".hex())), setOf(IrreversibleEffect.RAW_UNKNOWN_COMMAND)).confirmed()
+        assertEquals(
+            com.tagforge.domain.common.Outcome.Err(RawRefusal.NeedsTypedConfirmation),
+            RawCommandGuard.authorize(frame, ntag215, 0, advanced = true, plan = other),
+            "a plan for another frame does not count",
+        )
+
+        val plan = SecurityPlan(SecurityOperation.RAW_WRITE, SPEC_UID, ntag215, listOf(PlanStep.Raw(frame)), setOf(IrreversibleEffect.RAW_UNKNOWN_COMMAND)).confirmed()
+        val ok = RawCommandGuard.authorize(frame, ntag215, 0, advanced = true, plan = plan)
+        assertEquals(frame, (ok as com.tagforge.domain.common.Outcome.Ok).value.frame)
     }
 
     @Test

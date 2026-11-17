@@ -6,9 +6,11 @@ import com.tagforge.domain.common.TagResult
 import com.tagforge.domain.fakes.FakeNtag21x
 import com.tagforge.domain.fakes.FakeTagSession
 import com.tagforge.domain.fakes.hex
+import com.tagforge.domain.ndef.NdefMessage
 import com.tagforge.domain.ntag.NtagModel
 import com.tagforge.domain.scan.TagOperation
 import com.tagforge.domain.tag.TagError
+import kotlinx.coroutines.runBlocking
 
 /** UID of the examples in the spec (NS-01): its last 4 hex characters are E5F6. */
 val SPEC_UID: Bytes = "04 A1 B2 C3 D4 E5 F6".hex()
@@ -16,6 +18,25 @@ val SPEC_UID: Bytes = "04 A1 B2 C3 D4 E5 F6".hex()
 /** A blank NTAG with the factory CFG0 `04 00 00 FF` of the spec fixtures. */
 fun specTag(model: NtagModel = NtagModel.NTAG215, uid: Bytes = SPEC_UID): FakeNtag21x =
     FakeNtag21x(model, uid).also { it.setPage(model.cfg0, "04 00 00 FF".hex()) }
+
+/** The password every [passwordProtectedTag] answers to; its PACK is `AB CD`. */
+val PROTECTED_TAG_PASSWORD: Password = Password.fromHex("12345678")!!
+
+/** A tag that holds [message] and is then protected from page 4 on (user area and configuration): reads too when [protectReads], else writes only. */
+fun passwordProtectedTag(
+    message: NdefMessage,
+    protectReads: Boolean = true,
+    model: NtagModel = NtagModel.NTAG215,
+    uid: Bytes = SPEC_UID,
+): FakeNtag21x {
+    val tag = specTag(model, uid)
+    check(runBlocking { FakeTagSession.ntag(tag).writeNdef(message) } is Outcome.Ok)
+    tag.setPage(model.pwd, "12 34 56 78".hex())
+    tag.setPage(model.pack, "AB CD 00 00".hex())
+    tag.setPage(model.cfg1, if (protectReads) "80 00 00 00".hex() else "00 00 00 00".hex())
+    tag.setPage(model.cfg0, "04 00 00 04".hex())
+    return tag
+}
 
 fun sessionOf(tag: FakeNtag21x): FakeTagSession = FakeTagSession.ntag(tag)
 

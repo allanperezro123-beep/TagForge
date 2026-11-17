@@ -110,7 +110,7 @@ class WriteNdefUseCase(
         val steps = Type2WritePlanner.plan(model, current, encoded, leading, area.ndefAreaFor(model))
             ?: return Outcome.Err(TagError.CapacityExceeded(encoded.size, NdefBudget.androidMaxSize(model)))
 
-        return Type2Io.execute(transceiver, steps)
+        return Type2Io.execute(transceiver, steps, model, area)
     }
 
     private suspend fun verify(session: TagSession, expected: Bytes): TagResult<WriteReport> {

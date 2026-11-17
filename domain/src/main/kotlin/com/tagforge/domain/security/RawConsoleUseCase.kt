@@ -94,7 +94,13 @@ class RawConsoleUseCase(private val command: RawCommand) : TagOperation<RawRespo
             else -> null
         }
 
-        private fun effectsOf(reserved: RawClass.Reserved, frame: Bytes): Set<IrreversibleEffect> = buildSet {
+        private fun effectsOf(reserved: RawClass.Reserved, frame: Bytes): Set<IrreversibleEffect> {
+            // Not a page write at all: say only what is true, that nobody can tell what this frame does.
+            if (reserved.reason == ReservedReason.UNKNOWN_OPCODE) return setOf(IrreversibleEffect.RAW_UNKNOWN_COMMAND)
+            return pageEffects(reserved, frame)
+        }
+
+        private fun pageEffects(reserved: RawClass.Reserved, frame: Bytes): Set<IrreversibleEffect> = buildSet {
             add(IrreversibleEffect.RAW_RESERVED_PAGE_WRITE)
             val payload = if (frame[0] == NtagCommands.WRITE) frame.slice(2) else Bytes.of(0, 0, 0, 0)
             when (reserved.reason) {

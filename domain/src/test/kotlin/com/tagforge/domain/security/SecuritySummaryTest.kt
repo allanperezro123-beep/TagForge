@@ -22,12 +22,28 @@ class SecuritySummaryTest {
 
     @Test
     fun aPartialFailureSaysHowFarItGotAndWhetherProtectionIsActive() {
-        val partial = TagError.Security(SecurityFailure.Partial(SecurityOperation.SET_PASSWORD, TagError.TagLost, 1, 4))
+        fun summary(protection: ProtectionState, page: PasswordPageState) = SecuritySummary.of(
+            SecurityOperation.SET_PASSWORD,
+            TagError.Security(SecurityFailure.Partial(SecurityOperation.SET_PASSWORD, TagError.TagLost, 1, 4, 1, protection, page)),
+        )
 
-        val summary = SecuritySummary.of(SecurityOperation.SET_PASSWORD, partial)
+        assertTrue(summary(ProtectionState.NOT_PROTECTED, PasswordPageState.CHANGED).contains("interrupted after 1 of 4 writes"))
+        assertTrue(summary(ProtectionState.NOT_PROTECTED, PasswordPageState.CHANGED).contains("protection is NOT active, password page already rewritten"))
+        assertTrue(summary(ProtectionState.NOT_PROTECTED, PasswordPageState.UNCHANGED).contains("protection is NOT active, password unchanged"))
+        assertTrue(summary(ProtectionState.PROTECTED, PasswordPageState.CHANGED).contains("protection is active"))
+        assertTrue(summary(ProtectionState.UNKNOWN, PasswordPageState.UNKNOWN).contains("protection state unknown"))
+    }
 
-        assertTrue(summary.contains("interrupted after 1 of 4 writes"), summary)
-        assertTrue(summary.contains("protection may NOT be active"), summary)
+    @Test
+    fun anInterruptedRemovalSaysWhetherTheTagIsOpenNow() {
+        fun summary(protection: ProtectionState) = SecuritySummary.of(
+            SecurityOperation.REMOVE_PASSWORD,
+            TagError.Security(SecurityFailure.Partial(SecurityOperation.REMOVE_PASSWORD, TagError.TagLost, 1, 4, 1, protection, PasswordPageState.UNCHANGED)),
+        )
+
+        assertTrue(summary(ProtectionState.NOT_PROTECTED).contains("protection removed, stored password not reset"))
+        assertTrue(summary(ProtectionState.PROTECTED).contains("protection still active"))
+        assertTrue(summary(ProtectionState.UNKNOWN).contains("protection state unknown"))
     }
 
     @Test
@@ -51,5 +67,14 @@ class SecuritySummaryTest {
         assertEquals(HistoryOutcome.FAILED_TAGLOST, HistoryOutcome.of(partial))
         assertEquals(HistoryOutcome.FAILED_AUTH, HistoryOutcome.of(TagError.Security(SecurityFailure.AuthExhausted)))
         assertEquals(HistoryOutcome.FAILED_OTHER, HistoryOutcome.of(TagError.Security(SecurityFailure.UidMismatch)))
+    }
+
+    @Test
+    fun aPackMismatchIsAnAuthenticationFailureThatNamesTheCloneSuspicion() {
+        assertEquals(HistoryOutcome.FAILED_AUTH, HistoryOutcome.of(TagError.Security(SecurityFailure.PackMismatch)))
+        assertEquals(
+            "Password protection set: failed (tag answered another PACK: possible clone)",
+            SecuritySummary.of(SecurityOperation.SET_PASSWORD, TagError.Security(SecurityFailure.PackMismatch)),
+        )
     }
 }

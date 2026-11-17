@@ -55,13 +55,13 @@ internal object SecurityPlans {
         }
     }
 
-    private fun password(form: SecurityForm): Password? = PasswordInput.password(form.mode, form.password).getOrNull()
+    fun password(form: SecurityForm): Password? = PasswordInput.password(form.mode, form.password).getOrNull()
 
-    private fun pack(form: SecurityForm): Bytes? = PasswordInput.parse(form.mode, SecretKind.PACK, form.pack).getOrNull()
+    fun pack(form: SecurityForm): Bytes? = PasswordInput.parse(form.mode, SecretKind.PACK, form.pack).getOrNull()
 
-    private fun expectedPack(form: SecurityForm): Bytes? = PasswordInput.parse(form.mode, SecretKind.PACK, form.expectedPack).getOrNull()
+    fun expectedPack(form: SecurityForm): Bytes? = PasswordInput.parse(form.mode, SecretKind.PACK, form.expectedPack).getOrNull()
 
-    private fun current(form: SecurityForm): Password? = PasswordInput.password(form.mode, form.currentPassword).getOrNull()
+    fun current(form: SecurityForm): Password? = PasswordInput.password(form.mode, form.currentPassword).getOrNull()
 
     /** The read that comes first: it gives the exact current content the dry-run is built from. */
     fun readOperation(form: SecurityForm): TagOperation<SecurityState> = ReadSecurityStateUseCase(current(form))

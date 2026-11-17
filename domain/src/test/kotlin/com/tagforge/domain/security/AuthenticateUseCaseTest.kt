@@ -96,11 +96,60 @@ class AuthenticateUseCaseTest {
     }
 
     @Test
-    fun tagLostDuringAuthenticationIsTagLost() = runTest {
-        val tag = protectedTag()
-        tag.failNext(TagError.TagLost)
+    fun aLinkErrorAroundPwdAuthIsAnUnknownOutcomeNotAPlainTagLost() = runTest {
+        for (error in listOf(TagError.TagLost, TagError.Io("Transceive failed"), TagError.Timeout)) {
+            val tag = protectedTag()
+            tag.failNext(error)
 
-        assertEquals(Outcome.Err(TagError.TagLost), AuthenticateUseCase(right).runOn(sessionOf(tag)))
+            assertEquals(SecurityFailure.AuthOutcomeUnknown, AuthenticateUseCase(right).runOn(sessionOf(tag)).securityFailure(), "$error")
+        }
+    }
+
+    @Test
+    fun aPhoneThatReportsTheNakOfAWrongPasswordAsADroppedLinkSendsOnePwdAuthAndSaysTheOutcomeIsUnknown() = runTest {
+        for (error in listOf(TagError.TagLost, TagError.Io("Transceive failed"), TagError.Timeout)) {
+            val tag = protectedTag(access = "83 00 00 00")
+            tag.dropLinkOnRefusedAuth = error
+
+            val failure = AuthenticateUseCase(wrong).runOn(sessionOf(tag)).securityFailure()
+
+            assertEquals(SecurityFailure.AuthOutcomeUnknown, failure, "$error")
+            assertEquals(1, tag.authFrames().size, "$error: the wrong password was sent once and never again")
+            assertEquals(1, tag.authFailures, "$error: the tag did count that attempt against AUTHLIM")
+        }
+    }
+
+    @Test
+    fun readingTheStateWithAPasswordNeverResendsItAfterADroppedLink() = runTest {
+        val tag = protectedTag()
+        tag.dropLinkOnRefusedAuth = TagError.TagLost
+
+        val result = ReadSecurityStateUseCase(wrong).runOn(sessionOf(tag))
+
+        assertEquals(SecurityFailure.AuthOutcomeUnknown, result.securityFailure())
+        assertEquals(1, tag.authFrames().size)
+    }
+
+    @Test
+    fun theLeadingAuthenticationOfAPlanIsNeverResentAndNothingIsWritten() = runTest {
+        val tag = protectedTag(access = "83 00 00 00")
+        val plan = ConfigLockUseCase.plan(stateOf(tag, right), ConfigLockRequest(lockConfig = true, currentPassword = wrong)).value()
+        tag.dropLinkOnRefusedAuth = TagError.TagLost
+
+        val failure = ConfigLockUseCase(plan.confirmed()).runOn(sessionOf(tag)).securityFailure()
+
+        assertEquals(SecurityFailure.AuthOutcomeUnknown, failure)
+        assertEquals(1, tag.authFrames().count { it == NtagCommands.pwdAuth(wrong.bytes) }, "the wrong password went out once")
+        assertEquals(emptyList(), tag.writeCommands)
+    }
+
+    @Test
+    fun theAttemptLimitProbeReportsTheChipSoTheFormCanBoundAuth0() = runTest {
+        for (chip in NtagModel.entries) {
+            val tag = specTag(chip)
+
+            assertEquals(chip, ReadAuthLimitUseCase().runOn(sessionOf(tag)).value().model)
+        }
     }
 
     @Test

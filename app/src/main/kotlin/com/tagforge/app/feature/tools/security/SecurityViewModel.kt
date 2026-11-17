@@ -3,17 +3,21 @@ package com.tagforge.app.feature.tools.security
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tagforge.app.infrastructure.nfc.NfcAvailability
+import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.common.Outcome
 import com.tagforge.domain.history.RecordHistoryUseCase
+import com.tagforge.domain.ntag.NtagModel
 import com.tagforge.domain.scan.ScanCoordinator
 import com.tagforge.domain.scan.ScanState
 import com.tagforge.domain.scan.TagOperation
 import com.tagforge.domain.security.ConfirmedPlan
+import com.tagforge.domain.security.Password
 import com.tagforge.domain.security.PasswordInput
 import com.tagforge.domain.security.PasswordMode
 import com.tagforge.domain.security.SecurityFailure
 import com.tagforge.domain.security.SecurityState
 import com.tagforge.domain.security.SecuritySummary
+import com.tagforge.domain.security.SessionCredentials
 import com.tagforge.domain.settings.AppSettings
 import com.tagforge.domain.tag.TagError
 import com.tagforge.domain.tag.TagInfo
@@ -40,6 +44,7 @@ class SecurityViewModel(
     private val recordHistory: RecordHistoryUseCase,
     availability: Flow<NfcAvailability>,
     settings: Flow<AppSettings>,
+    private val credentials: SessionCredentials? = null,
     internal val random: Random = SecureRandom().asKotlinRandom(),
 ) : ViewModel() {
 
@@ -57,19 +62,31 @@ class SecurityViewModel(
     init {
         viewModelScope.launch { availability.collect { value -> _state.update { it.copy(availability = value) } } }
         viewModelScope.launch { settings.collect { value -> _state.update { it.copy(advanced = value.advancedMode) } } }
+        credentials?.let { store ->
+            viewModelScope.launch { store.liveCount.collect { count -> _state.update { it.copy(rememberedCount = count) } } }
+        }
     }
 
     // ---- the form ------------------------------------------------------------------------------------------------
 
     fun onChoose(action: SecurityAction) {
         wipe()
-        _state.update { SecurityUiState(availability = it.availability, advanced = it.advanced, action = action, step = SecurityStep.FORM) }
+        val count = credentials?.rememberedUids()?.size ?: 0
+        _state.update {
+            SecurityUiState(availability = it.availability, advanced = it.advanced, rememberedCount = count, action = action, step = SecurityStep.FORM)
+        }
         if (action == SecurityAction.UNLOCK || action == SecurityAction.REMOVE_PASSWORD) armLimitProbe()
     }
 
     fun onFormChange(transform: (SecurityForm) -> SecurityForm) {
-        _state.update { it.copy(form = transform(it.form), problem = null, failure = null) }
+        _state.update { it.copy(form = transform(it.form), problem = null, failure = null).withAuth0Clamped() }
     }
+
+    /** The chip is known: AUTH0 may never leave its range (it must stay at or below CFG0, or the config stays writable). */
+    private fun SecurityUiState.withModel(chip: NtagModel): SecurityUiState = copy(model = chip).withAuth0Clamped()
+
+    private fun SecurityUiState.withAuth0Clamped(): SecurityUiState =
+        if (form.auth0 in auth0Range) this else copy(form = form.copy(auth0 = form.auth0.coerceIn(auth0Range)))
 
     /** Flips between plain text and hexadecimal, keeping every typed value that has a form in the other mode. */
     fun onModeChange(mode: PasswordMode) {
@@ -155,7 +172,8 @@ class SecurityViewModel(
             }
             SecurityStep.FORM -> {
                 wipe()
-                _state.update { SecurityUiState(availability = it.availability, advanced = it.advanced) }
+                val count = credentials?.rememberedUids()?.size ?: 0
+                _state.update { SecurityUiState(availability = it.availability, advanced = it.advanced, rememberedCount = count) }
                 true
             }
             SecurityStep.CHOOSE -> false
@@ -164,8 +182,10 @@ class SecurityViewModel(
 
     // ---- the sheet -------------------------------------------------------------------------------------------------
 
+    /** Only a failure that offered a retry may be re-armed: a wrong or unknown password attempt is never sent again from here. */
     fun onRetry() {
-        rerun?.invoke()
+        val sheet = _state.value.sheet as? SecuritySheet.Failure ?: return
+        if (sheet.canRetry) rerun?.invoke()
     }
 
     fun onSheetDismissed() {
@@ -174,6 +194,21 @@ class SecurityViewModel(
         armJob?.cancel()
         disarm()
         _state.update { it.copy(sheet = null) }
+    }
+
+    /** Refreshes the remembered credential count (drops expired entries) when the screen returns to view. */
+    fun onVisible() {
+        val count = credentials?.rememberedUids()?.size ?: return
+        _state.update { it.copy(rememberedCount = count) }
+    }
+
+    /** Clears every remembered tag password from memory immediately. */
+    fun onForgetRemembered() {
+        credentials?.forgetAll()
+        _state.update { state ->
+            val updatedSheet = (state.sheet as? SecuritySheet.Success)?.copy(remembered = false) ?: state.sheet
+            state.copy(rememberedCount = 0, sheet = updatedSheet)
+        }
     }
 
     /** The screen left the foreground: stop waiting for a tag, but never abort a tag that is being changed. */
@@ -210,52 +245,137 @@ class SecurityViewModel(
     private fun onTagRead(action: SecurityAction, form: SecurityForm, tagState: SecurityState) {
         val advanced = _state.value.advanced
         when (val planned = SecurityPlans.plan(action, form, tagState, advanced)) {
-            is Outcome.Err -> _state.update { it.copy(sheet = null, failure = planned.error, step = SecurityStep.FORM) }
+            is Outcome.Err -> _state.update { it.copy(sheet = null, failure = planned.error, step = SecurityStep.FORM).withModel(tagState.model) }
             is Outcome.Ok -> _state.update {
                 it.copy(sheet = null, failure = null, plan = planned.value, typed = "", understood = false, step = SecurityStep.DRY_RUN)
+                    .withModel(tagState.model)
             }
         }
     }
 
     private fun armExecute(action: SecurityAction) {
         val plan = confirmed ?: return
+        val form = _state.value.form
+        val newPassword = if (action == SecurityAction.SET_PASSWORD) SecurityPlans.password(form) else null
+        val newPack = if (action == SecurityAction.SET_PASSWORD) SecurityPlans.pack(form) else null
         val operation = SecurityPlans.execution(action, plan)
         rerun = { armExecute(action) }
-        runExecution(operation, action, plan)
+        runExecution(operation, action, plan, newPassword, newPack)
     }
 
     private fun armLimitProbe() {
         run(SecurityStage.READ, SecurityPlans.limitProbe()) { scan ->
-            _state.update { it.copy(sheet = null, authLimit = scan.value) }
+            _state.update { state ->
+                val probed = state.copy(sheet = null, authLimit = scan.value)
+                scan.value.model?.let { chip -> probed.withModel(chip) } ?: probed
+            }
         }
         rerun = { armLimitProbe() }
     }
 
     private fun armUnlock() {
         val form = _state.value.form
-        run(SecurityStage.EXECUTE, SecurityPlans.authenticate(form)) { scan ->
+        val typedPassword = SecurityPlans.current(form)
+        val expectedPack = SecurityPlans.expectedPack(form)
+        run(
+            stage = SecurityStage.EXECUTE,
+            operation = SecurityPlans.authenticate(form),
+            onFailure = { scan ->
+                val uid = scan.tag?.uid
+                if (uid != null && isAuthRejection(scan.error)) credentials?.forget(uid)
+            },
+        ) { scan ->
             val report = scan.value
-            _state.update { it.copy(sheet = SecuritySheet.Success(SecurityAction.UNLOCK, report.pack, report.packMatches), form = SecurityForm()) }
+            val uid = scan.tag.uid
+            val remembered = if (report.packMatches == false) {
+                credentials?.forget(uid)
+                false
+            } else if (credentials != null && typedPassword != null && form.rememberForSession) {
+                credentials.remember(uid, typedPassword, expectedPack)
+                true
+            } else {
+                false
+            }
+            _state.update {
+                it.copy(
+                    sheet = SecuritySheet.Success(SecurityAction.UNLOCK, report.pack, report.packMatches, remembered = remembered),
+                    form = SecurityForm(),
+                    rememberedCount = credentials?.rememberedUids()?.size ?: it.rememberedCount,
+                )
+            }
             eventChannel.trySend(SecurityEvent.Succeeded)
         }
         rerun = { onNext() }
     }
 
+    private fun isAuthRejection(error: TagError): Boolean =
+        error is TagError.AuthFailed ||
+            error == TagError.Security(SecurityFailure.AuthExhausted) ||
+            error == TagError.Security(SecurityFailure.AuthOutcomeUnknown)
+
     // ---- running ---------------------------------------------------------------------------------------------------
 
-    private fun <T> runExecution(operation: TagOperation<T>, action: SecurityAction, plan: ConfirmedPlan) {
-        run(SecurityStage.EXECUTE, operation, onFailure = { scan -> recordFailure(plan, scan.tag, scan.error) }) { scan ->
+    private fun <T> runExecution(
+        operation: TagOperation<T>,
+        action: SecurityAction,
+        plan: ConfirmedPlan,
+        newPassword: Password?,
+        newPack: Bytes?,
+    ) {
+        run(
+            stage = SecurityStage.EXECUTE,
+            operation = operation,
+            onFailure = { scan ->
+                recordFailure(plan, scan.tag, scan.error)
+                if ((action == SecurityAction.SET_PASSWORD || action == SecurityAction.REMOVE_PASSWORD) &&
+                    shouldClearCredential(scan.error, plan.plan.uid, scan.tag?.uid)
+                ) {
+                    credentials?.forget(plan.plan.uid)
+                }
+            },
+        ) { scan ->
             recordHistory.recordSecurity(scan.tag, SecuritySummary.of(plan.plan.operation, null), null)
+            val remembered = updateCredentialsAfterChange(action, scan.tag.uid, newPassword, newPack)
             wipe()
             _state.update {
                 SecurityUiState(
                     availability = it.availability,
                     advanced = it.advanced,
-                    sheet = SecuritySheet.Success(action),
+                    rememberedCount = credentials?.rememberedUids()?.size ?: it.rememberedCount,
+                    sheet = SecuritySheet.Success(action, remembered = remembered),
                 )
             }
             eventChannel.trySend(SecurityEvent.Succeeded)
         }
+    }
+
+    private fun updateCredentialsAfterChange(
+        action: SecurityAction,
+        uid: Bytes,
+        newPassword: Password?,
+        newPack: Bytes?,
+    ): Boolean = when (action) {
+        SecurityAction.SET_PASSWORD -> {
+            credentials?.forget(uid)
+            if (credentials != null && newPassword != null) {
+                credentials.remember(uid, newPassword, newPack)
+                true
+            } else {
+                false
+            }
+        }
+        SecurityAction.REMOVE_PASSWORD -> {
+            credentials?.forget(uid)
+            false
+        }
+        else -> false
+    }
+
+    private fun shouldClearCredential(error: TagError, targetUid: Bytes, tappedUid: Bytes?): Boolean {
+        if (tappedUid != targetUid) return false
+        if (isAuthRejection(error)) return true
+        val failure = (error as? TagError.Security)?.failure ?: return false
+        return failure is SecurityFailure.Partial || failure is SecurityFailure.NotVerified
     }
 
     private suspend fun recordFailure(plan: ConfirmedPlan, tag: TagInfo?, error: TagError) {

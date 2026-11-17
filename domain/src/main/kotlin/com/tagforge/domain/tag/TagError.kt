@@ -35,6 +35,9 @@ sealed interface TagError {
 
             /** The tag cannot be formatted for NDEF with the platform APIs. */
             const val FORMAT = "format"
+
+            /** The tag has no NDEF technology, or the platform says it cannot be made read-only through it. */
+            const val MAKE_READ_ONLY = "makeReadOnly"
         }
     }
     data class CapacityExceeded(val required: Int, val available: Int) : TagError

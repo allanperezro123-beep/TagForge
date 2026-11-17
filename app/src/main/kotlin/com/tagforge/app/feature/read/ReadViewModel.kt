@@ -115,7 +115,8 @@ class ReadViewModel(
             is ScanState.Success -> ReadUiState.Success(scan.value, taskOn(scan.value))
             is ScanState.Failure -> when (scan.error) {
                 TagError.Cancelled -> ReadUiState.Waiting
-                TagError.AuthRequired -> ReadUiState.Protected(scan.tag)
+                TagError.AuthRequired -> ReadUiState.Protected(scan.tag, rejectedRemembered = false)
+                is TagError.AuthFailed -> ReadUiState.Protected(scan.tag, rejectedRemembered = true)
                 else -> ReadUiState.Error(scan.error, scan.tag)
             }
         }

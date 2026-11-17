@@ -164,6 +164,38 @@ class RawConsoleUseCaseTest {
         assertEquals(1, tag.commandLog.count { it[0] == 0x1B })
     }
 
+    @Test
+    fun anUnknownOpcodeGoesThroughTheTypedProtocolAsASingleCommandPlan() = runTest {
+        val tag = specTag()
+        val frame = "50 00".hex()
+
+        val plan = RawConsoleUseCase.plan(frame, stateOf(tag)).value()
+
+        assertEquals(listOf(PlanStep.Raw(frame)), plan.steps)
+        assertEquals(listOf(frame), plan.commands)
+        assertEquals(setOf(IrreversibleEffect.RAW_UNKNOWN_COMMAND), plan.effects)
+        val line = plan.dryRun().single()
+        assertEquals("50 00", line.commandHex)
+        assertEquals(-1, line.page, "the second byte of an unknown frame is not a page number")
+        assertEquals(null, line.region)
+        assertEquals(null, plan.confirm("0000"), "the wrong text keeps Confirm disabled")
+        assertEquals(0, tag.commandLog.count { it[0] == 0x50 }, "nothing was sent while planning")
+    }
+
+    @Test
+    fun aConfirmedUnknownOpcodeReachesOnlyTheTagItWasConfirmedFor() = runTest {
+        val tag = specTag()
+        val frame = "50 00".hex()
+        val command = authorize(tag, "50 00", plan = RawConsoleUseCase.plan(frame, stateOf(tag)).value().confirmed())
+
+        val other = specTag(uid = "04 A1 B2 C3 D4 E5 F7".hex())
+        assertEquals(SecurityFailure.UidMismatch, RawConsoleUseCase(command).runOn(sessionOf(other)).securityFailure())
+        assertTrue(other.commandLog.isEmpty())
+
+        send(tag, command)
+        assertEquals(1, tag.commandLog.count { it == frame }, "the confirmed frame was sent once to the confirmed tag")
+    }
+
     // ---- G4: a vanished tag ---------------------------------------------------------------------------------------
 
     @Test

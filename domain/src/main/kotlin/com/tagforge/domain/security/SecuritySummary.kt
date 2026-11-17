@@ -18,13 +18,23 @@ object SecuritySummary {
         }
         if (error == null) return what
         val partial = (error as? TagError.Security)?.failure as? SecurityFailure.Partial
-        if (partial != null) return "$what: interrupted after ${partial.completedWrites} of ${partial.totalWrites} writes; ${consequence(operation)}"
+        if (partial != null) return "$what: interrupted after ${partial.completedWrites} of ${partial.totalWrites} writes; ${consequence(partial)}"
         return "$what: failed (${reason(error)})"
     }
 
-    private fun consequence(operation: SecurityOperation): String = when (operation) {
-        SecurityOperation.SET_PASSWORD -> "protection may NOT be active, retry with the same password"
-        SecurityOperation.REMOVE_PASSWORD -> "protection may be partly removed, authenticate and retry"
+    private fun consequence(partial: SecurityFailure.Partial): String = when (partial.operation) {
+        SecurityOperation.SET_PASSWORD -> when (partial.protection) {
+            ProtectionState.NOT_PROTECTED ->
+                if (partial.passwordPage == PasswordPageState.UNCHANGED) "protection is NOT active, password unchanged, run it again"
+                else "protection is NOT active, password page already rewritten, run it again with the same password"
+            ProtectionState.PROTECTED -> "protection is active, check which password the tag accepts"
+            ProtectionState.UNKNOWN -> "protection state unknown, re-scan to read the real state"
+        }
+        SecurityOperation.REMOVE_PASSWORD -> when (partial.protection) {
+            ProtectionState.NOT_PROTECTED -> "protection removed, stored password not reset"
+            ProtectionState.PROTECTED -> "protection still active, authenticate and retry"
+            ProtectionState.UNKNOWN -> "protection state unknown, re-scan to read the real state"
+        }
         SecurityOperation.LOCK -> "the lock may be partially applied, re-scan to read the real state"
         SecurityOperation.CONFIG_LOCK, SecurityOperation.RAW_WRITE -> "the change may be partially applied, re-scan to check"
     }
@@ -39,6 +49,8 @@ object SecuritySummary {
             SecurityFailure.UidMismatch -> "UID mismatch"
             SecurityFailure.ConfigLocked, SecurityFailure.Unremovable -> "configuration locked"
             SecurityFailure.AuthExhausted -> "attempt limit reached"
+            SecurityFailure.AuthOutcomeUnknown -> "link dropped after the password: the attempt may have counted"
+            SecurityFailure.PackMismatch -> "tag answered another PACK: possible clone"
             SecurityFailure.AdvancedRequired -> "Advanced mode required"
             SecurityFailure.StateChanged -> "tag changed since planning"
             is SecurityFailure.NotVerified -> "not verified"

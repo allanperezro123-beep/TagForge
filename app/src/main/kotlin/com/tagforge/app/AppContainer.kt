@@ -48,6 +48,7 @@ import com.tagforge.domain.ports.TemplateRepository
 import com.tagforge.domain.read.ReadMemoryUseCase
 import com.tagforge.domain.read.ReadTagUseCase
 import com.tagforge.domain.scan.ScanCoordinator
+import com.tagforge.domain.security.SessionCredentials
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -80,9 +81,14 @@ class AppContainer(context: Context) {
     /** The secret that lets only our own pinned shortcuts arm a write on open (exported MainActivity, W4). */
     val shortcutNonceStore = ShortcutNonceStore(appContext.settingsDataStore)
 
+    val clock: Clock = Clock.System
+
     val ndefCodec: NdefCodec = DefaultNdefCodec
 
-    val scanCoordinator = ScanCoordinator(applicationScope, dispatchers.io)
+    /** In-memory passwords unlocked in this process (10-minute TTL, cleared on close, never persisted). */
+    val sessionCredentials = SessionCredentials(clock)
+
+    val scanCoordinator = ScanCoordinator(applicationScope, dispatchers.io, credentials = sessionCredentials)
 
     /** Opened lazily: the first screen that needs history or templates pays for it, not app start. */
     private val database: TagForgeDatabase by lazy { TagForgeDatabase.create(appContext) }
@@ -94,8 +100,6 @@ class AppContainer(context: Context) {
 
     /** Backup export and all-or-nothing import (HT-04). */
     val exchangeStore: ExchangeStore by lazy { RoomExchangeStore(database) }
-
-    val clock: Clock = Clock.System
 
     /** Live grants and hardware: feeds the feasibility matrix and the Permission Center. */
     val deviceFacts = AndroidDeviceFacts(appContext)

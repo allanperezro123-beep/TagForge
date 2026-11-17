@@ -46,6 +46,30 @@ class LockTagUseCaseTest {
         assertEquals(SecurityFailure.CannotMakeReadOnly, LockTagUseCase.plan(stuck, LockRequest(LockScope.NDEF_READ_ONLY, advanced = true)).failure())
     }
 
+    @Test
+    fun aTagWithoutTheNdefTechnologyCannotBeMadeReadOnlyThroughAndroidAndIsRefusedBeforeAnything() = runTest {
+        val tag = specTag()
+        val state = stateOf(tag)
+        val noNdef = state.copy(info = state.info.copy(ndef = null))
+
+        assertEquals(SecurityFailure.CannotMakeReadOnly, LockTagUseCase.plan(noNdef, LockRequest(LockScope.NDEF_READ_ONLY, advanced = false)).failure())
+        assertEquals(emptyList(), tag.writeCommands)
+    }
+
+    @Test
+    fun aPlatformRefusalToMakeReadOnlyIsNeverASuccessAndCarriesTheTypedError() = runTest {
+        val tag = specTag()
+        val planned = plan(tag, LockScope.NDEF_READ_ONLY, advanced = false).value()
+        val refusing = object : com.tagforge.domain.ports.TagSession by sessionOf(tag) {
+            override suspend fun makeReadOnly(): com.tagforge.domain.common.TagResult<Unit> = Outcome.Err(TagError.Security(SecurityFailure.CannotMakeReadOnly))
+        }
+
+        val failure = LockTagUseCase(planned.confirmed()).execute(refusing) { }.securityFailure()
+
+        assertEquals(SecurityFailure.CannotMakeReadOnly, failure)
+        assertTrue(sessionOf(tag).info.ndef!!.isWritable, "nothing changed")
+    }
+
     // ---- raw locks are Advanced only ------------------------------------------------------------------------------------
 
     @Test

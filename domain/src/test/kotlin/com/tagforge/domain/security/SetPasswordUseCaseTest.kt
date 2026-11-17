@@ -136,13 +136,38 @@ class SetPasswordUseCaseTest {
     }
 
     @Test
-    fun auth0MustProtectTheUserAreaAndThePasswordPage() = runTest {
+    fun auth0MustProtectTheUserAreaAndTheConfigurationPages() = runTest {
         val tag = specTag()
         val state = stateOf(tag)
 
         assertEquals(SecurityFailure.Auth0OutOfRange, SetPasswordUseCase.plan(state, request.copy(auth0 = 3)).failure())
-        assertEquals(SecurityFailure.Auth0OutOfRange, SetPasswordUseCase.plan(state, request.copy(auth0 = model.pwd + 1)).failure())
-        assertTrue(SetPasswordUseCase.plan(state, request.copy(auth0 = model.pwd)) is Outcome.Ok)
+        assertEquals(SecurityFailure.Auth0OutOfRange, SetPasswordUseCase.plan(state, request.copy(auth0 = model.cfg0 + 1)).failure())
+        assertEquals(SecurityFailure.Auth0OutOfRange, SetPasswordUseCase.plan(state, request.copy(auth0 = model.pwd)).failure(), "PWD page: CFG0 and CFG1 would stay writable")
+        assertTrue(SetPasswordUseCase.plan(state, request.copy(auth0 = model.cfg0)) is Outcome.Ok)
+    }
+
+    @Test
+    fun auth0BoundaryIsCfg0ForEveryChip() = runTest {
+        for (chip in NtagModel.entries) {
+            val state = stateOf(specTag(chip))
+
+            assertTrue(SetPasswordUseCase.plan(state, request.copy(auth0 = chip.userStart)) is Outcome.Ok, "$chip first user page")
+            assertTrue(SetPasswordUseCase.plan(state, request.copy(auth0 = chip.cfg0)) is Outcome.Ok, "$chip cfg0 is accepted")
+            assertEquals(SecurityFailure.Auth0OutOfRange, SetPasswordUseCase.plan(state, request.copy(auth0 = chip.cfg0 + 1)).failure(), "$chip cfg0+1 is refused")
+            assertEquals(SecurityFailure.Auth0OutOfRange, SetPasswordUseCase.plan(state, request.copy(auth0 = 0xFF)).failure(), "$chip FFh would disable protection")
+        }
+    }
+
+    @Test
+    fun auth0AtCfg0LeavesTheConfigurationBehindThePassword() = runTest {
+        val tag = specTag()
+        val plan = plan(tag, request.copy(auth0 = model.cfg0), stateOf(tag))
+
+        execute(tag, plan)
+        tag.powerCycle()
+
+        assertEquals(Bytes.of(0x00), tag.send(NtagCommands.write(model.cfg0, "04 00 00 FF".hex())), "CFG0 can no longer be rewritten without the password")
+        assertEquals(Bytes.of(0x00), tag.send(NtagCommands.write(model.cfg1, "00 00 00 00".hex())), "CFG1 can no longer be rewritten without the password")
     }
 
     // ---- refusals ----------------------------------------------------------------------------------------------------
@@ -192,7 +217,13 @@ class SetPasswordUseCaseTest {
 
         val failure = execute(tag, plan).securityFailure()
 
-        assertEquals(SecurityFailure.Partial(SecurityOperation.SET_PASSWORD, TagError.TagLost, completedWrites = 1, totalWrites = 4), failure)
+        assertEquals(
+            SecurityFailure.Partial(
+                SecurityOperation.SET_PASSWORD, TagError.TagLost, completedWrites = 1, totalWrites = 4,
+                failedStep = 1, protection = ProtectionState.NOT_PROTECTED, passwordPage = PasswordPageState.CHANGED,
+            ),
+            failure,
+        )
         assertEquals(0xFF, tag.page(model.cfg0)[3], "AUTH0 is written LAST, so protection is NOT active")
         assertEquals("12 34 56 78".hex(), tag.page(model.pwd))
     }

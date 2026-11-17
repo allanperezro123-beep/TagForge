@@ -45,10 +45,22 @@ sealed interface SecurityFailure {
     /** There is no password protection to remove or authenticate against. */
     data object NotProtected : SecurityFailure
 
+    /**
+     * The link dropped right after a PWD_AUTH was sent: the tag may have refused the password and counted the attempt
+     * against AUTHLIM, or accepted it. The password is never sent again automatically; the user must check it first.
+     */
+    data object AuthOutcomeUnknown : SecurityFailure
+
+    /**
+     * The tag accepted the remembered password but answered a PACK other than the one stored with it: it may be a clone of
+     * the tag the user unlocked. The password is forgotten and nothing else is sent to this tag.
+     */
+    data object PackMismatch : SecurityFailure
+
     /** The tag is password protected and the request did not carry the current password. */
     data object PasswordRequired : SecurityFailure
 
-    /** AUTH0 must lie between the first user page and the PWD page, so the password page itself is protected. */
+    /** AUTH0 must lie between the first user page and CFG0, so the configuration (and the password pages after it) stay behind the password. */
     data object Auth0OutOfRange : SecurityFailure
 
     /** The platform says this tag cannot be made read-only through the NDEF API. */
@@ -72,8 +84,20 @@ sealed interface SecurityFailure {
         val cause: TagError,
         val completedWrites: Int,
         val totalWrites: Int,
+        /** 0-based index (among the plan's writes) of the write that failed; null when every write went through and the read-back failed. */
+        val failedStep: Int? = completedWrites,
+        /** Whether password protection is active on the tag now, worked out from the plan: set-password writes AUTH0 last, removal first. */
+        val protection: ProtectionState = ProtectionState.UNKNOWN,
+        /** Whether the PWD page (the stored password) was rewritten. UNCHANGED for the operations whose plan never writes it. */
+        val passwordPage: PasswordPageState = PasswordPageState.UNCHANGED,
     ) : SecurityFailure
 
     /** Every write went through but the read-back did not show the expected result. */
     data class NotVerified(val check: Check) : SecurityFailure
 }
+
+/** Is password protection active on the tag after an interrupted run? [UNKNOWN] when the write that decides it was in flight. */
+enum class ProtectionState { NOT_PROTECTED, PROTECTED, UNKNOWN }
+
+/** Was the PWD page rewritten? [UNKNOWN] when that very write was in flight when the link dropped. */
+enum class PasswordPageState { UNCHANGED, CHANGED, UNKNOWN }

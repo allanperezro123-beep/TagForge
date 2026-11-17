@@ -2,6 +2,7 @@ package com.tagforge.app.feature.tools.security
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -16,6 +17,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -30,7 +32,9 @@ import com.tagforge.app.R
 fun SecurityChooseList(
     advanced: Boolean,
     enabled: Boolean,
+    rememberedCount: Int,
     onChoose: (SecurityAction) -> Unit,
+    onForgetRemembered: () -> Unit,
     onOpenSignature: () -> Unit,
     onOpenConsole: () -> Unit,
     modifier: Modifier = Modifier,
@@ -42,6 +46,7 @@ fun SecurityChooseList(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(16.dp),
         )
+        SessionCredentialsBanner(rememberedCount, onForgetRemembered)
         HubEntry(Icons.Outlined.Password, R.string.security_action_set_password, R.string.security_action_set_password_summary, enabled) { onChoose(SecurityAction.SET_PASSWORD) }
         HubEntry(Icons.Outlined.LockOpen, R.string.security_action_unlock, R.string.security_action_unlock_summary, enabled) { onChoose(SecurityAction.UNLOCK) }
         HubEntry(Icons.Outlined.VerifiedUser, R.string.security_action_remove_password, R.string.security_action_remove_password_summary, enabled, danger = true) { onChoose(SecurityAction.REMOVE_PASSWORD) }
@@ -50,6 +55,27 @@ fun SecurityChooseList(
         HubEntry(Icons.Outlined.Fingerprint, R.string.security_action_signature, R.string.security_action_signature_summary, true, onClick = onOpenSignature)
         if (advanced) {
             HubEntry(Icons.Outlined.Terminal, R.string.security_action_console, R.string.security_action_console_summary, true, onClick = onOpenConsole)
+        }
+    }
+}
+
+@Composable
+private fun SessionCredentialsBanner(rememberedCount: Int, onForgetRemembered: () -> Unit) {
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            stringResource(R.string.security_remembered_count, rememberedCount),
+            style = MaterialTheme.typography.labelLarge,
+        )
+        Text(
+            stringResource(R.string.security_unlock_memory_note),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        OutlinedButton(onClick = onForgetRemembered, enabled = rememberedCount > 0) {
+            Text(stringResource(R.string.security_forget_password))
         }
     }
 }

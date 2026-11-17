@@ -3,6 +3,8 @@ package com.tagforge.app.ui.text
 import com.tagforge.app.R
 import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.security.Check
+import com.tagforge.domain.security.PasswordPageState
+import com.tagforge.domain.security.ProtectionState
 import com.tagforge.domain.security.SecurityFailure
 import com.tagforge.domain.security.SecurityOperation
 import com.tagforge.domain.tag.TagError
@@ -21,6 +23,8 @@ class SecurityErrorTextTest {
         SecurityFailure.ConfigLocked,
         SecurityFailure.Unremovable,
         SecurityFailure.AuthExhausted,
+        SecurityFailure.AuthOutcomeUnknown,
+        SecurityFailure.PackMismatch,
         SecurityFailure.AdvancedRequired,
         SecurityFailure.UnsupportedChip,
         SecurityFailure.NotProtected,
@@ -37,6 +41,16 @@ class SecurityErrorTextTest {
         SecurityFailure.Partial(SecurityOperation.CONFIG_LOCK, TagError.TagLost, 0, 1),
         SecurityFailure.Partial(SecurityOperation.RAW_WRITE, TagError.Io(null), 0, 1),
     )
+
+    private fun partial(operation: SecurityOperation, protection: ProtectionState, page: PasswordPageState, completed: Int = 1) =
+        SecurityFailure.Partial(operation, TagError.TagLost, completed, 4, failedStep = completed, protection = protection, passwordPage = page)
+
+    private val everyPartialVariant: List<SecurityFailure> = buildList {
+        for (protection in ProtectionState.entries) for (page in PasswordPageState.entries) {
+            add(partial(SecurityOperation.SET_PASSWORD, protection, page))
+            add(partial(SecurityOperation.REMOVE_PASSWORD, protection, page))
+        }
+    }
 
     private fun stringsOf(dir: String): Map<String, String> {
         val file = listOf(File("src/main/res/$dir/strings.xml"), File("app/src/main/res/$dir/strings.xml")).first { it.isFile }
@@ -70,6 +84,61 @@ class SecurityErrorTextTest {
             assertEquals(text.args.size, placeholderCount(en.getValue(key)), "$key (en) placeholders")
             assertEquals(text.args.size, placeholderCount(es.getValue(key)), "$key (es) placeholders")
         }
+    }
+
+    @Test
+    fun everyPartialSetOrRemoveVariantHasATextInBothLanguagesWithItsPlaceholders() {
+        val en = stringsOf("values")
+        val es = stringsOf("values-es")
+        for (failure in everyPartialVariant) {
+            val text = SecurityErrorText.of(failure)
+            val key = assertNotNull(keyNameOf(text.message), "no R.string for $failure")
+            assertTrue(key in en && key in es, "$key missing in a locale")
+            assertEquals(2, placeholderCount(en.getValue(key)), "$key (en) placeholders")
+            assertEquals(2, placeholderCount(es.getValue(key)), "$key (es) placeholders")
+        }
+    }
+
+    @Test
+    fun aSetPasswordInterruptionSaysWhetherTheTagIsProtectedAndWhetherThePasswordPageChanged() {
+        fun key(protection: ProtectionState, page: PasswordPageState) =
+            keyNameOf(SecurityErrorText.of(partial(SecurityOperation.SET_PASSWORD, protection, page)).message)
+
+        assertEquals("error_sec_partial_set_not_protected_changed", key(ProtectionState.NOT_PROTECTED, PasswordPageState.CHANGED))
+        assertEquals("error_sec_partial_set_not_protected", key(ProtectionState.NOT_PROTECTED, PasswordPageState.UNCHANGED))
+        assertEquals("error_sec_partial_set_not_protected_maybe", key(ProtectionState.NOT_PROTECTED, PasswordPageState.UNKNOWN))
+        assertEquals("error_sec_partial_set_protected", key(ProtectionState.PROTECTED, PasswordPageState.CHANGED))
+        assertEquals("error_sec_partial_set_password", key(ProtectionState.UNKNOWN, PasswordPageState.CHANGED))
+    }
+
+    @Test
+    fun aRemovalInterruptionSaysWhetherTheTagIsStillProtected() {
+        fun key(protection: ProtectionState) =
+            keyNameOf(SecurityErrorText.of(partial(SecurityOperation.REMOVE_PASSWORD, protection, PasswordPageState.UNCHANGED)).message)
+
+        assertEquals("error_sec_partial_remove_open", key(ProtectionState.NOT_PROTECTED))
+        assertEquals("error_sec_partial_remove_still_protected", key(ProtectionState.PROTECTED))
+        assertEquals("error_sec_partial_remove", key(ProtectionState.UNKNOWN))
+    }
+
+    @Test
+    fun anUnknownAuthOutcomeSaysTheAttemptMayHaveCountedAndTellsToCheckThePassword() {
+        val text = SecurityErrorText.of(SecurityFailure.AuthOutcomeUnknown)
+        val key = assertNotNull(keyNameOf(text.message))
+
+        assertEquals("error_sec_auth_outcome_unknown", key)
+        assertTrue(stringsOf("values").getValue(key).contains("may already count"), "EN says the attempt may have counted")
+        assertTrue(stringsOf("values-es").getValue(key).contains("ya cuente"), "ES says the attempt may have counted")
+    }
+
+    @Test
+    fun aPackMismatchSaysItMayBeACopyAndWasForgotten() {
+        val text = SecurityErrorText.of(SecurityFailure.PackMismatch)
+        val key = assertNotNull(keyNameOf(text.message))
+
+        assertEquals("error_sec_pack_mismatch", key)
+        assertTrue("forgotten" in stringsOf("values").getValue(key).lowercase(), "EN says it was forgotten")
+        assertTrue("olvid" in stringsOf("values-es").getValue(key).lowercase(), "ES says it was forgotten")
     }
 
     @Test

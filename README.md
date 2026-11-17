@@ -50,10 +50,14 @@ Se integra armónicamente como la aplicación compañera en campo para la plataf
 - **Generador de QR Wi-Fi:** Generación instantánea de códigos QR vectoriales para acceso de invitados.
 
 ### 4. 🛡️ Suite de Seguridad y Auditoría de Tags
-- **Protección por Contraseña:** Configuración y verificación de llaves `PWD` (32 bits) y acuses de recibo `PACK` (16 bits) en chips NTAG21x.
+- **Protección por Contraseña:** Configuración, desbloqueo y verificación de llaves `PWD` (32 bits) y acuses de recibo `PACK` (16 bits) en chips NTAG21x.
+- **Desbloqueo en Sesión (solo en memoria):** Al desbloquear o asignar una contraseña, la credencial se recuerda en RAM únicamente para ese UID durante un máximo de 10 minutos (y se borra al cerrar la app, con el botón *Olvidar contraseña* o si la etiqueta la rechaza).
+- **Aviso de seguridad de la contraseña recordada:** `PWD_AUTH` envía la contraseña **en claro por el aire**. La credencial recordada solo se envía a una etiqueta con el mismo UID, dentro de una operación iniciada por el usuario (leer, escribir, borrar, volcar, clonar), con un único intento y sin reintentos automáticos; una etiqueta con UID clonado podría capturarla, y por eso la caducidad es corta y el almacén vive solo en memoria. Si el PACK recibido no coincide con el esperado, la contraseña se olvida y la operación se detiene.
 - **Generador Criptográfico Seguro:** Generación aleatoria de contraseñas de grado industrial basada en `SecureRandom`.
 - **Protección de Datos Locales:** 
-  - Prevención de capturas de pantalla (`FLAG_SECURE`) en todas las interfaces de gestión de claves y contraseñas.
+  - Bloqueo de capturas de pantalla, grabación y miniatura de recientes (`FLAG_SECURE`) solo en las pantallas que pueden mostrar secretos: Seguridad, Consola RAW, Volcado de memoria, constructor de tareas, QR y el asistente de escritura mientras contiene un registro Wi-Fi. El resto de pantallas (Lectura, Historial, Plantillas, etc.) sí permite capturas.
+  - Contraseñas y claves Wi-Fi ocultas por defecto (puntos) con botón para mostrar u ocultar.
+  - Los archivos temporales de exportación viven en la caché privada y se borran al compartir de nuevo y al iniciar la app.
   - Marcado de portapapeles como contenido sensible para evitar fugas en teclados de terceros (Android 13+).
   - Redacción estricta de bytes secretos en registros y trazas de depuración.
 
@@ -158,9 +162,9 @@ Tag Forge ha sido estructurado respetando estrictamente estándares internaciona
 * **ISO/IEC 14443 & ISO/IEC 18092:** Soporte integral de señalización RF, anticolisión y encapsulado de tramas para proximidad (NFC-A, MIFARE Ultralight, NTAG).
 * **ISO/IEC 15693:** Soporte para tarjetas y transpondedores de vecindad (Vicinity Cards - alcance extendido).
 * **ISO/IEC 27001 (Seguridad de la Información & Privacidad):**
-  * Bloqueo contra captura de pantalla (`FLAG_SECURE`) en interfaces de claves y volcados de memoria.
+  * Bloqueo contra captura de pantalla (`FLAG_SECURE`) en las pantallas de Seguridad, Consola RAW, Volcado, constructor de tareas, QR y escritura de Wi-Fi (no en toda la app).
   * Marcado de portapapeles sensible en Android 13+ para evitar telemetría de teclados de terceros.
-  * Protección criptográfica de credenciales y redacción de bytes sensibles en logs de ejecución.
+  * Redacción de bytes sensibles en logs de ejecución. Aviso: la contraseña de un chip NTAG21x es un código de acceso de 32 bits que viaja SIN cifrar por el aire (no es cifrado ni autenticación criptográfica): limita la lectura o escritura de las páginas protegidas a quien conozca el código, pero quien capture la comunicación NFC puede obtenerlo. Una credencial recordada solo se envía a una etiqueta que reporte el mismo UID durante operaciones iniciadas por el usuario; una etiqueta con UID clonado podría capturarla, motivo por el cual el almacenamiento vive exclusivamente en memoria y caduca a los 10 minutos.
 
 ---
 

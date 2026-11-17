@@ -40,7 +40,7 @@ class SetPasswordUseCase(private val confirmed: ConfirmedPlan) : TagOperation<Se
         fun plan(state: SecurityState, request: PasswordRequest): Outcome<SecurityPlan, SecurityFailure> {
             val model = state.model
             val config = state.config
-            if (request.auth0 !in model.userStart..model.pwd) return Outcome.Err(SecurityFailure.Auth0OutOfRange)
+            if (request.auth0 !in model.auth0Range) return Outcome.Err(SecurityFailure.Auth0OutOfRange)
             if (config.cfgLock) return Outcome.Err(SecurityFailure.ConfigLocked)
             val current = if (state.isPasswordProtected) request.currentPassword ?: return Outcome.Err(SecurityFailure.PasswordRequired) else null
 

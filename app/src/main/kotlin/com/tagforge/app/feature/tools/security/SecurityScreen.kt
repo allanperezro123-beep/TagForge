@@ -30,6 +30,7 @@ data class SecurityActions(
     val onCancelDryRun: () -> Unit,
     val onSheetDismissed: () -> Unit,
     val onRetry: () -> Unit,
+    val onForgetRemembered: () -> Unit,
     val onOpenSignature: () -> Unit,
     val onOpenConsole: () -> Unit,
     val onOpenNfcSettings: () -> Unit,
@@ -52,7 +53,15 @@ fun SecurityScreen(state: SecurityUiState, actions: SecurityActions, modifier: M
             NfcStatusBanner(state.availability, actions.onOpenNfcSettings, Modifier.padding(16.dp))
             when (state.step) {
                 SecurityStep.CHOOSE -> Column(Modifier.verticalScroll(rememberScrollState())) {
-                    SecurityChooseList(state.advanced, state.canStart, actions.onChoose, actions.onOpenSignature, actions.onOpenConsole)
+                    SecurityChooseList(
+                        advanced = state.advanced,
+                        enabled = state.canStart,
+                        rememberedCount = state.rememberedCount,
+                        onChoose = actions.onChoose,
+                        onForgetRemembered = actions.onForgetRemembered,
+                        onOpenSignature = actions.onOpenSignature,
+                        onOpenConsole = actions.onOpenConsole,
+                    )
                 }
                 SecurityStep.FORM, SecurityStep.DRY_RUN -> SecurityFormContent(state, actions.form)
             }
@@ -75,6 +84,11 @@ fun SecurityScreen(state: SecurityUiState, actions: SecurityActions, modifier: M
     }
 
     state.sheet?.let { sheet ->
-        ToolScanSheet(ui = sheet.toUi(), onDismiss = actions.onSheetDismissed, onRetry = actions.onRetry)
+        ToolScanSheet(
+            ui = sheet.toUi(),
+            onDismiss = actions.onSheetDismissed,
+            onRetry = actions.onRetry,
+            onExtra = actions.onForgetRemembered,
+        )
     }
 }

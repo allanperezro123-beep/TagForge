@@ -3,6 +3,8 @@ package com.tagforge.domain.scan
 import com.tagforge.domain.common.Outcome
 import com.tagforge.domain.common.TagResult
 import com.tagforge.domain.ports.TagSession
+import com.tagforge.domain.security.SessionCredentials
+import com.tagforge.domain.security.UnlockedTagSession
 import com.tagforge.domain.tag.TagError
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -27,11 +29,14 @@ import kotlinx.coroutines.withTimeout
  * One operation is armed at a time ([arm]). The first tag that arrives while it is armed runs it on [io] with a
  * timeout; tags that arrive while it is working are ignored. Failures (TagLost, timeout, adapter bugs) become
  * [ScanState.Failure] values: this class never throws to the NFC callback thread.
+ *
+ * With [credentials], every operation except the security ones sees the tag through an [UnlockedTagSession].
  */
 class ScanCoordinator(
     private val scope: CoroutineScope,
     private val io: CoroutineDispatcher,
     private val timeoutMs: Long = DEFAULT_TIMEOUT_MS,
+    private val credentials: SessionCredentials? = null,
 ) {
     private class Arm<T>(val op: TagOperation<T>, val repeat: Boolean) {
         val flow = MutableStateFlow<ScanState<T>>(ScanState.Waiting(op.kind))
@@ -113,8 +118,9 @@ class ScanCoordinator(
         arm.job = scope.launch(io) { run(arm, session) }
     }
 
-    private suspend fun <T> run(arm: Arm<T>, session: TagSession) {
+    private suspend fun <T> run(arm: Arm<T>, tagSession: TagSession) {
         val kind = arm.op.kind
+        val session = unlockedFor(kind, tagSession)
         arm.session = session
         publish(arm, ScanState.Working(kind, OperationPhase.CONNECTING))
 
@@ -134,6 +140,14 @@ class ScanCoordinator(
             synchronized(lock) { arm.working = false }
         }
     }
+
+    /**
+     * Operations on the tag's data get a session that authenticates with the password the user remembered for that tag
+     * ([SessionCredentials]). Security operations never do: they carry the password the user typed for that very action,
+     * and an extra frame with an older one would burn an attempt of the tag's AUTHLIM.
+     */
+    private fun unlockedFor(kind: OperationKind, session: TagSession): TagSession =
+        if (credentials == null || kind == OperationKind.SECURITY) session else UnlockedTagSession(session, credentials)
 
     private fun <T> finish(arm: Arm<T>, result: TagResult<T>, session: TagSession) {
         val kind = arm.op.kind

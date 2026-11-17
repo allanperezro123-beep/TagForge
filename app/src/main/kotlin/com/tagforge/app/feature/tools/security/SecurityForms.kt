@@ -12,6 +12,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,6 +39,7 @@ data class SecurityFormActions(
     val onCopy: (String) -> Unit,
     val onShare: (String) -> Unit,
     val onModeChange: (PasswordMode) -> Unit,
+    val onForgetRemembered: () -> Unit,
 )
 
 @Composable
@@ -78,7 +80,7 @@ private fun SetPasswordFields(state: SecurityUiState, actions: SecurityFormActio
     CurrentPasswordField(state, actions, R.string.security_form_current)
     PasswordAdvancedSection(state.form.mode, actions.onModeChange) {
         PackField(state.form, state.problem, actions.onChange)
-        Auth0Stepper(state.form.auth0) { value -> actions.onChange { it.copy(auth0 = value) } }
+        Auth0Stepper(state.form.auth0, state.auth0Range) { value -> actions.onChange { it.copy(auth0 = value) } }
     }
 }
 
@@ -130,6 +132,17 @@ private fun AttemptLimitSection(state: SecurityUiState, actions: SecurityFormAct
 @Composable
 private fun UnlockFields(state: SecurityUiState, actions: SecurityFormActions) {
     CurrentPasswordField(state, actions, R.string.security_form_current_required)
+    SwitchRow(state.form.rememberForSession, { v -> actions.onChange { it.copy(rememberForSession = v) } }, R.string.security_unlock_remember)
+    Text(
+        stringResource(R.string.security_unlock_memory_note),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    if (state.rememberedCount > 0) {
+        OutlinedButton(onClick = actions.onForgetRemembered) {
+            Text(stringResource(R.string.security_forget_password))
+        }
+    }
     PasswordAdvancedSection(state.form.mode, actions.onModeChange) {
         ExpectedPackField(state.form, state.problem, actions.onChange)
     }

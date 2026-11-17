@@ -63,6 +63,17 @@ class RawConsoleProbeUseCaseTest {
     }
 
     @Test
+    fun anUnknownOpcodeIsNotSentAndComesBackAsReservedWithTheTagState() = runTest {
+        val tag = specTag()
+
+        val needs = assertIs<RawProbeResult.NeedsConfirmation>(probe("50 00", tag = tag).value())
+
+        assertEquals(RawClass.Reserved(null, ReservedReason.UNKNOWN_OPCODE), needs.kind)
+        assertNotNull(needs.state)
+        assertEquals(0, tag.commandLog.count { it[0] == 0x50 }, "the frame was not sent")
+    }
+
+    @Test
     fun anInvalidFrameIsRefusedWithoutBeingSent() = runTest {
         val tag = specTag()
 

@@ -167,7 +167,7 @@ class CloneTagUseCase {
             )
 
             phase(OperationPhase.WRITING)
-            val written = Type2Io.execute(transceiver, steps)
+            val written = Type2Io.execute(transceiver, steps, model, area)
             if (written is Outcome.Err) return written
 
             phase(OperationPhase.VERIFYING)

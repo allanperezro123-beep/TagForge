@@ -31,6 +31,7 @@ fun IrreversibleEffect.messageRes(): Int = when (this) {
     IrreversibleEffect.LOCK_BITS_NEVER_CLEARED -> R.string.effect_lock_bits
     IrreversibleEffect.TAG_READ_ONLY_FOREVER -> R.string.effect_read_only_forever
     IrreversibleEffect.RAW_RESERVED_PAGE_WRITE -> R.string.effect_raw_reserved
+    IrreversibleEffect.RAW_UNKNOWN_COMMAND -> R.string.effect_raw_unknown
 }
 
 /** The exact frames of a plan, one block per page, with the page content before and after (NS-01 step 1). */
@@ -39,8 +40,13 @@ fun DryRunList(lines: List<DryRunLine>, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         for (line in lines) {
             Column {
-                val title = line.region?.let { stringResource(R.string.typed_confirm_line_page, line.page, stringResource(it.labelRes())) }
-                    ?: stringResource(R.string.typed_confirm_line_page_plain, line.page)
+                // A frame that is not addressed to a page (an unknown opcode) has page -1: do not invent a page number.
+                val title = if (line.page < 0) {
+                    stringResource(R.string.typed_confirm_line_command)
+                } else {
+                    line.region?.let { stringResource(R.string.typed_confirm_line_page, line.page, stringResource(it.labelRes())) }
+                        ?: stringResource(R.string.typed_confirm_line_page_plain, line.page)
+                }
                 Text(title, style = MaterialTheme.typography.labelLarge)
                 Text(line.commandHex, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodyMedium)
                 Text(

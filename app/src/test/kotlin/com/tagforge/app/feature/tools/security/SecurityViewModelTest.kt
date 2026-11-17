@@ -14,9 +14,13 @@ import com.tagforge.domain.history.RecordHistoryUseCase
 import com.tagforge.domain.ntag.NtagModel
 import com.tagforge.domain.scan.ScanCoordinator
 import com.tagforge.domain.security.LockScope
+import com.tagforge.domain.security.Password
 import com.tagforge.domain.security.PasswordMode
+import com.tagforge.domain.security.PasswordPageState
+import com.tagforge.domain.security.ProtectionState
 import com.tagforge.domain.security.SecurityFailure
 import com.tagforge.domain.security.SecurityOperation
+import com.tagforge.domain.security.SessionCredentials
 import com.tagforge.domain.settings.AppSettings
 import com.tagforge.domain.settings.TaskExecutionPolicy
 import com.tagforge.domain.tag.TagError
@@ -39,6 +43,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Instant
@@ -70,7 +75,12 @@ class SecurityViewModelTest {
     private fun TestScope.coordinator() = ScanCoordinator(this, StandardTestDispatcher(testScheduler))
 
     /** [relaxed] switches every Settings confirmation off and "never ask for tasks" on: none of it may reach this screen. */
-    private fun viewModel(coordinator: ScanCoordinator, advanced: Boolean = false, relaxed: Boolean = false) = SecurityViewModel(
+    private fun viewModel(
+        coordinator: ScanCoordinator,
+        advanced: Boolean = false,
+        relaxed: Boolean = false,
+        credentials: SessionCredentials? = null,
+    ) = SecurityViewModel(
         coordinator = coordinator,
         recordHistory = RecordHistoryUseCase(history, settingsStore, clock),
         availability = availability,
@@ -82,6 +92,7 @@ class SecurityViewModelTest {
                 taskExecution = if (relaxed) TaskExecutionPolicy.NEVER_ASK else TaskExecutionPolicy.ASK_ALWAYS,
             ),
         ),
+        credentials = credentials,
         random = Random(42),
     )
 
@@ -320,7 +331,12 @@ class SecurityViewModelTest {
 
         val failure = assertIs<SecuritySheet.Failure>(vm.uiState.value.sheet)
         assertEquals(
-            TagError.Security(SecurityFailure.Partial(SecurityOperation.SET_PASSWORD, TagError.TagLost, completedWrites = 1, totalWrites = 4)),
+            TagError.Security(
+                SecurityFailure.Partial(
+                    SecurityOperation.SET_PASSWORD, TagError.TagLost, completedWrites = 1, totalWrites = 4,
+                    failedStep = 1, protection = ProtectionState.NOT_PROTECTED, passwordPage = PasswordPageState.CHANGED,
+                ),
+            ),
             failure.error,
         )
         assertTrue(failure.canRetry)
@@ -404,6 +420,24 @@ class SecurityViewModelTest {
     }
 
     @Test
+    fun aTagWithoutTheNdefTechnologyIsNeverOfferedTheMakeReadOnlyPlan() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        val tag = blankTag()
+        val noNdef = FakeTagSession.ntag(tag).let { FakeTagSession(it.info.copy(ndef = null), tag) }
+        vm.onChoose(SecurityAction.LOCK)
+
+        vm.onNext()
+        coordinator.onTagDiscovered(noNdef)
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(SecurityFailure.CannotMakeReadOnly, vm.uiState.value.failure)
+        assertEquals(SecurityStep.FORM, vm.uiState.value.step, "no dry-run, no typed confirmation for an operation that cannot work")
+        assertNull(vm.uiState.value.plan)
+        assertEquals(emptyList(), tag.writeCommands)
+    }
+
+    @Test
     fun rawLockScopesNeedAdvancedModeAndTheMakeReadOnlyPathDoesNot() = runTest {
         val coordinator = coordinator()
         val off = viewModel(coordinator, advanced = false)
@@ -463,6 +497,70 @@ class SecurityViewModelTest {
         val failure = assertIs<SecuritySheet.Failure>(vm.uiState.value.sheet)
         assertEquals(TagError.AuthFailed(null), failure.error)
         assertEquals(1, tag.commandLog.count { it[0] == 0x1B }, "no automatic retry")
+    }
+
+    @Test
+    fun aLinkDropAfterThePasswordIsAnUnknownOutcomeWithNoRetryAndNeverResendsIt() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        val tag = protectedTag().also { it.setPage(model.cfg1, "03 00 00 00".hex()) }
+        vm.onChoose(SecurityAction.UNLOCK)
+        tap(coordinator, tag)
+        vm.onLimitUnderstood()
+        vm.onFormChange { it.copy(mode = PasswordMode.HEX, currentPassword = "00000001") }
+        tag.dropLinkOnRefusedAuth = TagError.TagLost
+
+        vm.onNext()
+        tap(coordinator, tag)
+
+        val failure = assertIs<SecuritySheet.Failure>(vm.uiState.value.sheet)
+        assertEquals(TagError.Security(SecurityFailure.AuthOutcomeUnknown), failure.error)
+        assertFalse(failure.canRetry, "a retry would send the same wrong password again")
+        vm.onRetry()
+        tap(coordinator, tag)
+        assertEquals(1, vm.pwAuthFrames(tag), "the password went out once and was never resent")
+        assertEquals(1, tag.authFailures, "the tag counted that single attempt")
+    }
+
+    // ---- AUTH0 is bounded by the chip: it must stay at or below CFG0 ---------------------------------------------------------
+
+    @Test
+    fun theAuth0RangeIsTheWidestUntilTheChipIsKnownAndThenTheChipsOwn() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.onChoose(SecurityAction.SET_PASSWORD)
+        assertEquals(NtagModel.NTAG216.auth0Range, vm.uiState.value.auth0Range, "chip not read yet: the domain decides at the dry-run")
+        vm.onFormChange { it.copy(auth0 = 200) }
+        assertEquals(200, vm.uiState.value.form.auth0)
+
+        vm.onProbeLimit()
+        tap(coordinator, FakeNtag21x(NtagModel.NTAG213, uid))
+
+        assertEquals(NtagModel.NTAG213, vm.uiState.value.model)
+        assertEquals(4..41, vm.uiState.value.auth0Range)
+        assertEquals(41, vm.uiState.value.form.auth0, "the stored value is clamped when the chip becomes known")
+        vm.onFormChange { it.copy(auth0 = 100) }
+        assertEquals(41, vm.uiState.value.form.auth0, "no edit can leave the chip's range")
+        vm.onFormChange { it.copy(auth0 = 1) }
+        assertEquals(4, vm.uiState.value.form.auth0)
+    }
+
+    @Test
+    fun anAuth0AboveCfg0IsRefusedAtTheDryRunAndTheFormIsClampedToTheChip() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        val tag = FakeNtag21x(NtagModel.NTAG213, uid).also { it.setPage(NtagModel.NTAG213.cfg0, "04 00 00 FF".hex()) }
+        vm.fillSetPassword()
+        vm.onFormChange { it.copy(auth0 = 100) }
+
+        vm.onNext()
+        tap(coordinator, tag)
+
+        val state = vm.uiState.value
+        assertEquals(SecurityFailure.Auth0OutOfRange, state.failure)
+        assertEquals(SecurityStep.FORM, state.step)
+        assertEquals(41, state.form.auth0)
+        assertEquals(emptyList(), tag.writeCommands)
     }
 
     @Test
@@ -553,7 +651,7 @@ class SecurityViewModelTest {
         vm.onChoose(SecurityAction.UNLOCK)
         tap(coordinator, tag)
 
-        assertEquals(com.tagforge.domain.security.AuthLimitInfo(null), vm.uiState.value.authLimit)
+        assertEquals(com.tagforge.domain.security.AuthLimitInfo(null, model), vm.uiState.value.authLimit)
         assertFalse(vm.uiState.value.passwordFieldEnabled, "unknown limit: could be 15 attempts before a permanent lock")
         vm.onLimitUnderstood()
         assertTrue(vm.uiState.value.passwordFieldEnabled)
@@ -773,5 +871,197 @@ class SecurityViewModelTest {
         assertEquals(FormProblem.PACK_INVALID, vm.uiState.value.problem)
         assertNull(vm.uiState.value.sheet)
         assertEquals(0, tag.commandLog.count { it[0] == 0x1B }, "no authentication was sent")
+    }
+
+    // ---- WU3: session credentials -----------------------------------------------------------------------------------------
+
+    @Test
+    fun unlockRemembersTheCredentialForThatUidByDefault() = runTest {
+        val store = SessionCredentials(clock)
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator, credentials = store)
+        val tag = protectedTag().also { it.setPage(model.cfg1, "00 00 00 00".hex()) }
+
+        vm.onChoose(SecurityAction.UNLOCK)
+        assertTrue(vm.uiState.value.form.rememberForSession, "remembering is on by default")
+        tap(coordinator, tag)
+        vm.onFormChange { it.copy(mode = PasswordMode.HEX, currentPassword = "12345678", expectedPack = "ABCD") }
+        vm.onNext()
+        tap(coordinator, tag)
+
+        val stored = assertNotNull(store.credentialFor(uid))
+        assertEquals(Password.fromHex("12345678"), stored.password)
+        assertEquals("AB CD".hex(), stored.pack)
+        assertEquals(1, vm.uiState.value.rememberedCount)
+        assertTrue(assertIs<SecuritySheet.Success>(vm.uiState.value.sheet).remembered)
+    }
+
+    @Test
+    fun aFailedUnlockRemembersNothing() = runTest {
+        val store = SessionCredentials(clock)
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator, credentials = store)
+        val tag = protectedTag().also { it.setPage(model.cfg1, "00 00 00 00".hex()) }
+
+        vm.onChoose(SecurityAction.UNLOCK)
+        tap(coordinator, tag)
+        vm.onFormChange { it.copy(mode = PasswordMode.HEX, currentPassword = "00000001") }
+        vm.onNext()
+        tap(coordinator, tag)
+
+        assertIs<SecuritySheet.Failure>(vm.uiState.value.sheet)
+        assertNull(store.credentialFor(uid))
+        assertEquals(0, vm.uiState.value.rememberedCount)
+
+        tag.dropLinkOnRefusedAuth = TagError.TagLost
+        vm.onNext()
+        tap(coordinator, tag)
+        assertIs<SecuritySheet.Failure>(vm.uiState.value.sheet)
+        assertNull(store.credentialFor(uid))
+    }
+
+    @Test
+    fun anUnlockWhoseExpectedPackMismatchesRemembersNothingAndForgetsOldCredential() = runTest {
+        val store = SessionCredentials(clock)
+        store.remember(uid, Password.fromHex("12345678")!!)
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator, credentials = store)
+        val tag = protectedTag().also { it.setPage(model.cfg1, "00 00 00 00".hex()) }
+
+        vm.onChoose(SecurityAction.UNLOCK)
+        tap(coordinator, tag)
+        vm.onFormChange { it.copy(mode = PasswordMode.HEX, currentPassword = "12345678", expectedPack = "1122") }
+        vm.onNext()
+        tap(coordinator, tag)
+
+        val success = assertIs<SecuritySheet.Success>(vm.uiState.value.sheet)
+        assertEquals(false, success.packMatches)
+        assertFalse(success.remembered, "a suspected clone must not be remembered")
+        assertNull(store.credentialFor(uid), "any prior credential for that UID is cleared too")
+        assertEquals(0, vm.uiState.value.rememberedCount)
+    }
+
+    @Test
+    fun unlockCanOptOutOfRememberingInSession() = runTest {
+        val store = SessionCredentials(clock)
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator, credentials = store)
+        val tag = protectedTag().also { it.setPage(model.cfg1, "00 00 00 00".hex()) }
+
+        vm.onChoose(SecurityAction.UNLOCK)
+        tap(coordinator, tag)
+        vm.onFormChange { it.copy(mode = PasswordMode.HEX, currentPassword = "12345678", rememberForSession = false) }
+        vm.onNext()
+        tap(coordinator, tag)
+
+        val success = assertIs<SecuritySheet.Success>(vm.uiState.value.sheet)
+        assertFalse(success.remembered)
+        assertNull(store.credentialFor(uid))
+        assertEquals(0, vm.uiState.value.rememberedCount)
+    }
+
+    @Test
+    fun forgetRememberedPasswordsClearsAllAndUpdatesTheState() = runTest {
+        val store = SessionCredentials(clock)
+        val otherUid = "04 11 22 33 44 55 66".hex()
+        store.remember(otherUid, Password.fromHex("87654321")!!)
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator, credentials = store)
+        val tag = protectedTag().also { it.setPage(model.cfg1, "00 00 00 00".hex()) }
+
+        vm.onChoose(SecurityAction.UNLOCK)
+        tap(coordinator, tag)
+        vm.onFormChange { it.copy(mode = PasswordMode.HEX, currentPassword = "12345678") }
+        vm.onNext()
+        tap(coordinator, tag)
+        assertEquals(2, vm.uiState.value.rememberedCount)
+        assertTrue(assertIs<SecuritySheet.Success>(vm.uiState.value.sheet).remembered)
+
+        vm.onForgetRemembered()
+
+        assertFalse(store.hasAny())
+        assertEquals(0, vm.uiState.value.rememberedCount)
+        assertFalse(assertIs<SecuritySheet.Success>(vm.uiState.value.sheet).remembered)
+    }
+
+    @Test
+    fun setPasswordStoresTheNewCredentialAndReplacesAnyPriorOne() = runTest {
+        val store = SessionCredentials(clock)
+        store.remember(uid, Password.fromHex("00000001")!!)
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator, credentials = store)
+        val tag = blankTag()
+
+        vm.fillSetPassword()
+        vm.onNext()
+        tap(coordinator, tag)
+        vm.onTypedChange("E5F6")
+        vm.onUnderstoodChange(true)
+        vm.onConfirm()
+        tap(coordinator, tag)
+
+        val stored = assertNotNull(store.credentialFor(uid))
+        assertEquals(Password.fromHex("12345678"), stored.password)
+        assertEquals("AB CD".hex(), stored.pack)
+        assertEquals(1, vm.uiState.value.rememberedCount)
+        assertTrue(assertIs<SecuritySheet.Success>(vm.uiState.value.sheet).remembered)
+    }
+
+    @Test
+    fun removePasswordClearsTheCredentialForThatUidAndKeepsOthers() = runTest {
+        val store = SessionCredentials(clock)
+        val otherUid = "04 11 22 33 44 55 66".hex()
+        store.remember(uid, Password.fromHex("12345678")!!)
+        store.remember(otherUid, Password.fromHex("87654321")!!)
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator, credentials = store)
+        val tag = protectedTag()
+
+        vm.onChoose(SecurityAction.REMOVE_PASSWORD)
+        tap(coordinator, tag)
+        vm.onLimitUnderstood()
+        tag.powerCycle()
+        vm.onFormChange { it.copy(mode = PasswordMode.HEX, currentPassword = "12345678") }
+        vm.onNext()
+        tap(coordinator, tag)
+        tag.powerCycle()
+        vm.onTypedChange("E5F6")
+        vm.onConfirm()
+        tap(coordinator, tag)
+
+        assertIs<SecuritySheet.Success>(vm.uiState.value.sheet)
+        assertNull(store.credentialFor(uid))
+        assertNotNull(store.credentialFor(otherUid))
+        assertEquals(1, vm.uiState.value.rememberedCount)
+    }
+
+    @Test
+    fun aPartialFailureChangingPasswordClearsTheCredentialWhileAWrongTagLeavesItAlone() = runTest {
+        val store = SessionCredentials(clock)
+        store.remember(uid, Password.fromHex("12345678")!!)
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator, credentials = store)
+        val tag = protectedTag()
+
+        vm.onChoose(SecurityAction.REMOVE_PASSWORD)
+        tap(coordinator, tag)
+        vm.onLimitUnderstood()
+        tag.powerCycle()
+        vm.onFormChange { it.copy(mode = PasswordMode.HEX, currentPassword = "12345678") }
+        vm.onNext()
+        tap(coordinator, tag)
+        tag.powerCycle()
+        vm.onTypedChange("E5F6")
+        vm.onConfirm()
+
+        tap(coordinator, blankTag("04 11 22 33 44 55 66".hex()))
+        assertIs<SecuritySheet.Failure>(vm.uiState.value.sheet)
+        assertNotNull(store.credentialFor(uid), "wrong tag at execution touched nothing")
+
+        tag.loseTagAfter(1)
+        vm.onRetry()
+        tap(coordinator, tag)
+        assertIs<SecuritySheet.Failure>(vm.uiState.value.sheet)
+        assertNull(store.credentialFor(uid), "a partial write may have changed the tag")
     }
 }

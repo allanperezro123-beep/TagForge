@@ -3,6 +3,7 @@ package com.tagforge.domain.security
 import com.tagforge.domain.common.Bytes
 import com.tagforge.domain.common.Outcome
 import com.tagforge.domain.common.TagResult
+import com.tagforge.domain.ntag.NtagModel
 import com.tagforge.domain.ports.TagSession
 import com.tagforge.domain.scan.OperationKind
 import com.tagforge.domain.scan.OperationPhase
@@ -14,7 +15,8 @@ data class AuthReport(val pack: Bytes, val packMatches: Boolean?) {
     val possibleClone: Boolean get() = packMatches == false
 }
 
-data class AuthLimitInfo(val authLimit: Int?)
+/** [model] is the chip that answered, so a form can bound AUTH0 to it; null when it is not known. */
+data class AuthLimitInfo(val authLimit: Int?, val model: NtagModel? = null)
 
 /**
  * One PWD_AUTH per tap (NS-03). There is no retry, no list of passwords and no counter-guessing: the only password this
@@ -49,8 +51,8 @@ class ReadAuthLimitUseCase : TagOperation<AuthLimitInfo> {
         }
         phase(OperationPhase.READING)
         return when (val cfg1 = SecurityIo.readPages(link.transceiver, link.model.cfg1, link.model.cfg1)) {
-            is Outcome.Ok -> Outcome.Ok(AuthLimitInfo(cfg1.value[0] and AUTHLIM_MASK))
-            is Outcome.Err -> if (cfg1.error == TagError.AuthRequired) Outcome.Ok(AuthLimitInfo(null)) else cfg1
+            is Outcome.Ok -> Outcome.Ok(AuthLimitInfo(cfg1.value[0] and AUTHLIM_MASK, link.model))
+            is Outcome.Err -> if (cfg1.error == TagError.AuthRequired) Outcome.Ok(AuthLimitInfo(null, link.model)) else cfg1
         }
     }
 

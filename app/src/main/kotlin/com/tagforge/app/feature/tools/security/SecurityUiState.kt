@@ -2,6 +2,7 @@ package com.tagforge.app.feature.tools.security
 
 import com.tagforge.app.infrastructure.nfc.NfcAvailability
 import com.tagforge.domain.common.Bytes
+import com.tagforge.domain.ntag.NtagModel
 import com.tagforge.domain.scan.OperationPhase
 import com.tagforge.domain.security.AuthLimitInfo
 import com.tagforge.domain.security.LockScope
@@ -41,13 +42,15 @@ data class SecurityForm(
     val currentPassword: String = "",
     /** Unlock only, optional: the PACK this tag should answer. A different one means the tag may be a clone. */
     val expectedPack: String = "",
+    /** Unlock only: remember this password in memory for up to 10 minutes so Read/Write/Tools work without retyping. */
+    val rememberForSession: Boolean = true,
     val lockConfig: Boolean = false,
     val authLimit: Int = 0,
     val lockScope: LockScope = LockScope.NDEF_READ_ONLY,
 ) {
     /** The typed secrets never reach a log or a crash report (S7). */
     override fun toString(): String =
-        "SecurityForm(auth0=$auth0, protectReads=$protectReads, storedAck=$storedAck, lockConfig=$lockConfig, authLimit=$authLimit, lockScope=$lockScope, secrets=****)"
+        "SecurityForm(auth0=$auth0, protectReads=$protectReads, storedAck=$storedAck, rememberForSession=$rememberForSession, lockConfig=$lockConfig, authLimit=$authLimit, lockScope=$lockScope, secrets=****)"
 }
 
 sealed interface SecuritySheet {
@@ -55,7 +58,12 @@ sealed interface SecuritySheet {
     data class Working(val stage: SecurityStage, val phase: OperationPhase) : SecuritySheet
 
     /** [pack] is the PACK the tag answered after an unlock; [packMatches] is null unless the user typed one to compare. */
-    data class Success(val action: SecurityAction, val pack: Bytes? = null, val packMatches: Boolean? = null) : SecuritySheet
+    data class Success(
+        val action: SecurityAction,
+        val pack: Bytes? = null,
+        val packMatches: Boolean? = null,
+        val remembered: Boolean = false,
+    ) : SecuritySheet
 
     data class Failure(val error: TagError, val canRetry: Boolean) : SecuritySheet
 }
@@ -82,7 +90,18 @@ data class SecurityUiState(
     /** Unlock only: the attempt limit read from the tag; null until read. */
     val authLimit: AuthLimitInfo? = null,
     val limitUnderstood: Boolean = false,
+    /** The chip a tap identified; null until a tag was read. Bounds the AUTH0 stepper. */
+    val model: NtagModel? = null,
+    /** Number of tags currently holding a remembered password in memory. */
+    val rememberedCount: Int = 0,
 ) {
+    /**
+     * The AUTH0 values the form may hold: the identified chip's own range, or the widest of all three chips while no tag
+     * was read (the domain refuses an out-of-range value for the real chip at the dry-run, before any write).
+     */
+    val auth0Range: IntRange
+        get() = model?.auth0Range ?: ANY_CHIP_AUTH0_RANGE
+
     val canStart: Boolean get() = availability == NfcAvailability.ENABLED
 
     /** The warning that must be acknowledged on top of the typed UID: anything that cannot be undone. */
@@ -105,4 +124,8 @@ data class SecurityUiState(
 
     /** "Next" is allowed: a flow that sends a password needs the attempt limit settled first. */
     val canGoNext: Boolean get() = !willSendPassword || passwordFieldEnabled
+
+    private companion object {
+        val ANY_CHIP_AUTH0_RANGE: IntRange = NtagModel.entries.minOf { it.auth0Range.first }..NtagModel.entries.maxOf { it.auth0Range.last }
+    }
 }

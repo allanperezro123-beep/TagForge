@@ -52,6 +52,12 @@ enum class NtagModel(
 
     val lastPage: Int get() = totalPages - 1
 
+    /**
+     * The AUTH0 values a password may use: from the first user page up to CFG0 itself. Every page from AUTH0 on needs the
+     * password, so AUTH0 above CFG0 would leave CFG0/CFG1 writable and anyone could rewrite AUTH0 to FFh.
+     */
+    val auth0Range: IntRange get() = userStart..cfg0
+
     /** User memory in bytes (144 / 504 / 888): page maps and dumps only, NOT the NDEF budget. */
     val userBytes: Int get() = (userEnd - userStart + 1) * 4
 

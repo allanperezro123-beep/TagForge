@@ -14,6 +14,7 @@ import com.tagforge.app.di.rememberAppContainer
 import com.tagforge.app.di.tagForgeViewModel
 import com.tagforge.app.feature.tools.openNfcSettings
 import com.tagforge.app.infrastructure.android.SensitiveClipboard
+import com.tagforge.app.ui.components.RejectObscuredTouches
 import com.tagforge.app.ui.components.SecureWindow
 import com.tagforge.app.ui.haptics.rememberHaptics
 import com.tagforge.domain.settings.AppSettings
@@ -33,9 +34,11 @@ fun SecurityRoute(
             recordHistory = it.recordHistory,
             availability = it.nfcAvailabilityMonitor.availability,
             settings = it.settingsStore.settings,
+            credentials = it.sessionCredentials,
         )
     }
     SecureWindow()
+    RejectObscuredTouches()   // typed confirmations can write irreversible locks (S4)
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val settings by container.settingsStore.settings.collectAsStateWithLifecycle(AppSettings())
     val haptics by rememberUpdatedState(rememberHaptics(settings.hapticsEnabled))
@@ -45,6 +48,7 @@ fun SecurityRoute(
         if (initialAction != null && viewModel.uiState.value.action == null) viewModel.onChoose(initialAction)
     }
     LifecycleStartEffect(viewModel) {
+        viewModel.onVisible()
         onStopOrDispose { viewModel.onHidden() }
     }
     BackHandler { if (!viewModel.onBack()) onBack() }
@@ -73,6 +77,7 @@ fun SecurityRoute(
                 onNext = viewModel::onNext,
                 onCopy = { SensitiveClipboard.copy(context, "tag password", it) },
                 onShare = { shareToSelf(context, it) },
+                onForgetRemembered = viewModel::onForgetRemembered,
             ),
             onTypedChange = viewModel::onTypedChange,
             onUnderstoodChange = viewModel::onUnderstoodChange,
@@ -80,6 +85,7 @@ fun SecurityRoute(
             onCancelDryRun = { viewModel.onBack() },
             onSheetDismissed = viewModel::onSheetDismissed,
             onRetry = viewModel::onRetry,
+            onForgetRemembered = viewModel::onForgetRemembered,
             onOpenSignature = onOpenSignature,
             onOpenConsole = onOpenConsole,
             onOpenNfcSettings = { openNfcSettings(context) },

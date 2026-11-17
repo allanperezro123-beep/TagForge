@@ -42,8 +42,24 @@ internal object SecurityIo {
         return if (checked is Outcome.Err && checked.error is TagError.Nak) Outcome.Err(TagError.AuthRequired) else checked
     }
 
-    /** PWD_AUTH: Ok(PACK) / Err(AuthFailed) for a wrong password / Err(Security(AuthExhausted)) once AUTHLIM ran out. */
-    suspend fun authenticate(t: TagTransceiver, password: Bytes): TagResult<Bytes> {
+    /**
+     * PWD_AUTH with a password the USER typed: Ok(PACK) / Err(AuthFailed) for a wrong password / Err(Security(AuthExhausted))
+     * once AUTHLIM ran out. A link error here is [SecurityFailure.AuthOutcomeUnknown], never a plain TagLost: some phones
+     * report the NAK of a wrong password as a dropped link, so the attempt may already count against AUTHLIM. The frame is
+     * sent exactly once; nothing in the domain retries it.
+     */
+    suspend fun authenticate(t: TagTransceiver, password: Bytes): TagResult<Bytes> =
+        when (val result = pwdAuth(t, password)) {
+            is Outcome.Err -> if (result.error.isLinkError()) Outcome.Err(TagError.Security(SecurityFailure.AuthOutcomeUnknown)) else result
+            is Outcome.Ok -> result
+        }
+
+    /** PWD_AUTH with the password this app just wrote (the read-back check): a link error keeps its own meaning there. */
+    suspend fun authenticateJustWritten(t: TagTransceiver, password: Bytes): TagResult<Bytes> = pwdAuth(t, password)
+
+    private fun TagError.isLinkError(): Boolean = this is TagError.TagLost || this is TagError.Io || this is TagError.Timeout
+
+    private suspend fun pwdAuth(t: TagTransceiver, password: Bytes): TagResult<Bytes> {
         val response = when (val sent = t.transceive(NtagCommands.pwdAuth(password))) {
             is Outcome.Err -> return sent
             is Outcome.Ok -> sent.value

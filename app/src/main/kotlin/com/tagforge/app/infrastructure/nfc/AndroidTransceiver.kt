@@ -26,6 +26,8 @@ class AndroidTransceiver(
 
     override val maxTransceiveLength: Int get() = nfcA.maxTransceiveLength
 
+    override val isConnected: Boolean get() = try { nfcA.isConnected } catch (_: Throwable) { false }
+
     override suspend fun transceive(command: Bytes): TagResult<Bytes> = withContext(io) {
         try {
             if (!nfcA.isConnected) {

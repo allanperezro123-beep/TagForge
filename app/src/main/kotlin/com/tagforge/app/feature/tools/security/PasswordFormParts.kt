@@ -19,9 +19,6 @@ import androidx.compose.ui.unit.dp
 import com.tagforge.app.R
 import com.tagforge.domain.security.SecretKind
 
-private const val MIN_AUTH0 = 4
-private const val MAX_AUTH0 = 229
-
 @Composable
 fun CheckRow(checked: Boolean, onChange: (Boolean) -> Unit, labelRes: Int, modifier: Modifier = Modifier) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -62,7 +59,7 @@ fun PasswordFields(
         SecretField(
             form.password, { v -> onChange { it.copy(password = v, storedAck = false) } },
             R.string.security_form_password, form.mode, SecretKind.PASSWORD,
-            isError = problem == FormProblem.PASSWORD_INVALID, startVisible = true,
+            isError = problem == FormProblem.PASSWORD_INVALID,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = onGenerate, modifier = Modifier.weight(1f)) { ButtonLabel(R.string.security_form_generate) }
@@ -84,12 +81,12 @@ private fun ButtonLabel(res: Int) {
 }
 
 @Composable
-fun Auth0Stepper(auth0: Int, onChange: (Int) -> Unit) {
+fun Auth0Stepper(auth0: Int, range: IntRange, onChange: (Int) -> Unit) {
     Column {
         StepperRow(
             stringResource(R.string.security_form_auth0, auth0),
-            onMinus = { onChange((auth0 - 1).coerceAtLeast(MIN_AUTH0)) },
-            onPlus = { onChange((auth0 + 1).coerceAtMost(MAX_AUTH0)) },
+            onMinus = { onChange((auth0 - 1).coerceAtLeast(range.first)) },
+            onPlus = { onChange((auth0 + 1).coerceAtMost(range.last)) },
         )
         Text(stringResource(R.string.security_form_auth0_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }

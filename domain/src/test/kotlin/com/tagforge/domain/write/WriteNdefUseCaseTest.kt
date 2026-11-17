@@ -229,10 +229,22 @@ class WriteNdefUseCaseTest {
     }
 
     @Test
-    fun aWriteNakOnTheFirstPageAlsoMeansReadOnly() {
+    fun aWriteNakOnTheFirstPageOfAPasswordProtectedTagIsAuthRequiredNotReadOnly() {
         val tag = ntag()
         // AUTH0 = 4 without read protection: everything stays readable but every user page refuses writes
         tag.setPage(tag.model.cfg0, "00 00 00 04".hex())
+
+        val result = write(uriMessage, FakeTagSession.ntag(tag))
+
+        assertEquals(Outcome.Err(TagError.AuthRequired), result)
+        assertEquals(0, tag.writeCount)
+    }
+
+    @Test
+    fun aWriteNakOnTheFirstPageOfATagLockedThroughItsLockBitsIsReadOnly() {
+        val tag = ntag()
+        tag.setPage(2, tag.page(2).slice(0, 2) + "F0 FF".hex())   // L4..L15: every page of the first user block is locked
+        tag.setPage(tag.model.cfg0, "00 00 00 04".hex())          // and a password on top: the lock bits are the certain cause
 
         val result = write(uriMessage, FakeTagSession.ntag(tag))
 

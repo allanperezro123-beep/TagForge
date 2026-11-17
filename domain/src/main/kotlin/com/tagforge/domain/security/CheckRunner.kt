@@ -36,7 +36,7 @@ internal object CheckRunner {
     }
 
     private suspend fun authWorks(t: TagTransceiver, check: Check.AuthWorks): TagResult<Boolean> =
-        when (val r = SecurityIo.authenticate(t, check.password)) {
+        when (val r = SecurityIo.authenticateJustWritten(t, check.password)) {
             is Outcome.Ok -> Outcome.Ok(r.value == check.pack)
             is Outcome.Err -> if (r.error is TagError.AuthFailed) Outcome.Ok(false) else r
         }

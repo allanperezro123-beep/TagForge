@@ -17,6 +17,7 @@ import com.tagforge.domain.ntag.NtagResponses
 import com.tagforge.domain.ports.ClassicChannel
 import com.tagforge.domain.ports.TagSession
 import com.tagforge.domain.ports.TagTransceiver
+import com.tagforge.domain.security.SecurityFailure
 import com.tagforge.domain.tag.TagError
 import com.tagforge.domain.tag.TagFamily
 import com.tagforge.domain.tag.UltralightType
@@ -221,7 +222,38 @@ class AndroidTagSession(
         }
     }
 
-    override suspend fun makeReadOnly(): TagResult<Unit> = Outcome.Err(TagError.Unsupported("makeReadOnly"))
+    /**
+     * `Ndef.makeReadOnly`: permanent. Raw channels are closed first (one active technology per tag, like [writeNdef]). A tag
+     * that cannot be locked this way is [TagError.Unsupported]; one that refuses is [SecurityFailure.CannotMakeReadOnly].
+     * Android keeps the writable flag it read at discovery, so after a success the capability container is read back and
+     * [info] only turns read-only when the tag itself says so: the domain's read-back then judges the real state.
+     * Not unit tested: it needs a real `android.nfc.Tag` (verify on a device with an NTAG).
+     */
+    override suspend fun makeReadOnly(): TagResult<Unit> = withContext(io) {
+        try {
+            val ndef = ndefTech() ?: return@withContext Outcome.Err(TagError.Unsupported(TagError.Unsupported.MAKE_READ_ONLY))
+            if (!ndef.isConnected) {
+                closeRawChannels()
+                ndef.connect()
+            }
+            if (!ndef.canMakeReadOnly()) return@withContext Outcome.Err(TagError.Unsupported(TagError.Unsupported.MAKE_READ_ONLY))
+            if (!ndef.makeReadOnly()) return@withContext Outcome.Err(TagError.Security(SecurityFailure.CannotMakeReadOnly))
+            refreshWritableFromCapabilityContainer()
+            Outcome.Ok(Unit)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            Outcome.Err(TagErrorMapper.map(e))
+        }
+    }
+
+    /** Page 3 byte 3 is the NFC Forum write access: anything but 00 means the tag was made read-only. A failed read leaves [info] as it was. */
+    private suspend fun refreshWritableFromCapabilityContainer() {
+        val transceiver = nfcATransceiver ?: return
+        val read = transceiver.transceive(NtagCommands.read(CC_PAGE)) as? Outcome.Ok ?: return
+        val cc = NtagResponses.checkData(read.value, NtagCommands.READ_RESPONSE_SIZE) as? Outcome.Ok ?: return
+        if (cc.value[CC_WRITE_ACCESS_INDEX] != 0) info = info.copy(ndef = info.ndef?.copy(isWritable = false))
+    }
 
     override suspend fun close() {
         withContext(io) {
@@ -229,5 +261,10 @@ class AndroidTagSession(
             closeNdefQuietly()
             closeFormatableQuietly()
         }
+    }
+
+    private companion object {
+        const val CC_PAGE = 3
+        const val CC_WRITE_ACCESS_INDEX = 3
     }
 }

@@ -31,6 +31,9 @@ enum class IrreversibleEffect {
 
     /** A hand-written frame to a lock, configuration or password page. */
     RAW_RESERVED_PAGE_WRITE,
+
+    /** A hand-written frame whose opcode the app does not know: whether it changes the tag for good cannot be told. */
+    RAW_UNKNOWN_COMMAND,
 }
 
 /** One step of a plan. Page writes are exact WRITE frames; [MakeReadOnly] is the platform's `Ndef.makeReadOnly`. */
@@ -99,8 +102,8 @@ data class SecurityPlan(
         when (step) {
             is PlanStep.WritePage -> writeLine(step)
             is PlanStep.Raw -> DryRunLine(
-                page = step.frame.takeIf { it.size > 1 }?.get(1) ?: -1,
-                region = step.frame.takeIf { it.size > 1 }?.let { NtagMemoryMap.regionsOf(model, it[1]).firstOrNull() },
+                page = pageOf(step.frame) ?: -1,
+                region = pageOf(step.frame)?.let { NtagMemoryMap.regionsOf(model, it).firstOrNull() },
                 commandHex = step.frame.toHex(" "),
                 oldHex = null,
                 newHex = "",
@@ -109,6 +112,10 @@ data class SecurityPlan(
             is PlanStep.Authenticate, PlanStep.MakeReadOnly -> null
         }
     }
+
+    /** The page a raw frame addresses: only the compatibility write carries one; the second byte of an unknown frame means nothing. */
+    private fun pageOf(frame: Bytes): Int? =
+        if (frame.size > 1 && frame[0] == NtagCommands.COMPATIBILITY_WRITE) frame[1] else null
 
     private fun writeLine(step: PlanStep.WritePage): DryRunLine {
         val region = NtagMemoryMap.regionsOf(model, step.page).firstOrNull()

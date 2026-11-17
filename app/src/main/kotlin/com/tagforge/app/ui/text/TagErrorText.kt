@@ -30,6 +30,7 @@ object TagErrorText {
             TagError.Unsupported.CLASSIC_TRAILER, TagError.Unsupported.CLASSIC_MANUFACTURER_BLOCK ->
                 ErrorText(R.string.error_unsupported_classic_trailer)
             TagError.Unsupported.FORMAT -> ErrorText(R.string.error_unsupported_format)
+            TagError.Unsupported.MAKE_READ_ONLY -> ErrorText(R.string.error_sec_cannot_make_read_only)
             else -> ErrorText(R.string.error_unsupported, listOf(error.what))
         }
         TagError.SameTag -> ErrorText(R.string.error_same_tag)
