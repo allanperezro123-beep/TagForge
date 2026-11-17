@@ -8,6 +8,7 @@ import com.tagforge.domain.exchange.ExportedText
 import com.tagforge.domain.exchange.ImportError
 import com.tagforge.domain.exchange.ImportFailure
 import com.tagforge.domain.exchange.ImportReport
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -58,7 +59,7 @@ class ImportExportViewModel(
         return "${format.namePrefix}-$date.${format.extension}"
     }
 
-    fun onExport(format: ExportFormat, target: String) = launchBusy {
+    fun onExport(format: ExportFormat, target: String) = launchBusy(ImportExportMessage.ExportFailed) {
         val exported: ExportedText = when (format) {
             ExportFormat.JSON -> exchange.exportJson()
             ExportFormat.CSV -> exchange.exportCsv()
@@ -71,7 +72,7 @@ class ImportExportViewModel(
         }
     }
 
-    fun onImport(source: String) = launchBusy {
+    fun onImport(source: String) = launchBusy(ImportExportMessage.ImportUnreadable) {
         val message = when (val read = documents.read(source, MAX_IMPORT_BYTES)) {
             DocumentRead.TooLarge -> ImportExportMessage.ImportTooLarge
             DocumentRead.Unreadable -> ImportExportMessage.ImportUnreadable
@@ -100,11 +101,20 @@ class ImportExportViewModel(
         null
     }
 
-    private fun launchBusy(block: suspend () -> Unit) {
+    /**
+     * Runs [block] with the busy flag on. An unexpected exception (a provider that dies, a revoked permission, a file the
+     * parser did not foresee) must not crash the app: it ends in [onFailure], the same state the known failures use.
+     * Cancellation is not a failure and is rethrown untouched.
+     */
+    private fun launchBusy(onFailure: ImportExportMessage, block: suspend () -> Unit) {
         state.update { it.copy(busy = true, message = null) }
         viewModelScope.launch {
             try {
                 block()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                state.update { it.copy(message = onFailure) }
             } finally {
                 state.update { it.copy(busy = false) }
             }

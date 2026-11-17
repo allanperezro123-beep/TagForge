@@ -164,6 +164,17 @@ class JsonExchangeTest {
     }
 
     @Test
+    fun anImportedNdefWhoseLengthFieldOverflowsIsUnreadableInsteadOfThrowing() {
+        val text = edit(export(ExchangeData(listOf(history(1)), emptyList(), emptyList()))) { root ->
+            val entries = root.getValue("history").jsonArray.toMutableList()
+            entries[0] = JsonObject(entries[0].jsonObject + ("ndef" to JsonPrimitive("C1017FFFFFFF54")))
+            JsonObject(root + ("history" to JsonArray(entries)))
+        }
+
+        assertEquals(ImportError.BadEntry(ExchangeSection.HISTORY, 1, EntryProblem.UNREADABLE_NDEF), err(JsonExchange.parse(text)))
+    }
+
+    @Test
     fun unknownExtraKeysAreIgnoredAndRepeatedIdsKeepTheFirstEntry() {
         val text = edit(export(ExchangeData(listOf(history(1), history(2)), emptyList(), emptyList()))) { root ->
             val entries = root.getValue("history").jsonArray.toMutableList()

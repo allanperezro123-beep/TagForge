@@ -567,12 +567,56 @@ class TaskRunnerViewModelTest {
         assertEquals(0, executor.executeCalls)
     }
 
+    private val local = TaskAction.HttpRequest(url = "https://192.168.1.1/reboot", method = HttpMethod.POST)
+
     @Test
-    fun neverAskRunsAnyTaskEvenFromAnUnknownTagAndOffersTheWayBack() = runTest {
+    fun neverAskStillShowsTheSheetForAnUnknownTagWithAPlainHttpOrLocalNetworkRequest() = runTest {
         choose(TaskExecutionPolicy.NEVER_ASK)
         val vm = viewModel()
 
         vm.onNdefBytes(messageBytes(ringer, insecure))
+        assertTrue(vm.confirming().plan.requiresSecondTap)
+        vm.onNdefBytes(messageBytes(ringer, local))
+        assertTrue(vm.confirming().plan.requiresSecondTap)
+
+        assertEquals(0, executor.executeCalls)
+    }
+
+    @Test
+    fun aLocalNetworkRequestNeedsTheSecondTapBeforeItRuns() = runTest {
+        val vm = viewModel()
+        vm.onNdefBytes(messageBytes(local))
+        vm.confirming()
+
+        vm.onRun()
+        assertTrue(vm.confirming().armed)
+        assertEquals(0, executor.executeCalls)
+
+        vm.onRun()
+        assertIs<TaskRunnerUiState.Finished>(vm.uiState.value)
+        assertEquals(1, executor.executeCalls)
+    }
+
+    @Test
+    fun ownTasksRunMyLocalNetworkTaskWithoutAskingButAskForSomeoneElses() = runTest {
+        choose(TaskExecutionPolicy.OWN_TASKS, listOf(local))
+        val vm = viewModel()
+
+        vm.onNdefBytes(messageBytes(local))
+        assertIs<TaskRunnerUiState.Finished>(vm.uiState.value)
+        assertEquals(1, executor.executeCalls)
+
+        vm.onNdefBytes(messageBytes(TaskAction.HttpRequest(url = "https://192.168.1.2/reboot", method = HttpMethod.POST)))
+        vm.confirming()
+        assertEquals(1, executor.executeCalls, "a different local request is a foreign task")
+    }
+
+    @Test
+    fun neverAskRunsAnyTaskWithoutWarningsEvenFromAnUnknownTagAndOffersTheWayBack() = runTest {
+        choose(TaskExecutionPolicy.NEVER_ASK)
+        val vm = viewModel()
+
+        vm.onNdefBytes(messageBytes(ringer, url))
 
         val done = assertIs<TaskRunnerUiState.Finished>(vm.uiState.value)
         assertEquals(2, executor.executeCalls)

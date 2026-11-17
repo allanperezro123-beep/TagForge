@@ -83,6 +83,55 @@ class ShareExporterTest {
     }
 
     @Test
+    fun aFileIsStaleOnceItIsOlderThanTheMaximumAge() {
+        assertFalse(ExportFiles.isStale(lastModifiedMillis = 1_000, nowMillis = 61_000, maxAgeMillis = 60_000), "exactly at the limit is still fresh")
+        assertTrue(ExportFiles.isStale(lastModifiedMillis = 1_000, nowMillis = 61_001, maxAgeMillis = 60_000))
+    }
+
+    @Test
+    fun aFileDatedInTheFutureIsStaleSoAClockChangeCannotKeepItForever() {
+        assertTrue(ExportFiles.isStale(lastModifiedMillis = 500_000, nowMillis = 100_000, maxAgeMillis = 60_000))
+    }
+
+    @Test
+    fun theStartupSweepRemovesStaleExportsAndKeepsFreshOnes() {
+        val dir = Files.createTempDirectory("exports").toFile()
+        try {
+            val old = File(dir, "old.txt").apply { writeText("x"); setLastModified(1_000) }
+            val fresh = File(dir, "fresh.txt").apply { writeText("y"); setLastModified(900_000) }
+
+            val removed = ExportFiles.sweepQuietly(dir, nowMillis = 1_000_000, maxAgeMillis = 3_600_000 / 6)
+
+            assertEquals(1, removed)
+            assertFalse(old.exists())
+            assertTrue(fresh.exists())
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun theStartupSweepNeverThrowsWhenThereIsNothingToSweep() {
+        val missing = File(Files.createTempDirectory("exports").toFile(), "not-created")
+        try {
+            assertEquals(0, ExportFiles.sweepQuietly(missing, nowMillis = 1_000_000, maxAgeMillis = 1))
+        } finally {
+            missing.parentFile.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun theStartupSweepNeverThrowsWhenTheFolderCannotBeListed() {
+        val notAFolder = File.createTempFile("exports", ".tmp")
+        try {
+            assertEquals(0, ExportFiles.sweepQuietly(notAFolder, nowMillis = 1_000_000, maxAgeMillis = 1))
+            assertTrue(notAFolder.exists())
+        } finally {
+            notAFolder.delete()
+        }
+    }
+
+    @Test
     fun aQrImageIsNamedAfterTheTimeAndNeverCarriesTagData() {
         val name = ExportFiles.qrFileName(epochMillis = 1_792_240_800_000)
 

@@ -29,11 +29,13 @@ import com.tagforge.app.BuildConfig
 import com.tagforge.app.R
 import com.tagforge.app.di.rememberAppContainer
 import com.tagforge.app.di.tagForgeViewModel
+import com.tagforge.app.ui.components.SecureWindow
 import com.tagforge.app.ui.haptics.rememberHaptics
 import com.tagforge.domain.exchange.QrPayloadMapper
 import com.tagforge.domain.location.SharedText
 import com.tagforge.domain.location.SharedTextResult
 import com.tagforge.domain.ndef.spec.LanguageCodes
+import com.tagforge.domain.ndef.spec.RecordSpec
 import com.tagforge.domain.settings.AppSettings
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -69,6 +71,8 @@ fun WriteRoute(
         )
     }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    // Only while a Wi-Fi record is in the wizard: a text or URL record keeps its screenshots (S6).
+    if (state.records.any { it is RecordSpec.Wifi } || state.editing?.spec is RecordSpec.Wifi) SecureWindow()
     val settings by container.settingsStore.settings.collectAsStateWithLifecycle(AppSettings())
     val haptics by rememberUpdatedState(rememberHaptics(settings.hapticsEnabled))
     val snackbarHostState = remember { SnackbarHostState() }

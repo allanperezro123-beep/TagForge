@@ -84,14 +84,15 @@ object DefaultNdefCodec : NdefCodec {
         fun u8OrNull(): Int? = if (pos < bytes.size) bytes[pos++] else null
 
         fun u32OrNull(): Int? {
-            if (pos + 4 > bytes.size) return null
+            if (bytes.size - pos < 4) return null
             val value = (bytes[pos] shl 24) or (bytes[pos + 1] shl 16) or (bytes[pos + 2] shl 8) or bytes[pos + 3]
             pos += 4
             return if (value < 0) null else value   // lengths beyond Int range are necessarily truncated
         }
 
         fun take(count: Int): Bytes? {
-            if (count < 0 || pos + count > bytes.size) return null
+            // `pos + count` would overflow Int for a hostile length near Int.MAX_VALUE and slip past the check.
+            if (count < 0 || count > bytes.size - pos) return null
             return bytes.slice(pos, pos + count).also { pos += count }
         }
     }

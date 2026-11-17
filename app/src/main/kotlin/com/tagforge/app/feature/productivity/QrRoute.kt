@@ -29,6 +29,7 @@ import com.tagforge.app.infrastructure.android.ContentResolverQrImageSource
 import com.tagforge.app.infrastructure.android.QrImageExporter
 import com.tagforge.app.infrastructure.android.SensitiveClipboard
 import com.tagforge.app.infrastructure.android.ShareExporter
+import com.tagforge.app.ui.components.SecureWindow
 import kotlinx.coroutines.launch
 
 /** BROWSABLE only for web links: the handlers of geo:, tel: and the like do not declare it, so adding it would find nobody. */
@@ -54,6 +55,7 @@ fun QrRoute(payload: String?, onBack: () -> Unit, onOpenWrite: (String) -> Unit)
             clock = container.clock,
         )
     }
+    SecureWindow()   // the creator can show a Wi-Fi password and a scanned code can carry one (S6)
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()

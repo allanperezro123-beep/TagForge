@@ -42,17 +42,31 @@ object TaskTrust {
     fun isTrusted(settings: AppSettings, plan: TaskPlan): Boolean =
         TaskFingerprint.of(plan)?.let { it in settings.trustedTaskFingerprints } == true
 
-    /** The token that runs [plan] without showing the sheet, or null when the user must be asked. */
+    /**
+     * The token that runs [plan] without showing the sheet, or null when the user must be asked.
+     *
+     * - `ASK_ALWAYS`: never skips the sheet.
+     * - `OWN_TASKS`: skips it only for a trusted plan (written or saved on this phone) with no blocked action and no missing
+     *   grant. A plan with plain HTTP is never skipped; a plan whose only warnings are [ActionWarning.LOCAL_NETWORK] is, because
+     *   the user wrote it here (a home-automation webhook on their own network, say).
+     * - `NEVER_ASK`: skips it for a plan without warnings, as the user asked. A plan WITH any warning is skipped only when it is
+     *   trusted: tag content and intents from other apps are untrusted, and a request into the user's own network or over plain
+     *   HTTP is exactly what a planted sticker would carry, so for those the sheet, the warning and the second tap still apply.
+     */
     fun autoConfirm(settings: AppSettings, plan: TaskPlan): ConfirmedTask? {
         if (plan.items.isEmpty()) return null
         return when (settings.taskExecution) {
             TaskExecutionPolicy.ASK_ALWAYS -> null
-            // The user accepted the risk of running anything, plain HTTP included.
-            TaskExecutionPolicy.NEVER_ASK -> plan.confirm(acknowledgedInsecure = true, source = ConfirmationSource.POLICY)
+            TaskExecutionPolicy.NEVER_ASK ->
+                if (!plan.requiresSecondTap || isTrusted(settings, plan)) policyConfirm(plan) else null
             TaskExecutionPolicy.OWN_TASKS -> {
-                val clean = !plan.requiresSecondTap && plan.items.none { it.isBlocked || it.capability is Capability.NeedsGrant }
-                if (clean && isTrusted(settings, plan)) plan.confirm(acknowledgedInsecure = false, source = ConfirmationSource.POLICY) else null
+                val runnable = plan.items.none { it.isBlocked || it.capability is Capability.NeedsGrant || it.warning == ActionWarning.INSECURE_HTTP }
+                if (runnable && isTrusted(settings, plan)) policyConfirm(plan) else null
             }
         }
     }
+
+    /** The policy stands in for the second tap: the warnings of an auto-run plan are accepted by the user's own choice. */
+    private fun policyConfirm(plan: TaskPlan): ConfirmedTask? =
+        plan.confirm(acknowledgedInsecure = true, source = ConfirmationSource.POLICY)
 }

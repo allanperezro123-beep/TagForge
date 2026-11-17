@@ -105,6 +105,7 @@ fun WifiJoinForm(action: TaskAction.WifiJoin, visibility: FieldVisibility, onCha
             label = stringResource(R.string.form_wifi_key),
             visibility = visibility,
             reason = keyReason,
+            secret = true,
         )
     }
     ChoiceChips(

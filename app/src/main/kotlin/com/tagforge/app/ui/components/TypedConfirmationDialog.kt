@@ -46,6 +46,7 @@ fun TypedConfirmationDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.typed_confirm_title)) },
         text = {
+            RejectObscuredTouches()   // the dialog is its own window (S4)
             Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(stringResource(R.string.typed_confirm_uid, plan.uid.toHex(":")), style = MaterialTheme.typography.titleSmall)
                 if (plan.effects.isNotEmpty()) EffectList(plan.effects)

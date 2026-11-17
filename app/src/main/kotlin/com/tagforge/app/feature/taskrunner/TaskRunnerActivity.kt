@@ -16,6 +16,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.tagforge.app.MainActivity
+import com.tagforge.app.ui.components.rejectObscuredTouches
 import com.tagforge.app.TagForgeApplication
 import com.tagforge.app.ui.theme.TagForgeTheme
 import com.tagforge.domain.common.Bytes
@@ -52,6 +53,8 @@ open class TaskRunnerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Exported entry: an overlay app must not be able to steer the tap on Run (S4).
+        rejectObscuredTouches()
         // After a configuration change the ViewModel still holds the pending task; after process death it is empty.
         if (viewModel.uiState.value == TaskRunnerUiState.Idle) handle(intent)
 

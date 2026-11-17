@@ -47,7 +47,7 @@ enum class HistoryOutcome(val code: String) {
             TagError.AuthRequired, is TagError.AuthFailed -> FAILED_AUTH
             is TagError.Security -> when (val failure = error.failure) {
                 is SecurityFailure.Partial -> of(failure.cause)
-                SecurityFailure.AuthExhausted -> FAILED_AUTH
+                SecurityFailure.AuthExhausted, SecurityFailure.AuthOutcomeUnknown, SecurityFailure.PackMismatch -> FAILED_AUTH
                 else -> FAILED_OTHER
             }
             else -> FAILED_OTHER

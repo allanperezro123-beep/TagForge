@@ -1,5 +1,6 @@
 package com.tagforge.app.feature.taskrunner
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -36,8 +37,10 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.tagforge.app.R
+import com.tagforge.app.ui.components.RejectObscuredTouches
 import com.tagforge.app.ui.text.TaskText
 import com.tagforge.domain.settings.TaskExecutionPolicy
+import com.tagforge.domain.task.ActionWarning
 import com.tagforge.domain.task.PlanItem
 import com.tagforge.domain.task.TaskPlan
 
@@ -66,6 +69,8 @@ fun TaskConfirmationSheet(
         sheetState = sheetState,
         modifier = modifier,
     ) {
+        // The sheet is its own window: the Activity-level guard does not reach the Run button (S4).
+        RejectObscuredTouches()
         Column(
             modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -115,7 +120,8 @@ private fun ConfirmContent(state: TaskRunnerUiState.Confirming, onRun: () -> Uni
     } else {
         Rows(state.plan.items, List(state.plan.items.size) { null }, onFix)
     }
-    if (state.plan.requiresSecondTap) InsecureWarning(armed = state.armed)
+    val warnings = state.plan.items.mapNotNull { it.warning }.toSet()
+    if (state.plan.requiresSecondTap) PlanWarnings(warnings, armed = state.armed)
 
     val cancelFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) {
@@ -132,24 +138,38 @@ private fun ConfirmContent(state: TaskRunnerUiState.Confirming, onRun: () -> Uni
             colors = if (state.armed) ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError) else ButtonDefaults.buttonColors(),
             modifier = Modifier.weight(1f),
         ) {
-            Text(stringResource(if (state.armed) R.string.task_runner_run_unencrypted else R.string.task_runner_run))
+            val label = when {
+                !state.armed -> R.string.task_runner_run
+                ActionWarning.INSECURE_HTTP in warnings -> R.string.task_runner_run_unencrypted
+                else -> R.string.task_runner_run_anyway
+            }
+            Text(stringResource(label))
         }
     }
 }
 
+/** One banner per kind of warning present in the plan (plain HTTP, request into the local network), each in its own words. */
 @Composable
-private fun InsecureWarning(armed: Boolean) {
-    Surface(
-        color = MaterialTheme.colorScheme.errorContainer,
-        contentColor = MaterialTheme.colorScheme.onErrorContainer,
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth().semantics { if (armed) liveRegion = LiveRegionMode.Assertive },
-    ) {
-        Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
-            Icon(Icons.Outlined.WarningAmber, contentDescription = null, modifier = Modifier.size(20.dp))
-            Text(stringResource(R.string.task_runner_http_warning), style = MaterialTheme.typography.bodyMedium)
+private fun PlanWarnings(warnings: Set<ActionWarning>, armed: Boolean) {
+    for (warning in ActionWarning.entries.filter { it in warnings }) {
+        Surface(
+            color = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier.fillMaxWidth().semantics { if (armed) liveRegion = LiveRegionMode.Assertive },
+        ) {
+            Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
+                Icon(Icons.Outlined.WarningAmber, contentDescription = null, modifier = Modifier.size(20.dp))
+                Text(stringResource(warning.messageRes()), style = MaterialTheme.typography.bodyMedium)
+            }
         }
     }
+}
+
+@StringRes
+private fun ActionWarning.messageRes(): Int = when (this) {
+    ActionWarning.INSECURE_HTTP -> R.string.task_runner_http_warning
+    ActionWarning.LOCAL_NETWORK -> R.string.task_runner_local_warning
 }
 
 @Composable

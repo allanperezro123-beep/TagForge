@@ -92,11 +92,20 @@ internal object ExchangeConversions {
         return Outcome.Ok(HistoryEntry(dto.id, at, kind, outcome, uid, dto.tagType, dto.summary, ndef))
     }
 
-    /** The bytes to keep, or null when they are not a readable NDEF message. */
-    private fun safeNdef(raw: Bytes): Bytes? {
-        val message = (DefaultNdefCodec.decode(raw) as? Outcome.Ok)?.value ?: return null
-        val safe = HistorySummarizer.redact(message)
-        return if (safe == message) raw else DefaultNdefCodec.encode(safe)
+    /**
+     * The bytes to keep, or null when they are not a readable NDEF message. The bytes come from a file the user picked
+     * and may be hostile: whatever goes wrong while decoding or re-encoding them counts as unreadable, never as a crash.
+     */
+    private fun safeNdef(raw: Bytes): Bytes? = try {
+        val message = (DefaultNdefCodec.decode(raw) as? Outcome.Ok)?.value
+        if (message == null) {
+            null
+        } else {
+            val safe = HistorySummarizer.redact(message)
+            if (safe == message) raw else DefaultNdefCodec.encode(safe)
+        }
+    } catch (_: RuntimeException) {
+        null
     }
 
     fun template(dto: TemplateDto): Outcome<Template, EntryProblem> {

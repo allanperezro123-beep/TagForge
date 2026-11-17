@@ -44,7 +44,66 @@ class ActionValidatorTest {
     fun httpsRequestsAreFineAndPlainHttpCarriesAnExtraWarning() {
         assertEquals(ActionCheck.Ok, check(TaskAction.HttpRequest("https://example.com/hook")))
         assertEquals(ActionCheck.Ok, check(TaskAction.HttpRequest("https://example.com/hook", HttpMethod.POST)))
-        assertEquals(ActionCheck.Warn(ActionWarning.INSECURE_HTTP), check(TaskAction.HttpRequest("http://192.168.1.5/on")))
+        assertEquals(ActionCheck.Warn(ActionWarning.INSECURE_HTTP), check(TaskAction.HttpRequest("http://example.com/on")))
+    }
+
+    // ---- S1: a request into the user's own network ------------------------------------------------------------------
+
+    @Test
+    fun aRequestToALocalTargetWarnsAboutTheLocalNetworkWhetherOrNotItIsEncrypted() {
+        listOf(
+            "https://192.168.1.1/admin", "https://10.0.0.5:8443/x", "https://router/reset", "https://nas.local/api",
+            "https://localhost:8080/", "https://[::1]/", "https://2130706433/", "https://0x7f.0.0.1/", "https://169.254.169.254/latest",
+        ).forEach {
+            assertEquals(ActionCheck.Warn(ActionWarning.LOCAL_NETWORK), check(TaskAction.HttpRequest(it, HttpMethod.POST)), it)
+        }
+    }
+
+    @Test
+    fun plainHttpToALocalTargetReportsTheMoreSpecificLocalNetworkWarning() {
+        assertEquals(ActionCheck.Warn(ActionWarning.LOCAL_NETWORK), check(TaskAction.HttpRequest("http://192.168.1.5/on")))
+        assertEquals(ActionCheck.Warn(ActionWarning.LOCAL_NETWORK), check(TaskAction.HttpRequest("HTTP://Router.LAN:8080/on", HttpMethod.POST)))
+    }
+
+    @Test
+    fun aPublicPlainHttpRequestStillReportsInsecureHttpAndAPublicHttpsOneIsClean() {
+        assertEquals(ActionCheck.Warn(ActionWarning.INSECURE_HTTP), check(TaskAction.HttpRequest("http://example.com:8080/hook")))
+        assertEquals(ActionCheck.Ok, check(TaskAction.HttpRequest("https://example.com/hook", HttpMethod.POST)))
+        assertEquals(ActionCheck.Ok, check(TaskAction.HttpRequest("https://8.8.8.8/dns")))
+    }
+
+    @Test
+    fun openingALocalAddressInTheBrowserIsNotWarnedBecauseTheUserSeesIt() {
+        assertEquals(ActionCheck.Ok, check(TaskAction.OpenUrl("https://192.168.1.1/")))
+        assertEquals(ActionCheck.Ok, check(TaskAction.OpenUrl("http://192.168.1.1/")))
+        assertEquals(ActionCheck.Ok, check(TaskAction.OpenUrl("http://localhost:3000")))
+    }
+
+    // ---- S11: a tel: link carries a number, not arbitrary text ------------------------------------------------------
+
+    @Test
+    fun aTelLinkMustCarryADialableNumberAfterPercentDecoding() {
+        listOf("tel:+573001234567", "tel:112", "tel:*123%23", "tel:%2B57%20300%20123", "TEL:+57-300-123", "tel:(601)%20555-0100")
+            .forEach { assertEquals(ActionCheck.Ok, check(TaskAction.OpenUrl(it)), it) }
+    }
+
+    @Test
+    fun aTelLinkWithSomethingElseThanANumberIsBlockedAsInvalidNumber() {
+        listOf("tel:callme", "tel:123;DROP", "tel:%2B57%3B", "tel:123?x=1", "tel:%0A123", "tel:+", "tel:%C3%A9", "tel:123%2F456")
+            .forEach { assertEquals(blocked(BlockReason.INVALID_NUMBER), check(TaskAction.OpenUrl(it)), it) }
+        assertEquals(blocked(BlockReason.EMPTY_VALUE), check(TaskAction.OpenUrl("tel:")))
+    }
+
+    @Test
+    fun aTelLinkWithBrokenPercentEscapesIsBlockedAsInvalidUrl() {
+        listOf("tel:12%", "tel:12%4", "tel:%ZZ", "tel:%G1")
+            .forEach { assertEquals(blocked(BlockReason.INVALID_URL), check(TaskAction.OpenUrl(it)), it) }
+    }
+
+    @Test
+    fun otherSchemesAreNotAffectedByTheTelRule() {
+        listOf("mailto:a@b.co", "geo:4.6,-74.0", "sms:+573001234567?body=hi", "https://example.com/tel:abc")
+            .forEach { assertEquals(ActionCheck.Ok, check(TaskAction.OpenUrl(it)), it) }
     }
 
     @Test

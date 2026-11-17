@@ -24,8 +24,12 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.tagforge.app.feature.tasks.ActionInput
+import com.tagforge.app.ui.components.SecretVisibilityToggle
+import com.tagforge.app.ui.components.secretKeyboardOptions
+import com.tagforge.app.ui.components.secretTransformation
 import com.tagforge.app.ui.text.TaskText
 import com.tagforge.domain.task.BlockReason
 
@@ -35,7 +39,10 @@ import com.tagforge.domain.task.BlockReason
  */
 class FieldVisibility(val showAllErrors: Boolean)
 
-/** A text field whose error, when [reason] is set and visible, is written out beneath it (never colour alone). */
+/**
+ * A text field whose error, when [reason] is set and visible, is written out beneath it (never colour alone). With
+ * [secret] the value is dots until the eye button is tapped and the keyboard never autocorrects it (S6).
+ */
 @Composable
 fun TaskTextField(
     value: String,
@@ -48,8 +55,10 @@ fun TaskTextField(
     keyboardType: KeyboardType = KeyboardType.Text,
     singleLine: Boolean = true,
     minLines: Int = 1,
+    secret: Boolean = false,
 ) {
     var touched by rememberSaveable { mutableStateOf(false) }
+    var revealed by rememberSaveable { mutableStateOf(false) }
     val error = reason?.takeIf { visibility.showAllErrors || touched }
     OutlinedTextField(
         value = value,
@@ -63,7 +72,9 @@ fun TaskTextField(
         supportingText = error?.let { { Text(stringResource(TaskText.blocked(it))) } },
         singleLine = singleLine,
         minLines = minLines,
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = if (singleLine) ImeAction.Next else ImeAction.Default),
+        keyboardOptions = if (secret) secretKeyboardOptions(ImeAction.Next) else KeyboardOptions(keyboardType = keyboardType, imeAction = if (singleLine) ImeAction.Next else ImeAction.Default),
+        visualTransformation = if (secret) secretTransformation(revealed) else VisualTransformation.None,
+        trailingIcon = if (secret) ({ SecretVisibilityToggle(revealed) { revealed = !revealed } }) else null,
         modifier = modifier.fillMaxWidth(),
     )
 }

@@ -22,8 +22,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.tagforge.app.R
+import com.tagforge.app.ui.components.SecretVisibilityToggle
+import com.tagforge.app.ui.components.secretKeyboardOptions
+import com.tagforge.app.ui.components.secretTransformation
 import com.tagforge.domain.location.MapLink
 import com.tagforge.domain.location.MapLinkParser
 import com.tagforge.domain.ndef.spec.RecordSpec
@@ -81,7 +85,7 @@ private fun WifiFields(spec: RecordSpec.Wifi, onSpec: (RecordSpec) -> Unit) {
             },
         )
     }
-    if (secured) Field(spec.password, R.string.write_field_password) { onSpec(spec.copy(password = it)) }
+    if (secured) Field(spec.password, R.string.write_field_password, secret = true) { onSpec(spec.copy(password = it)) }
 }
 
 /** A place is made by pasting a Maps link or "lat, lon": the same parser the Write wizard uses. */
@@ -101,12 +105,22 @@ private fun LocationFields(spec: RecordSpec.Geo, onSpec: (RecordSpec) -> Unit) {
 }
 
 @Composable
-private fun Field(value: String, label: Int, keyboard: KeyboardType = KeyboardType.Text, multiline: Boolean = false, onChange: (String) -> Unit) {
+private fun Field(
+    value: String,
+    label: Int,
+    keyboard: KeyboardType = KeyboardType.Text,
+    multiline: Boolean = false,
+    secret: Boolean = false,
+    onChange: (String) -> Unit,
+) {
+    var revealed by rememberSaveable { mutableStateOf(false) }
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
         label = { Text(stringResource(label)) },
-        keyboardOptions = KeyboardOptions(keyboardType = keyboard),
+        keyboardOptions = if (secret) secretKeyboardOptions() else KeyboardOptions(keyboardType = keyboard),
+        visualTransformation = if (secret) secretTransformation(revealed) else VisualTransformation.None,
+        trailingIcon = if (secret) ({ SecretVisibilityToggle(revealed) { revealed = !revealed } }) else null,
         singleLine = !multiline,
         minLines = if (multiline) 3 else 1,
         modifier = Modifier.fillMaxWidth(),

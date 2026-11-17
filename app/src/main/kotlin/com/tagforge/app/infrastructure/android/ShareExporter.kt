@@ -13,6 +13,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import kotlin.math.abs
 
 /** Naming and path rules for exported files (pure, unit tested). */
 object ExportFiles {
@@ -48,9 +49,30 @@ object ExportFiles {
         return file
     }
 
+    /**
+     * True when a file last touched at [lastModifiedMillis] is more than [maxAgeMillis] away from [nowMillis]. The distance
+     * is absolute on purpose: a file dated far in the future (the clock was moved back) must not outlive its sweep forever.
+     */
+    fun isStale(lastModifiedMillis: Long, nowMillis: Long, maxAgeMillis: Long): Boolean =
+        abs(nowMillis - lastModifiedMillis) > maxAgeMillis
+
     /** Deletes exports older than [maxAgeMillis]; returns how many were removed. */
     fun sweep(dir: File, nowMillis: Long, maxAgeMillis: Long): Int =
-        dir.listFiles().orEmpty().count { it.isFile && nowMillis - it.lastModified() > maxAgeMillis && it.delete() }
+        dir.listFiles().orEmpty().count { it.isFile && isStale(it.lastModified(), nowMillis, maxAgeMillis) && it.delete() }
+
+    /** [sweep] for app start (S9): a missing folder, a file in its place or a denied delete just means "nothing removed". */
+    fun sweepQuietly(dir: File, nowMillis: Long, maxAgeMillis: Long): Int =
+        try {
+            sweep(dir, nowMillis, maxAgeMillis)
+        } catch (_: Exception) {
+            0
+        }
+
+    /** The cache sub-folder every export is written to. */
+    fun folder(cacheDir: File): File = File(cacheDir, SUBFOLDER)
+
+    /** Exports left from a previous run are removed at app start after this long (the share sheet is long gone by then). */
+    const val STARTUP_MAX_AGE_MILLIS = 60L * 60 * 1000
 }
 
 /**
@@ -77,7 +99,7 @@ class ShareExporter(private val context: Context) {
     }
 
     private fun share(name: String, mimeType: String, content: ByteArray, nowMillis: Long) {
-        val dir = File(context.cacheDir, ExportFiles.SUBFOLDER).apply { mkdirs() }
+        val dir = ExportFiles.folder(context.cacheDir).apply { mkdirs() }
         ExportFiles.sweep(dir, nowMillis, MAX_AGE_MILLIS)
         val file = ExportFiles.resolveInside(dir, name).apply { writeBytes(content) }
         val uri = FileProvider.getUriForFile(context, authority, file)

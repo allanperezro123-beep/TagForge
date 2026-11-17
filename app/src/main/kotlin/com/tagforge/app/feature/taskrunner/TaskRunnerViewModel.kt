@@ -148,7 +148,7 @@ class TaskRunnerViewModel(
         }
     }
 
-    /** The Run button. For a plain-HTTP task the first press only arms the warning; the second one runs. */
+    /** The Run button. For a task with warnings (plain HTTP, local network) the first press only arms them; the second one runs. */
     fun onRun() {
         val state = _uiState.value as? TaskRunnerUiState.Confirming ?: return
         if (!state.canRun) return

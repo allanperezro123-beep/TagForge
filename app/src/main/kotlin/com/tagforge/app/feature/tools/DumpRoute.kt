@@ -16,6 +16,7 @@ import com.tagforge.app.di.rememberAppContainer
 import com.tagforge.app.di.tagForgeViewModel
 import com.tagforge.app.infrastructure.android.SensitiveClipboard
 import com.tagforge.app.infrastructure.android.ShareExporter
+import com.tagforge.app.ui.components.SecureWindow
 import com.tagforge.app.ui.haptics.rememberHaptics
 import com.tagforge.domain.settings.AppSettings
 import com.tagforge.domain.tools.DumpFormats
@@ -25,6 +26,7 @@ import com.tagforge.domain.tools.DumpFormats
 fun DumpRoute(onBack: () -> Unit) {
     val container = rememberAppContainer()
     val viewModel = tagForgeViewModel { DumpViewModel(it.scanCoordinator, it.nfcAvailabilityMonitor.availability) }
+    SecureWindow()   // a full memory dump can hold passwords, tokens and personal data (S6)
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val settings by container.settingsStore.settings.collectAsStateWithLifecycle(AppSettings())
     val haptics by rememberUpdatedState(rememberHaptics(settings.hapticsEnabled))

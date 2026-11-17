@@ -41,10 +41,12 @@ class ImportExportViewModelTest {
     private class FakeDocumentIo : DocumentIo {
         val files = mutableMapOf<String, ByteArray>()
         var failWrites = false
+        var throwOnAccess: Throwable? = null
         var gate: CompletableDeferred<Unit>? = null
 
         override suspend fun write(target: String, data: ByteArray): Boolean {
             gate?.await()
+            throwOnAccess?.let { throw it }
             if (failWrites) return false
             files[target] = data
             return true
@@ -52,6 +54,7 @@ class ImportExportViewModelTest {
 
         override suspend fun read(source: String, maxBytes: Int): DocumentRead {
             gate?.await()
+            throwOnAccess?.let { throw it }
             val bytes = files[source] ?: return DocumentRead.Unreadable
             return if (bytes.size > maxBytes) DocumentRead.TooLarge else DocumentRead.Bytes(bytes)
         }
@@ -206,6 +209,45 @@ class ImportExportViewModelTest {
         io.files["content://binary"] = byteArrayOf(0x7B, 0xC3.toByte(), 0x28, 0x7D)   // invalid UTF-8
         vm.onImport("content://binary")
         assertEquals(ImportExportMessage.ImportUnreadable, vm.uiState.value.message)
+    }
+
+    // ---- unexpected failures ---------------------------------------------------------------------------------------
+
+    @Test
+    fun anUnexpectedExceptionWhileExportingEndsInTheFailedStateInsteadOfCrashing() = runTest {
+        populate(historyCount = 1, templateCount = 0)
+        io.throwOnAccess = IllegalStateException("provider died")
+        val vm = vm()
+
+        vm.onExport(ExportFormat.JSON, "content://picked/backup")
+
+        assertEquals(ImportExportMessage.ExportFailed, vm.uiState.value.message)
+        assertFalse(vm.uiState.value.busy)
+    }
+
+    @Test
+    fun anUnexpectedExceptionWhileImportingEndsInTheUnreadableStateInsteadOfCrashing() = runTest {
+        io.files["content://f"] = "{}".toByteArray()
+        io.throwOnAccess = SecurityException("permission revoked")
+        val vm = vm()
+
+        vm.onImport("content://f")
+
+        assertEquals(ImportExportMessage.ImportUnreadable, vm.uiState.value.message)
+        assertFalse(vm.uiState.value.busy)
+    }
+
+    @Test
+    fun cancellationIsNotSwallowedAndStillClearsTheBusyFlag() = runTest {
+        io.gate = CompletableDeferred()
+        val vm = vm()
+        vm.onExport(ExportFormat.JSON, "content://slow")
+        assertTrue(vm.uiState.value.busy)
+
+        io.gate!!.completeExceptionally(kotlinx.coroutines.CancellationException("screen closed"))
+
+        assertFalse(vm.uiState.value.busy)
+        assertEquals(null, vm.uiState.value.message, "a cancelled operation reports nothing")
     }
 
     // ---- progress and dismissal -----------------------------------------------------------------------------------

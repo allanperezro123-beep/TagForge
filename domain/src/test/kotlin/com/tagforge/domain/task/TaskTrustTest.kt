@@ -16,6 +16,9 @@ class TaskTrustTest {
     private val secure = TaskAction.HttpRequest(url = "https://example.com/hook", method = HttpMethod.GET)
     private val insecure = TaskAction.HttpRequest(url = "http://example.com/hook", method = HttpMethod.GET)
 
+    private val local = TaskAction.HttpRequest(url = "https://192.168.1.1/on", method = HttpMethod.POST)
+    private val localPlain = TaskAction.HttpRequest(url = "http://router.local/on", method = HttpMethod.POST)
+
     private fun plan(vararg actions: TaskAction, name: String? = "Night", capability: Capability = Capability.Ready) =
         TaskPlanner.plan(TaskPayload(name, actions.toList())) { capability }
 
@@ -82,18 +85,84 @@ class TaskTrustTest {
     }
 
     @Test
-    fun neverAskRunsAnyTaskIncludingPlainHttpButStaysAPolicyConfirmation() {
-        val foreign = plan(ringer, insecure)
+    fun neverAskRunsAnyTaskWithoutWarningsAndStaysAPolicyConfirmation() {
+        val foreign = plan(ringer, secure, TaskAction.OpenUrl("https://example.com"))
         val confirmed = assertNotNull(TaskTrust.autoConfirm(AppSettings(taskExecution = TaskExecutionPolicy.NEVER_ASK), foreign))
         assertEquals(ConfirmationSource.POLICY, confirmed.source)
         assertNull(TaskTrust.autoConfirm(AppSettings(taskExecution = TaskExecutionPolicy.NEVER_ASK), plan()))
     }
 
     @Test
-    fun theUserTapIsStillTheOnlyUserSourceAndPlainHttpStillNeedsItsSecondTap() {
-        val http = plan(insecure)
-        assertNull(http.confirm(acknowledgedInsecure = false))
-        assertEquals(ConfirmationSource.USER, http.confirm(acknowledgedInsecure = true)!!.source)
+    fun neverAskStillAsksForAForeignTaskThatCarriesAnyWarning() {
+        val never = AppSettings(taskExecution = TaskExecutionPolicy.NEVER_ASK)
+        assertNull(TaskTrust.autoConfirm(never, plan(ringer, insecure)), "plain HTTP from an unknown tag")
+        assertNull(TaskTrust.autoConfirm(never, plan(ringer, local)), "a request into the local network from an unknown tag")
+        assertNull(TaskTrust.autoConfirm(never, plan(localPlain)), "plain HTTP to a local address")
+    }
+
+    @Test
+    fun neverAskRunsATrustedTaskEvenWhenItCarriesWarnings() {
+        for (action in listOf(insecure, local, localPlain)) {
+            val mine = plan(ringer, action)
+            val confirmed = assertNotNull(TaskTrust.autoConfirm(settings(TaskExecutionPolicy.NEVER_ASK, mine), mine), action.toString())
+            assertEquals(ConfirmationSource.POLICY, confirmed.source)
+        }
+    }
+
+    @Test
+    fun neverAskTrustIsTiedToTheExactTask() {
+        val mine = plan(ringer, local)
+        val settings = settings(TaskExecutionPolicy.NEVER_ASK, mine)
+        assertNull(TaskTrust.autoConfirm(settings, plan(ringer, TaskAction.HttpRequest("https://192.168.1.2/on", HttpMethod.POST))))
+    }
+
+    @Test
+    fun ownTasksRunATrustedTaskWhoseOnlyWarningIsTheLocalNetwork() {
+        for (action in listOf(local, localPlain)) {
+            val mine = plan(ringer, action)
+            val settings = settings(TaskExecutionPolicy.OWN_TASKS, mine)
+
+            val confirmed = assertNotNull(TaskTrust.autoConfirm(settings, mine), action.toString())
+            assertEquals(ConfirmationSource.POLICY, confirmed.source)
+            assertEquals(listOf(ringer, action), confirmed.plan.items.map { it.action })
+        }
+    }
+
+    @Test
+    fun ownTasksAskForALocalNetworkTaskThatWasNotCreatedHere() {
+        val foreign = plan(ringer, local)
+        assertNull(TaskTrust.autoConfirm(settings(TaskExecutionPolicy.OWN_TASKS), foreign))
+    }
+
+    @Test
+    fun ownTasksNeverRunAPlanThatAlsoHasPlainHttpABlockedActionOrAMissingGrantEvenIfTrusted() {
+        val mixed = plan(local, insecure)
+        assertNull(TaskTrust.autoConfirm(settings(TaskExecutionPolicy.OWN_TASKS, mixed), mixed), "local + plain HTTP")
+
+        val blocked = plan(local, TaskAction.OpenUrl("javascript:alert(1)"))
+        assertNull(TaskTrust.autoConfirm(settings(TaskExecutionPolicy.OWN_TASKS, blocked), blocked), "local + blocked")
+
+        val needsGrant = plan(local, capability = Capability.NeedsGrant(SpecialGrant.WRITE_SETTINGS))
+        assertNull(TaskTrust.autoConfirm(settings(TaskExecutionPolicy.OWN_TASKS, needsGrant), needsGrant), "local + missing grant")
+    }
+
+    @Test
+    fun askAlwaysAsksEvenForATrustedLocalNetworkTask() {
+        val mine = plan(local)
+        assertNull(TaskTrust.autoConfirm(settings(TaskExecutionPolicy.ASK_ALWAYS, mine), mine))
+    }
+
+    @Test
+    fun theUserTapIsStillTheOnlyUserSourceAndEveryWarningStillNeedsItsSecondTap() {
+        for (action in listOf(insecure, local, localPlain)) {
+            val withWarning = plan(action)
+            assertTrue(withWarning.requiresSecondTap, action.toString())
+            assertNull(withWarning.confirm(acknowledgedInsecure = false), action.toString())
+            assertEquals(ConfirmationSource.USER, withWarning.confirm(acknowledgedInsecure = true)!!.source)
+        }
+        val clean = plan(ringer, secure)
+        assertEquals(false, clean.requiresSecondTap)
+        assertEquals(ConfirmationSource.USER, clean.confirm(acknowledgedInsecure = false)!!.source)
     }
 
     @Test

@@ -31,3 +31,11 @@ apks/
 
 # IDE output
 /domain/bin/
+
+# Secrets and backups (WU1b): keystore backup folder, key material, env files, editor backups
+copia de keystore/
+*.pem
+*.der
+.env
+.env.*
+*.bak

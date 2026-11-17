@@ -24,6 +24,7 @@ import com.tagforge.app.feature.tasks.EditingAction
 import com.tagforge.app.feature.tasks.titleRes
 import com.tagforge.app.feature.taskrunner.RiskBadge
 import com.tagforge.domain.task.ActionCheck
+import com.tagforge.domain.task.ActionWarning
 import com.tagforge.domain.task.TaskAction
 import com.tagforge.domain.task.risk
 
@@ -54,9 +55,14 @@ fun ActionForm(
 
         ActionFields(action, editing, onChange)
 
-        if ((editing.check as? ActionCheck.Warn) != null) {
+        (editing.check as? ActionCheck.Warn)?.let { warn ->
             Text(
-                stringResource(R.string.form_insecure_http),
+                stringResource(
+                    when (warn.warning) {
+                        ActionWarning.INSECURE_HTTP -> R.string.form_insecure_http
+                        ActionWarning.LOCAL_NETWORK -> R.string.form_local_network
+                    },
+                ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
             )

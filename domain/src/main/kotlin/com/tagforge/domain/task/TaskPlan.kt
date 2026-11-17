@@ -17,10 +17,16 @@ data class PlanItem(
  */
 class TaskPlan internal constructor(val name: String?, val items: List<PlanItem>) {
 
-    /** True when an unencrypted HTTP request is part of the task: Run then needs a second, deliberate tap (TK-08). */
-    val requiresSecondTap: Boolean get() = items.any { it.warning == ActionWarning.INSECURE_HTTP }
+    /**
+     * True when any action carries an [ActionWarning] (plain HTTP, or a request into the local network): Run then needs a
+     * second, deliberate tap (TK-08).
+     */
+    val requiresSecondTap: Boolean get() = items.any { it.warning != null }
 
-    /** Null while the second tap is still owed. [source] says who confirmed: the user's tap, or a policy they chose in Settings. */
+    /**
+     * Null while the second tap is still owed. [acknowledgedInsecure] means "the user (or the policy) accepted the warnings
+     * of this plan", whichever kind they are. [source] says who confirmed: the user's tap, or a policy they chose in Settings.
+     */
     fun confirm(acknowledgedInsecure: Boolean, source: ConfirmationSource = ConfirmationSource.USER): ConfirmedTask? =
         if (requiresSecondTap && !acknowledgedInsecure) null else ConfirmedTask(this, source)
 }

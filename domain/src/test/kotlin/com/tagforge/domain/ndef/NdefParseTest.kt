@@ -77,6 +77,14 @@ class NdefParseTest {
     }
 
     @Test
+    fun aPayloadLengthNearIntMaxIsTruncatedAndNeverThrows() {
+        // pos + length used to overflow Int, slip past the bounds check and make slice() throw.
+        assertEquals(NdefParseError.Truncated, err("C1 01 7F FF FF FF 54"))
+        assertEquals(NdefParseError.Truncated, err("C1 01 7F FF FF FE 54 00"))
+        assertEquals(NdefParseError.Truncated, err("C9 01 7F FF FF FF 01 54 31"))   // IL set: type + id precede the payload
+    }
+
+    @Test
     fun reservedTnfSevenFailsWithInvalidTnf() {
         assertEquals(NdefParseError.InvalidTnf(7), err("D7 00 00"))
     }

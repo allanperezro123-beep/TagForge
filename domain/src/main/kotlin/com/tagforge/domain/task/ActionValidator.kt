@@ -1,5 +1,7 @@
 package com.tagforge.domain.task
 
+import java.io.ByteArrayOutputStream
+
 /** Why an action is refused. The UI turns each into a sentence; the domain never returns text. */
 enum class BlockReason {
     /** `intent:`, `file:`, `content:`, `javascript:` and every other scheme outside the allowlist. */
@@ -13,8 +15,11 @@ enum class BlockReason {
 }
 
 enum class ActionWarning {
-    /** HTTP without TLS: needs an extra warning in the sheet and a second tap (TK-08). */
+    /** HTTP without TLS, to a host outside the user's network: needs an extra warning in the sheet and a second tap (TK-08). */
     INSECURE_HTTP,
+
+    /** A request to a device inside the network the phone is on (router, NAS, camera, plug...): second tap, never auto-run for foreign tasks. */
+    LOCAL_NETWORK,
 }
 
 /** Verdict on one action. [Blocked] actions are shown as blocked and never executed. */
@@ -81,9 +86,39 @@ object ActionValidator {
             val authority = UrlHost.authorityOf(url) ?: return blocked(BlockReason.INVALID_URL)
             // `https://trusted.com@evil.com` shows one host and contacts another: user info is never legitimate here.
             if (authority.any { it == '@' || it == '\\' }) return blocked(BlockReason.INVALID_URL)
-            if (scheme == "http" && httpOnly) return ActionCheck.Warn(ActionWarning.INSECURE_HTTP)
+            if (httpOnly) {
+                // An invisible request: nothing opens in the browser for the user to look at. Into the user's own network is
+                // the worse case, so it wins over "plain http".
+                if (LocalNetworkHost.isLocal(authority)) return ActionCheck.Warn(ActionWarning.LOCAL_NETWORK)
+                if (scheme == "http") return ActionCheck.Warn(ActionWarning.INSECURE_HTTP)
+            }
         }
+        if (scheme == "tel") return checkTelLink(url.substring(scheme.length + 1))
         return ActionCheck.Ok
+    }
+
+    /** A `tel:` link has to carry what a [TaskAction.Dial] would accept, once its percent escapes are undone. */
+    private fun checkTelLink(schemeSpecificPart: String): ActionCheck {
+        val number = percentDecode(schemeSpecificPart) ?: return blocked(BlockReason.INVALID_URL)
+        return checkNumber(number)
+    }
+
+    /** UTF-8 percent-decoding; null when an escape is not `%` plus two hex digits. */
+    private fun percentDecode(text: String): String? {
+        val out = ByteArrayOutputStream(text.length)
+        var i = 0
+        while (i < text.length) {
+            if (text[i] != '%') {
+                out.write(text[i].toString().toByteArray(Charsets.UTF_8))
+                i++
+                continue
+            }
+            val high = text.getOrNull(i + 1)?.digitToIntOrNull(HEX_RADIX) ?: return null
+            val low = text.getOrNull(i + 2)?.digitToIntOrNull(HEX_RADIX) ?: return null
+            out.write((high shl 4) or low)
+            i += 3
+        }
+        return String(out.toByteArray(), Charsets.UTF_8)
     }
 
     private fun checkNumber(number: String): ActionCheck {
@@ -118,6 +153,7 @@ object ActionValidator {
     private fun blocked(reason: BlockReason) = ActionCheck.Blocked(reason)
 
     private const val DELETE = '\u007F'
+    private const val HEX_RADIX = 16
     private const val MAX_HOUR = 23
     private const val MAX_MINUTE = 59
     private const val MAX_PERCENT = 100

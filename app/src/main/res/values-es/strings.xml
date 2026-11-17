@@ -201,7 +201,9 @@
     <string name="dump_locked_note_short">Bloqueado: ninguna clave pública abre este sector</string>
     <string name="dump_locked_note">No legible: ninguna clave pública abre su sector o sus bits de acceso rechazan la lectura. Tag Forge nunca prueba otras claves.</string>
     <string name="read_protected_title">Protegida con contraseña</string>
-    <string name="read_protected_body">Parte de la memoria de esta etiqueta requiere una contraseña. Abajo se muestran los datos básicos.</string>
+    <string name="read_protected_body">Parte de la memoria de esta etiqueta requiere una contraseña. Desbloquéala en Seguridad para leer su contenido. Abajo se muestran los datos básicos.</string>
+    <string name="read_auth_rejected_title">Contraseña recordada rechazada</string>
+    <string name="read_auth_rejected_body">La etiqueta rechazó la contraseña recordada y se olvidó. Vuelve a desbloquearla en Seguridad con la contraseña correcta.</string>
     <string name="read_unlock">Desbloquear</string>
     <plurals name="read_records_count">
         <item quantity="one">%d registro</item>
@@ -843,6 +845,8 @@
     <string name="task_runner_run">Ejecutar</string>
     <string name="task_runner_run_unencrypted">Ejecutar igualmente (sin cifrar)</string>
     <string name="task_runner_http_warning">Una acción envía una petición por HTTP sin cifrar: cualquiera en la red puede leerla o modificarla. Pulsa el botón otra vez para confirmar.</string>
+    <string name="task_runner_local_warning">Una acción envía una petición a un dispositivo dentro de la red a la que está conectado este teléfono (un router, una cámara, un enchufe inteligente...). Continúa solo si creaste esta etiqueta o confías en quien la creó. Pulsa el botón otra vez para confirmar.</string>
+    <string name="task_runner_run_anyway">Ejecutar igualmente</string>
     <string name="task_runner_fix">Arreglar</string>
     <string name="task_runner_fix_description">Abrir el Centro de permisos</string>
     <string name="task_runner_nothing">No hay nada que ejecutar en esta tarea.</string>
@@ -975,6 +979,7 @@
     <string name="form_event_title">Título del evento</string>
     <string name="form_event_duration">Duración en minutos</string>
     <string name="form_insecure_http">Esta dirección usa http simple, que no está cifrado. La tarea avisará y pedirá una segunda confirmación antes de enviarla.</string>
+    <string name="form_local_network">Esta dirección apunta a un dispositivo de tu red local. La tarea avisará y pedirá una segunda confirmación antes de enviarla.</string>
 
     <!-- Fase 5: importar y exportar -->
     <string name="more_import_export">Importar y exportar</string>
@@ -1113,18 +1118,26 @@
     <string name="error_sec_config_locked">Las páginas de configuración están bloqueadas para siempre (CFGLCK). Ya no se pueden cambiar.</string>
     <string name="error_sec_unremovable">La configuración está bloqueada y hay una contraseña, así que la protección ya no se puede cambiar ni quitar.</string>
     <string name="error_sec_auth_exhausted">Se alcanzó el límite de intentos: esta zona quedó bloqueada para siempre, incluso con la contraseña correcta.</string>
+    <string name="error_sec_auth_outcome_unknown">La conexión se cortó justo después de enviar la contraseña. Es posible que la etiqueta la haya rechazado y que ese intento ya cuente para el límite de intentos. No vuelvas a acercar la etiqueta enseguida: comprueba primero la contraseña.</string>
+    <string name="error_sec_pack_mismatch">La etiqueta aceptó la contraseña, pero respondió un PACK distinto al esperado: puede ser una copia. Se olvidó la contraseña recordada.</string>
     <string name="error_sec_advanced_required">Esto requiere el modo Avanzado. Actívalo en Ajustes.</string>
     <string name="error_sec_unsupported_chip">Solo NTAG213, NTAG215 y NTAG216 admiten esto.</string>
     <string name="error_sec_not_protected">Esta etiqueta no tiene protección con contraseña.</string>
     <string name="error_sec_password_required">Esta etiqueta está protegida. Escribe su contraseña actual.</string>
-    <string name="error_sec_auth0_range">La página inicial protegida debe estar entre la primera página de usuario y la página de la contraseña.</string>
+    <string name="error_sec_auth0_range">La primera página protegida debe estar entre la página 4 y la página de configuración (CFG0), para que la configuración quede detrás de la contraseña.</string>
     <string name="error_sec_state_changed">La etiqueta ya no contiene lo planeado. No se escribió nada. Empieza de nuevo.</string>
     <string name="error_sec_nothing_to_change">No hay nada que cambiar: la etiqueta ya lo tiene.</string>
     <string name="error_sec_wrong_plan">Ese plan es de otra operación. No se envió nada.</string>
-    <string name="error_sec_cannot_make_read_only">Esta etiqueta no se puede dejar de solo lectura con la API NDEF estándar.</string>
+    <string name="error_sec_cannot_make_read_only">Esta etiqueta no se puede dejar de solo lectura con Android (no tiene una zona NDEF utilizable o la rechaza). No se cambió nada. Las opciones directas del modo Avanzado pueden bloquearla.</string>
     <string name="error_sec_not_verified">Todas las escrituras se completaron, pero al releer la etiqueta no se vio el resultado esperado. Vuelve a escanearla para ver su estado real.</string>
-    <string name="error_sec_partial_set_password">La contraseña se escribió pero la protección NO está activa (%1$d de %2$d escrituras hechas). Reintenta con la misma contraseña.</string>
-    <string name="error_sec_partial_remove">La eliminación se interrumpió (%1$d de %2$d escrituras hechas). Autentícate y reintenta; la protección puede estar quitada solo en parte.</string>
+    <string name="error_sec_partial_set_password">El cambio se interrumpió en una escritura que decide la protección, así que no se sabe si la protección está activa (%1$d de %2$d escrituras hechas). Vuelve a escanear la etiqueta para ver su estado real antes de hacer nada más.</string>
+    <string name="error_sec_partial_set_not_protected_changed">La protección todavía NO está activa, pero la página de la contraseña ya se reescribió (%1$d de %2$d escrituras hechas). La contraseña nueva queda guardada y no hace nada hasta el último paso. Repite la misma operación con la misma contraseña para terminar.</string>
+    <string name="error_sec_partial_set_not_protected">La protección NO está activa y la contraseña no cambió (%1$d de %2$d escrituras hechas). Repite la misma operación.</string>
+    <string name="error_sec_partial_set_not_protected_maybe">La protección NO está activa. La página de la contraseña pudo o no reescribirse (%1$d de %2$d escrituras hechas). Repite la misma operación con la misma contraseña: esa página se vuelve a escribir.</string>
+    <string name="error_sec_partial_set_protected">La protección está activa en esta etiqueta, pero la operación no terminó (%1$d de %2$d escrituras hechas). La contraseña guardada puede ser ya la nueva. Vuelve a escanear y comprueba cuál acepta: los intentos erróneos pueden contar para el límite de intentos.</string>
+    <string name="error_sec_partial_remove">No se sabe si la protección se quitó (%1$d de %2$d escrituras hechas). Vuelve a escanear la etiqueta para ver su estado real.</string>
+    <string name="error_sec_partial_remove_open">La protección se quitó: la etiqueta vuelve a estar abierta. El restablecimiento de la contraseña guardada no terminó (%1$d de %2$d escrituras hechas), así que la contraseña anterior puede seguir guardada, pero no protege nada. Puedes poner una contraseña nueva cuando quieras.</string>
+    <string name="error_sec_partial_remove_still_protected">La protección SIGUE activa: la escritura que abre la etiqueta no se completó (%1$d de %2$d escrituras hechas). Autentícate e intenta la eliminación otra vez.</string>
     <string name="error_sec_partial_lock">El bloqueo puede estar aplicado a medias (%1$d de %2$d escrituras hechas). Vuelve a escanear la etiqueta para ver su estado real. No asumas que funcionó.</string>
     <string name="error_sec_partial_other">El cambio puede estar aplicado a medias (%1$d de %2$d escrituras hechas). Vuelve a escanear la etiqueta para comprobar su estado.</string>
     <string name="history_kind_security">Seguridad</string>
@@ -1134,6 +1147,7 @@
     <string name="typed_confirm_commands">Comandos que se enviarán, en orden</string>
     <string name="typed_confirm_line_page">Página %1$d · %2$s</string>
     <string name="typed_confirm_line_page_plain">Página %1$d</string>
+    <string name="typed_confirm_line_command">Comando</string>
     <string name="typed_confirm_before">Antes: %1$s</string>
     <string name="typed_confirm_before_hidden">Antes: no legible (el chip lo oculta)</string>
     <string name="typed_confirm_after">Después: %1$s</string>
@@ -1150,6 +1164,7 @@
     <string name="effect_lock_bits">Los bits de bloqueo nunca se pueden borrar.</string>
     <string name="effect_read_only_forever">La etiqueta queda de solo lectura para siempre.</string>
     <string name="effect_raw_reserved">Esto escribe a mano una página de bloqueo, configuración o contraseña.</string>
+    <string name="effect_raw_unknown">La app no conoce este comando, así que no puede saber si cambia la etiqueta de forma permanente. Por eso debes escribir parte del UID de la etiqueta para continuar.</string>
 
     <!-- Security hub and forms -->
     <string name="security_title">Seguridad</string>
@@ -1159,7 +1174,7 @@
     <string name="security_action_remove_password">Quitar contraseña</string>
     <string name="security_action_remove_password_summary">Vuelve al estado de fábrica</string>
     <string name="security_action_unlock">Desbloquear</string>
-    <string name="security_action_unlock_summary">Comprueba una contraseña contra la etiqueta</string>
+    <string name="security_action_unlock_summary">Comprueba una contraseña y desbloquea la etiqueta en esta sesión</string>
     <string name="security_action_config_lock">Bloquear configuración o limitar intentos</string>
     <string name="security_action_config_lock_summary">CFGLCK y AUTHLIM: permanente</string>
     <string name="security_action_lock">Bloquear la etiqueta para siempre</string>
@@ -1178,7 +1193,7 @@
     <string name="security_form_shown_once">Guarda esta contraseña antes de continuar. Tag Forge no puede leerla de la etiqueta: el chip siempre responde ceros.</string>
     <string name="security_form_stored">Guardé esta contraseña en un lugar seguro</string>
     <string name="security_form_auth0">Primera página protegida: %1$d</string>
-    <string name="security_form_auth0_hint">La página 4 protege toda la memoria de usuario.</string>
+    <string name="security_form_auth0_hint">La página 4 protege toda la memoria de usuario. La más alta permitida es la página de configuración (CFG0), para que los ajustes queden detrás de la contraseña.</string>
     <string name="security_form_protect_reads">Pedir la contraseña también para leer</string>
     <string name="security_form_current">Contraseña actual (opcional)</string>
     <string name="security_form_current_required">Contraseña actual</string>
@@ -1203,6 +1218,10 @@
     <string name="security_unlock_limit_unknown">No se pudo leer el límite de intentos. Si la etiqueta tiene uno, los intentos fallidos cuentan hacia un bloqueo permanente.</string>
     <string name="security_unlock_understood">Entendido</string>
     <string name="security_unlock_action">Desbloquear</string>
+    <string name="security_unlock_remember">Recordar contraseña durante esta sesión</string>
+    <string name="security_unlock_memory_note">Solo se guarda en memoria, como máximo 10 minutos, y se borra al cerrar la app.</string>
+    <string name="security_remembered_count">Etiquetas desbloqueadas en memoria: %1$d</string>
+    <string name="security_forget_password">Olvidar contraseña</string>
     <string name="security_limit_check">Leer el límite de intentos</string>
     <string name="security_limit_check_hint">Una contraseña incorrecta puede bloquear una etiqueta para siempre. Lee su límite de intentos antes de escribir una.</string>
     <!-- Security sheets -->
@@ -1220,7 +1239,10 @@
     <string name="security_sheet_done_raw">Trama enviada</string>
     <string name="security_sheet_done_unlock">Contraseña aceptada</string>
     <string name="security_sheet_done_detail">Comprobado releyendo la etiqueta.</string>
+    <string name="security_sheet_done_set_password_remembered">Comprobado releyendo la etiqueta. La nueva contraseña queda recordada en memoria hasta 10 minutos.</string>
     <string name="security_sheet_done_unlock_detail">PACK respondido por la etiqueta: %1$s</string>
+    <string name="security_sheet_done_unlock_remembered">PACK respondido por la etiqueta: %1$s. Recordada en memoria hasta 10 minutos.</string>
+    <string name="security_sheet_done_unlock_match_remembered">PACK respondido por la etiqueta: %1$s. Coincide y queda recordada en memoria hasta 10 minutos.</string>
 
     <!-- Signature (NS-07) -->
     <string name="signature_title">Firma de originalidad</string>
@@ -1293,15 +1315,15 @@
     <string name="settings_tasks_ask">Preguntar siempre</string>
     <string name="settings_tasks_ask_desc">Recomendado. Una etiqueta que no conoces nunca hace nada sin tu permiso.</string>
     <string name="settings_tasks_own">Ejecutar sin preguntar las tareas que yo creé en este teléfono</string>
-    <string name="settings_tasks_own_desc">Solo las tareas idénticas a las que escribiste en una etiqueta o guardaste aquí. Cualquier otra etiqueta sigue preguntando, y también cualquier tarea con una petición http://.</string>
+    <string name="settings_tasks_own_desc">Solo las tareas idénticas a las que escribiste en una etiqueta o guardaste aquí, incluidas las peticiones a dispositivos de tu propia red. Cualquier otra etiqueta sigue preguntando, y también cualquier tarea con una petición http://.</string>
     <string name="settings_tasks_never">Ejecutar siempre sin preguntar (bajo tu propio riesgo)</string>
-    <string name="settings_tasks_never_desc">Todas las tareas de todas las etiquetas se ejecutan en cuanto se escanean.</string>
-    <string name="settings_tasks_never_active">Activo: cualquier etiqueta que acerques al teléfono ejecutará sus acciones sin preguntar. Alguien podría dejarte una etiqueta maliciosa.</string>
+    <string name="settings_tasks_never_desc">Las tareas de cualquier etiqueta, y de otras apps de este teléfono que puedan iniciar el ejecutor de tareas, se ejecutan en cuanto llegan. Única excepción: las tareas que envían peticiones a tu red local o por http:// y que no se crearon en este teléfono siguen preguntando.</string>
+    <string name="settings_tasks_never_active">Activo: cualquier etiqueta que acerques al teléfono, y otras apps que puedan iniciar el ejecutor de tareas, ejecutarán acciones sin preguntar. Alguien podría dejarte una etiqueta maliciosa. Las peticiones a tu red local o por http:// de tareas no creadas aquí siguen preguntando.</string>
     <string name="settings_tasks_back_to_ask">Volver a Preguntar siempre</string>
     <string name="settings_tasks_trusted_count">Tareas recordadas como tuyas: %1$d</string>
     <string name="settings_tasks_forget">Olvidar las tareas recordadas</string>
     <string name="settings_tasks_risk_title">¿Ejecutar todas las tareas sin preguntar?</string>
-    <string name="settings_tasks_risk_body">Cualquier etiqueta que acerques a este teléfono ejecutará sus acciones sin preguntarte antes: abrir enlaces, enviar peticiones, cambiar ajustes. Cualquiera podría dejar una pegatina con una tarea maliciosa donde vayas a escanear. Actívalo solo si aceptas ese riesgo.</string>
+    <string name="settings_tasks_risk_body">Cualquier etiqueta que acerques a este teléfono, y cualquier otra app instalada que pueda iniciar el ejecutor de tareas, ejecutará sus acciones sin preguntarte antes: abrir enlaces, enviar peticiones a internet, cambiar ajustes. Cualquiera podría dejar una pegatina con una tarea maliciosa donde vayas a escanear. Las únicas excepciones son las tareas que envían una petición a tu red local o por http:// sin cifrar y que no se crearon en este teléfono: esas siempre preguntan. Actívalo solo si aceptas el resto del riesgo.</string>
     <string name="settings_tasks_risk_accept">Entiendo, activar bajo mi propio riesgo</string>
     <string name="task_runner_ran_automatically">Se ejecutó sin preguntar, como indicaste en Ajustes.</string>
     <string name="task_runner_untrust">Dejar de confiar en esta tarea</string>

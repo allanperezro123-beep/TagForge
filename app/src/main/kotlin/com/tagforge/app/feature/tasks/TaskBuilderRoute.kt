@@ -22,6 +22,7 @@ import com.tagforge.app.BuildConfig
 import com.tagforge.app.R
 import com.tagforge.app.di.rememberAppContainer
 import com.tagforge.app.di.tagForgeViewModel
+import com.tagforge.app.ui.components.SecureWindow
 import com.tagforge.app.ui.haptics.rememberHaptics
 import com.tagforge.domain.settings.AppSettings
 import kotlinx.coroutines.launch
@@ -42,6 +43,7 @@ fun TaskBuilderRoute(taskId: Long?, onBack: () -> Unit) {
             taskId = taskId,
         )
     }
+    SecureWindow()   // a task can carry a Wi-Fi key or a URL with a token (S6)
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val settings by container.settingsStore.settings.collectAsStateWithLifecycle(AppSettings())
     val haptics by rememberUpdatedState(rememberHaptics(settings.hapticsEnabled))

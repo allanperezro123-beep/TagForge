@@ -48,8 +48,8 @@ object HistorySummarizer {
 
     private fun describe(record: ParsedRecord): String = when (record) {
         is ParsedRecord.Text -> record.text.replace(WHITESPACE, " ").trim()
-        is ParsedRecord.Uri -> record.uri
-        is ParsedRecord.SmartPoster -> record.title ?: record.uri
+        is ParsedRecord.Uri -> UrlRedaction.redact(record.uri)
+        is ParsedRecord.SmartPoster -> record.title ?: UrlRedaction.redact(record.uri)
         is ParsedRecord.Wifi -> record.credentials.ssid
         is ParsedRecord.Bluetooth -> record.address.name ?: record.address.mac
         is ParsedRecord.VCard -> record.fields.name
