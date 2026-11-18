@@ -13,6 +13,7 @@ import com.tagforge.domain.history.HistoryOutcome
 import com.tagforge.domain.history.RecordHistoryUseCase
 import com.tagforge.domain.ntag.NtagModel
 import com.tagforge.domain.scan.ScanCoordinator
+import com.tagforge.domain.security.DiversifiedPassword
 import com.tagforge.domain.security.LockScope
 import com.tagforge.domain.security.Password
 import com.tagforge.domain.security.PasswordMode
@@ -21,6 +22,7 @@ import com.tagforge.domain.security.ProtectionState
 import com.tagforge.domain.security.SecurityFailure
 import com.tagforge.domain.security.SecurityOperation
 import com.tagforge.domain.security.SessionCredentials
+import com.tagforge.domain.security.StrengthLevel
 import com.tagforge.domain.settings.AppSettings
 import com.tagforge.domain.settings.TaskExecutionPolicy
 import com.tagforge.domain.tag.TagError
@@ -43,6 +45,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -215,13 +218,13 @@ class SecurityViewModelTest {
         vm.onGeneratePassword()
 
         assertEquals(4, vm.uiState.value.form.password.length, "plain text: 4 characters")
-        assertEquals(2, vm.uiState.value.form.pack.length, "plain text: 2 characters")
+        assertEquals("", vm.uiState.value.form.pack, "the PACK stays blank: random per tag")
         assertFalse(vm.uiState.value.form.storedAck, "a fresh password has to be acknowledged again")
 
         vm.onModeChange(PasswordMode.HEX)
         vm.onGeneratePassword()
         assertEquals(8, vm.uiState.value.form.password.length)
-        assertEquals(4, vm.uiState.value.form.pack.length)
+        assertEquals("", vm.uiState.value.form.pack)
     }
 
     // ---- NS-01: cancel, back, wrong text, other tag ---------------------------------------------------------------------
@@ -761,12 +764,13 @@ class SecurityViewModelTest {
     private fun SecurityForm.secrets() = Triple(password, pack, currentPassword)
 
     @Test
-    fun theFormStartsInTextModeWithTheReadableTfPack() = runTest {
+    fun theFormStartsInTextModeWithABlankPackMeaningRandomPerTag() = runTest {
         val vm = viewModel(coordinator())
         vm.onChoose(SecurityAction.SET_PASSWORD)
 
         assertEquals(PasswordMode.TEXT, vm.uiState.value.form.mode)
-        assertEquals("TF", vm.uiState.value.form.pack)
+        assertEquals("", vm.uiState.value.form.pack)
+        assertFalse(vm.uiState.value.form.derive)
     }
 
     @Test
@@ -774,7 +778,7 @@ class SecurityViewModelTest {
         val coordinator = coordinator()
         val vm = viewModel(coordinator)
         vm.onChoose(SecurityAction.SET_PASSWORD)
-        vm.onFormChange { it.copy(password = "abcd", storedAck = true) }
+        vm.onFormChange { it.copy(password = "abcd", pack = "TF", storedAck = true) }
 
         vm.onNext()
         tap(coordinator, blankTag())
@@ -1063,5 +1067,228 @@ class SecurityViewModelTest {
         tap(coordinator, tag)
         assertIs<SecuritySheet.Failure>(vm.uiState.value.sheet)
         assertNull(store.credentialFor(uid), "a partial write may have changed the tag")
+    }
+
+    // ---- WU4: a random PACK per tag, strength feedback, passwords derived from a master passphrase --------------------------
+
+    private val phrase = "correct horse battery staple"
+
+    private fun TestScope.setPasswordOn(vm: SecurityViewModel, coordinator: ScanCoordinator, tag: FakeNtag21x, last4: String) {
+        vm.onNext()
+        tap(coordinator, tag)
+        vm.onTypedChange(last4)
+        vm.onUnderstoodChange(true)
+        vm.onConfirm()
+        tap(coordinator, tag)
+    }
+
+    private fun packFrame(pack: Bytes) = "A2 86 ${pack.toHex(" ")} 00 00".hex()
+
+    @Test
+    fun aBlankPackBecomesTwoRandomBytesFromTheInjectedSourceNotAFixedValue() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.onChoose(SecurityAction.SET_PASSWORD)
+        vm.onFormChange { it.copy(password = "abcd", storedAck = true) }
+
+        vm.onNext()
+        tap(coordinator, blankTag())
+
+        val expected = Password.randomPack(Random(42))
+        assertEquals(packFrame(expected), vm.uiState.value.plan!!.commands[1])
+        assertNotEquals(Bytes.of(0x54, 0x46), expected, "never the old constant TF")
+    }
+
+    @Test
+    fun theSuccessSheetShowsThePackThatWasWrittenAndTheCredentialRemembersIt() = runTest {
+        val store = SessionCredentials(clock)
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator, credentials = store)
+        val tag = blankTag()
+        vm.onChoose(SecurityAction.SET_PASSWORD)
+        vm.onFormChange { it.copy(password = "abcd", storedAck = true) }
+
+        setPasswordOn(vm, coordinator, tag, "E5F6")
+
+        val written = Password.randomPack(Random(42))
+        val success = assertIs<SecuritySheet.Success>(vm.uiState.value.sheet)
+        assertEquals(written, success.newPack)
+        assertEquals(written + Bytes.of(0, 0), tag.page(model.pack))
+        assertEquals(written, assertNotNull(store.credentialFor(uid)).pack)
+        assertFalse(everythingTheHistoryKept().contains(written.toHex()), "the PACK never reaches the history")
+    }
+
+    @Test
+    fun aTypedPackIsWrittenAsTypedAndStillShown() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        val tag = blankTag()
+        vm.fillSetPassword()
+
+        setPasswordOn(vm, coordinator, tag, "E5F6")
+
+        assertEquals("AB CD".hex(), assertIs<SecuritySheet.Success>(vm.uiState.value.sheet).newPack)
+    }
+
+    @Test
+    fun twoTagsGetDifferentPacks() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        val packs = listOf(blankTag() to "E5F6", blankTag("04 11 22 33 44 55 66".hex()) to "5566").map { (tag, last4) ->
+            vm.onChoose(SecurityAction.SET_PASSWORD)
+            vm.onFormChange { it.copy(password = "abcd", storedAck = true) }
+            setPasswordOn(vm, coordinator, tag, last4)
+            assertIs<SecuritySheet.Success>(vm.uiState.value.sheet).newPack
+        }
+
+        assertNotEquals(packs[0], packs[1])
+    }
+
+    @Test
+    fun theStrengthOfTheTypedPasswordIsEvaluatedForTheForm() = runTest {
+        val vm = viewModel(coordinator())
+        vm.onChoose(SecurityAction.SET_PASSWORD)
+        assertNull(vm.uiState.value.passwordStrength, "nothing valid typed yet")
+
+        vm.onFormChange { it.copy(mode = PasswordMode.HEX, password = "00000000") }
+        assertEquals(StrengthLevel.WEAK, vm.uiState.value.passwordStrength!!.level)
+        vm.onFormChange { it.copy(password = "3A9FC271") }
+        assertEquals(StrengthLevel.BEST_POSSIBLE, vm.uiState.value.passwordStrength!!.level)
+        vm.onFormChange { it.copy(derive = true) }
+        assertNull(vm.uiState.value.passwordStrength, "a derived password is judged by its passphrase")
+    }
+
+    @Test
+    fun aWeakPasswordIsAdvisedAgainstNeverRefused() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.onChoose(SecurityAction.SET_PASSWORD)
+        vm.onFormChange { it.copy(mode = PasswordMode.HEX, password = "12345678", storedAck = true) }
+
+        vm.onNext()
+        tap(coordinator, blankTag())
+
+        assertEquals(SecurityStep.DRY_RUN, vm.uiState.value.step)
+    }
+
+    @Test
+    fun aDerivedPasswordIsCalculatedForTheUidOfTheTagThatWasRead() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        vm.onChoose(SecurityAction.SET_PASSWORD)
+        vm.onFormChange { it.copy(derive = true, passphrase = phrase, storedAck = true) }
+
+        vm.onNext()
+        tap(coordinator, blankTag())
+
+        val (password, pack) = DiversifiedPassword.derive(phrase, uid)
+        val frames = vm.uiState.value.plan!!.commands
+        assertEquals("A2 85 ${password.bytes.toHex(" ")}".hex(), frames[0])
+        assertEquals(packFrame(pack), frames[1])
+    }
+
+    @Test
+    fun aDerivedSetPasswordRemembersOnlyTheDerivedCredentialAndShowsItsPack() = runTest {
+        val store = SessionCredentials(clock)
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator, credentials = store)
+        vm.onChoose(SecurityAction.SET_PASSWORD)
+        vm.onFormChange { it.copy(derive = true, passphrase = phrase, storedAck = true) }
+
+        setPasswordOn(vm, coordinator, blankTag(), "E5F6")
+
+        val (password, pack) = DiversifiedPassword.derive(phrase, uid)
+        assertEquals(password, assertNotNull(store.credentialFor(uid)).password)
+        assertEquals(pack, assertIs<SecuritySheet.Success>(vm.uiState.value.sheet).newPack)
+        assertEquals("", vm.uiState.value.form.passphrase, "the passphrase is wiped with the form")
+    }
+
+    @Test
+    fun aWeakOrShortPassphraseIsRefusedBeforeAnyTapAndTheAcknowledgementIsStillRequired() = runTest {
+        val vm = viewModel(coordinator())
+        vm.onChoose(SecurityAction.SET_PASSWORD)
+
+        for (bad in listOf("", "short", "aaaaaaaaaaaaaaaa", "abcdefghijklmnop", "passwordpassword")) {
+            vm.onFormChange { it.copy(derive = true, passphrase = bad, storedAck = true) }
+            vm.onNext()
+            assertEquals(FormProblem.PASSPHRASE_INVALID, vm.uiState.value.problem, "'$bad'")
+            assertNull(vm.uiState.value.sheet, "'$bad' arms nothing")
+        }
+        vm.onFormChange { it.copy(passphrase = phrase, storedAck = false) }
+        vm.onNext()
+        assertEquals(FormProblem.STORED_NOT_ACKNOWLEDGED, vm.uiState.value.problem)
+    }
+
+    private fun derivedTag(forUid: Bytes, tagUid: Bytes = forUid): FakeNtag21x {
+        val (password, pack) = DiversifiedPassword.derive(phrase, forUid)
+        return blankTag(tagUid).also {
+            it.setPage(model.pwd, password.bytes)
+            it.setPage(model.pack, pack + Bytes.of(0, 0))
+            it.setPage(model.cfg1, "00 00 00 00".hex())
+            it.setPage(model.cfg0, "04 00 00 04".hex())
+        }
+    }
+
+    @Test
+    fun unlockWithThePassphraseDerivesForTheTappedTagChecksItsPackAndRemembersTheDerivedPassword() = runTest {
+        val store = SessionCredentials(clock)
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator, credentials = store)
+        val tag = derivedTag(uid)
+        vm.onChoose(SecurityAction.UNLOCK)
+        tap(coordinator, tag)
+        vm.onFormChange { it.copy(derive = true, passphrase = phrase) }
+
+        vm.onNext()
+        tap(coordinator, tag)
+
+        val (password, pack) = DiversifiedPassword.derive(phrase, uid)
+        val success = assertIs<SecuritySheet.Success>(vm.uiState.value.sheet)
+        assertEquals(true, success.packMatches, "the derived PACK is the clone check")
+        assertEquals(pack, success.pack)
+        val stored = assertNotNull(store.credentialFor(uid))
+        assertEquals(password, stored.password)
+        assertEquals(pack, stored.pack)
+        assertEquals("", vm.uiState.value.form.passphrase)
+    }
+
+    @Test
+    fun aTagDerivedForAnotherUidIsRejectedAndNothingIsRemembered() = runTest {
+        val store = SessionCredentials(clock)
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator, credentials = store)
+        val tag = derivedTag(forUid = "04 11 22 33 44 55 66".hex(), tagUid = uid)
+        vm.onChoose(SecurityAction.UNLOCK)
+        tap(coordinator, tag)
+        vm.onFormChange { it.copy(derive = true, passphrase = phrase) }
+
+        vm.onNext()
+        tap(coordinator, tag)
+
+        assertIs<SecuritySheet.Failure>(vm.uiState.value.sheet)
+        assertNull(store.credentialFor(uid))
+        assertEquals(1, tag.commandLog.count { it[0] == 0x1B }, "one attempt, never retried")
+    }
+
+    @Test
+    fun aWeakPassphraseNeverReachesTheTagOnUnlock() = runTest {
+        val coordinator = coordinator()
+        val vm = viewModel(coordinator)
+        val tag = derivedTag(uid)
+        vm.onChoose(SecurityAction.UNLOCK)
+        tap(coordinator, tag)
+        vm.onFormChange { it.copy(derive = true, passphrase = "short") }
+
+        vm.onNext()
+
+        assertEquals(FormProblem.PASSPHRASE_INVALID, vm.uiState.value.problem)
+        assertNull(vm.uiState.value.sheet)
+    }
+
+    @Test
+    fun theFormNeverPrintsThePassphrase() {
+        val form = SecurityForm(derive = true, passphrase = phrase)
+
+        assertFalse("horse" in form.toString() || "horse" in SecurityUiState(form = form).toString())
     }
 }

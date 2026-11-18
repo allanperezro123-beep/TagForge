@@ -89,6 +89,7 @@ fun SecurityScreen(state: SecurityUiState, actions: SecurityActions, modifier: M
             onDismiss = actions.onSheetDismissed,
             onRetry = actions.onRetry,
             onExtra = actions.onForgetRemembered,
+            onCopy = actions.form.onCopy,
         )
     }
 }

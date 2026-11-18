@@ -11,6 +11,7 @@ import com.tagforge.domain.scan.ScanCoordinator
 import com.tagforge.domain.scan.ScanState
 import com.tagforge.domain.scan.TagOperation
 import com.tagforge.domain.security.ConfirmedPlan
+import com.tagforge.domain.security.DiversifiedPassword
 import com.tagforge.domain.security.Password
 import com.tagforge.domain.security.PasswordInput
 import com.tagforge.domain.security.PasswordMode
@@ -59,6 +60,9 @@ class SecurityViewModel(
     private var confirmed: ConfirmedPlan? = null
     private var rerun: (() -> Unit)? = null
 
+    /** The password and PACK of the Set password under review, resolved when the tag (and so its UID) was read. */
+    private var plannedCredential: SecurityPlans.NewCredential? = null
+
     init {
         viewModelScope.launch { availability.collect { value -> _state.update { it.copy(availability = value) } } }
         viewModelScope.launch { settings.collect { value -> _state.update { it.copy(advanced = value.advancedMode) } } }
@@ -97,7 +101,7 @@ class SecurityViewModel(
             form.copy(
                 mode = mode,
                 password = password,
-                pack = convert(form.pack).ifEmpty { PasswordInput.defaultPack(mode) },
+                pack = convert(form.pack),
                 currentPassword = convert(form.currentPassword),
                 expectedPack = convert(form.expectedPack),
                 storedAck = form.storedAck && password.isNotEmpty(),
@@ -105,7 +109,7 @@ class SecurityViewModel(
         }
     }
 
-    /** A fresh password in the current mode. The PACK stays the readable default: a random one nobody sees helps nobody. */
+    /** A fresh password in the current mode. The PACK stays blank: a blank PACK means two random bytes per tag, shown after writing. */
     fun onGeneratePassword() {
         val mode = _state.value.form.mode
         val password = PasswordInput.generate(mode, random)
@@ -231,6 +235,7 @@ class SecurityViewModel(
     /** Forget every secret this screen holds. */
     private fun wipe() {
         confirmed = null
+        plannedCredential = null
         rerun = null
     }
 
@@ -244,7 +249,14 @@ class SecurityViewModel(
 
     private fun onTagRead(action: SecurityAction, form: SecurityForm, tagState: SecurityState) {
         val advanced = _state.value.advanced
-        when (val planned = SecurityPlans.plan(action, form, tagState, advanced)) {
+        val credential = if (action == SecurityAction.SET_PASSWORD) SecurityPlans.newCredential(form, tagState.info.uid, random) else null
+        if (action == SecurityAction.SET_PASSWORD && credential == null) {
+            val problem = if (form.derive) FormProblem.PASSPHRASE_INVALID else FormProblem.PASSWORD_INVALID
+            _state.update { it.copy(sheet = null, problem = problem, step = SecurityStep.FORM).withModel(tagState.model) }
+            return
+        }
+        plannedCredential = credential
+        when (val planned = SecurityPlans.plan(action, form, tagState, advanced, credential)) {
             is Outcome.Err -> _state.update { it.copy(sheet = null, failure = planned.error, step = SecurityStep.FORM).withModel(tagState.model) }
             is Outcome.Ok -> _state.update {
                 it.copy(sheet = null, failure = null, plan = planned.value, typed = "", understood = false, step = SecurityStep.DRY_RUN)
@@ -256,8 +268,8 @@ class SecurityViewModel(
     private fun armExecute(action: SecurityAction) {
         val plan = confirmed ?: return
         val form = _state.value.form
-        val newPassword = if (action == SecurityAction.SET_PASSWORD) SecurityPlans.password(form) else null
-        val newPack = if (action == SecurityAction.SET_PASSWORD) SecurityPlans.pack(form) else null
+        val newPassword = plannedCredential?.password.takeIf { action == SecurityAction.SET_PASSWORD }
+        val newPack = plannedCredential?.pack.takeIf { action == SecurityAction.SET_PASSWORD }
         val operation = SecurityPlans.execution(action, plan)
         rerun = { armExecute(action) }
         runExecution(operation, action, plan, newPassword, newPack)
@@ -277,6 +289,7 @@ class SecurityViewModel(
         val form = _state.value.form
         val typedPassword = SecurityPlans.current(form)
         val expectedPack = SecurityPlans.expectedPack(form)
+        val passphrase = form.passphrase.takeIf { form.derive }
         run(
             stage = SecurityStage.EXECUTE,
             operation = SecurityPlans.authenticate(form),
@@ -290,6 +303,11 @@ class SecurityViewModel(
             val remembered = if (report.packMatches == false) {
                 credentials?.forget(uid)
                 false
+            } else if (credentials != null && passphrase != null && form.rememberForSession) {
+                // Only the DERIVED password and PACK for this UID are kept; the passphrase itself is never remembered.
+                val (derived, derivedPack) = DiversifiedPassword.derive(passphrase, uid)
+                credentials.remember(uid, derived, derivedPack)
+                true
             } else if (credentials != null && typedPassword != null && form.rememberForSession) {
                 credentials.remember(uid, typedPassword, expectedPack)
                 true
@@ -342,7 +360,7 @@ class SecurityViewModel(
                     availability = it.availability,
                     advanced = it.advanced,
                     rememberedCount = credentials?.rememberedUids()?.size ?: it.rememberedCount,
-                    sheet = SecuritySheet.Success(action, remembered = remembered),
+                    sheet = SecuritySheet.Success(action, remembered = remembered, newPack = newPack.takeIf { action == SecurityAction.SET_PASSWORD }),
                 )
             }
             eventChannel.trySend(SecurityEvent.Succeeded)

@@ -20,9 +20,12 @@ data class AuthLimitInfo(val authLimit: Int?, val model: NtagModel? = null)
 
 /**
  * One PWD_AUTH per tap (NS-03). There is no retry, no list of passwords and no counter-guessing: the only password this
- * class can ever send is the one the user typed. A wrong password is a real attempt against the tag's AUTHLIM.
+ * class can ever send is the one the [source] gives for the tag that answered. A wrong password is a real attempt against
+ * the tag's AUTHLIM. With a diversified source the derived PACK is the expected one, unless [expectedPack] says otherwise.
  */
-class AuthenticateUseCase(private val password: Password, private val expectedPack: Bytes? = null) : TagOperation<AuthReport> {
+class AuthenticateUseCase(private val source: PasswordSource, private val expectedPack: Bytes? = null) : TagOperation<AuthReport> {
+    constructor(password: Password, expectedPack: Bytes? = null) : this(PasswordSource.Typed(password), expectedPack)
+
     override val kind: OperationKind = OperationKind.SECURITY
 
     override suspend fun execute(session: TagSession, phase: (OperationPhase) -> Unit): TagResult<AuthReport> {
@@ -31,10 +34,12 @@ class AuthenticateUseCase(private val password: Password, private val expectedPa
             is Outcome.Err -> return linked
             is Outcome.Ok -> linked.value
         }
+        val resolved = source.forTag(link.info.uid)
+        val expected = expectedPack ?: resolved.pack
         phase(OperationPhase.READING)
-        return when (val pack = SecurityIo.authenticate(link.transceiver, password.bytes)) {
+        return when (val pack = SecurityIo.authenticate(link.transceiver, resolved.password.bytes)) {
             is Outcome.Err -> pack
-            is Outcome.Ok -> Outcome.Ok(AuthReport(pack.value, expectedPack?.let { it == pack.value }))
+            is Outcome.Ok -> Outcome.Ok(AuthReport(pack.value, expected?.let { it == pack.value }))
         }
     }
 }

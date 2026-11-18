@@ -128,9 +128,7 @@ class PasswordInputTest {
     }
 
     @Test
-    fun theDefaultPackIsTheReadableTfAndParses() {
-        assertEquals("TF", PasswordInput.defaultPack(PasswordMode.TEXT))
-        assertEquals("5446", PasswordInput.defaultPack(PasswordMode.HEX))
+    fun aTypedTextPackStillParses() {
         assertEquals(Bytes.of(0x54, 0x46), PasswordInput.parse(PasswordMode.TEXT, SecretKind.PACK, "TF").getOrNull())
     }
 }

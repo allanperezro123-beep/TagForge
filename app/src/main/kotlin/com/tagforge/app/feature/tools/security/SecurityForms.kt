@@ -75,11 +75,26 @@ fun SecurityFormContent(state: SecurityUiState, actions: SecurityFormActions, mo
 
 @Composable
 private fun SetPasswordFields(state: SecurityUiState, actions: SecurityFormActions) {
-    PasswordFields(state.form, state.problem, actions.onChange, actions.onGenerate, actions.onCopy, actions.onShare)
+    DeriveSwitch(state.form.derive, { on -> actions.onChange { it.copy(derive = on, passphrase = "", storedAck = false) } })
+    if (state.form.derive) {
+        PassphraseField(
+            value = state.form.passphrase,
+            onValueChange = { v -> actions.onChange { it.copy(passphrase = v, storedAck = false) } },
+            isError = state.problem == FormProblem.PASSPHRASE_INVALID,
+        )
+        CheckRow(state.form.storedAck, { v -> actions.onChange { it.copy(storedAck = v) } }, R.string.security_derive_stored)
+    } else {
+        PasswordFields(state.form, state.problem, actions.onChange, actions.onGenerate, actions.onCopy, actions.onShare, state.passwordStrength)
+    }
+    Text(
+        stringResource(R.string.security_set_limit_tip),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
     SwitchRow(state.form.protectReads, { v -> actions.onChange { it.copy(protectReads = v) } }, R.string.security_form_protect_reads)
     CurrentPasswordField(state, actions, R.string.security_form_current)
     PasswordAdvancedSection(state.form.mode, actions.onModeChange) {
-        PackField(state.form, state.problem, actions.onChange)
+        if (!state.form.derive) PackField(state.form, state.problem, actions.onChange)
         Auth0Stepper(state.form.auth0, state.auth0Range) { value -> actions.onChange { it.copy(auth0 = value) } }
     }
 }
@@ -131,7 +146,23 @@ private fun AttemptLimitSection(state: SecurityUiState, actions: SecurityFormAct
 
 @Composable
 private fun UnlockFields(state: SecurityUiState, actions: SecurityFormActions) {
-    CurrentPasswordField(state, actions, R.string.security_form_current_required)
+    DeriveSwitch(state.form.derive, { on -> actions.onChange { it.copy(derive = on, passphrase = "") } })
+    if (state.form.derive) {
+        AttemptLimitSection(state, actions)
+        PassphraseField(
+            value = state.form.passphrase,
+            onValueChange = { v -> actions.onChange { it.copy(passphrase = v) } },
+            enabled = state.passwordFieldEnabled,
+            isError = state.problem == FormProblem.PASSPHRASE_INVALID,
+        )
+        Text(
+            stringResource(R.string.security_derive_unlock_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    } else {
+        CurrentPasswordField(state, actions, R.string.security_form_current_required)
+    }
     SwitchRow(state.form.rememberForSession, { v -> actions.onChange { it.copy(rememberForSession = v) } }, R.string.security_unlock_remember)
     Text(
         stringResource(R.string.security_unlock_memory_note),
@@ -156,6 +187,7 @@ private fun ConfigLockFields(state: SecurityUiState, actions: SecurityFormAction
         onMinus = { actions.onChange { it.copy(authLimit = (it.authLimit - 1).coerceAtLeast(0)) } },
         onPlus = { actions.onChange { it.copy(authLimit = (it.authLimit + 1).coerceAtMost(MAX_LIMIT)) } },
     )
+    AuthLimitGuidanceText(state.form.authLimit)
     Text(
         stringResource(R.string.security_config_lock_note),
         style = MaterialTheme.typography.bodySmall,
@@ -205,6 +237,7 @@ private fun FormProblemText(problem: FormProblem?, failure: SecurityFailure?, mo
 @StringRes
 private fun FormProblem.messageRes(mode: PasswordMode): Int = when (this) {
     FormProblem.PASSWORD_INVALID -> if (mode == PasswordMode.TEXT) R.string.security_problem_password else R.string.security_problem_password_hex
+    FormProblem.PASSPHRASE_INVALID -> R.string.security_problem_passphrase
     FormProblem.PACK_INVALID -> if (mode == PasswordMode.TEXT) R.string.security_problem_pack else R.string.security_problem_pack_hex
     FormProblem.STORED_NOT_ACKNOWLEDGED -> R.string.security_problem_stored
     FormProblem.CURRENT_PASSWORD_INVALID -> if (mode == PasswordMode.TEXT) R.string.security_problem_current else R.string.security_problem_current_hex

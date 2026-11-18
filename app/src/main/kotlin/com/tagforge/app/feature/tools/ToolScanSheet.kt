@@ -4,6 +4,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -22,11 +23,15 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.tagforge.app.R
 import com.tagforge.app.ui.components.RadarPulse
@@ -41,9 +46,12 @@ private const val CHECK_START_SCALE = 0.3f
 sealed interface ToolSheetUi {
     data class Waiting(val title: String, val hint: String) : ToolSheetUi
     data class Working(val title: String, val hint: String) : ToolSheetUi
-    data class Success(val title: String, val detail: String?, val extraLabel: String? = null) : ToolSheetUi
+    data class Success(val title: String, val detail: String?, val extraLabel: String? = null, val secret: SheetSecret? = null) : ToolSheetUi
     data class Failure(val title: String, val message: String, val hint: String?, val canRetry: Boolean) : ToolSheetUi
 }
+
+/** A value the user must note down (a PACK): hidden as dots until Show, with a copy button. */
+data class SheetSecret(val label: String, val value: String)
 
 /**
  * The sheet that guides a tool from "hold the tag" to a result. While the tag is being changed it cannot be dismissed
@@ -58,6 +66,7 @@ fun ToolScanSheet(
     onRetry: () -> Unit,
     onExtra: () -> Unit = {},
     modifier: Modifier = Modifier,
+    onCopy: (String) -> Unit = {},
 ) {
     val working = ui is ToolSheetUi.Working
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true, confirmValueChange = { !working })
@@ -78,7 +87,7 @@ fun ToolScanSheet(
                     StatusText(ui.title, ui.hint)
                     LinearProgressIndicator(Modifier.fillMaxWidth())
                 }
-                is ToolSheetUi.Success -> SuccessContent(ui, onDismiss, onExtra)
+                is ToolSheetUi.Success -> SuccessContent(ui, onDismiss, onExtra, onCopy)
                 is ToolSheetUi.Failure -> FailureContent(ui, onDismiss, onRetry)
             }
         }
@@ -86,7 +95,7 @@ fun ToolScanSheet(
 }
 
 @Composable
-private fun SuccessContent(ui: ToolSheetUi.Success, onDone: () -> Unit, onExtra: () -> Unit) {
+private fun SuccessContent(ui: ToolSheetUi.Success, onDone: () -> Unit, onExtra: () -> Unit, onCopy: (String) -> Unit) {
     val reduced = rememberReducedMotion()
     val scale = remember { Animatable(if (reduced) 1f else CHECK_START_SCALE) }
     LaunchedEffect(Unit) {
@@ -99,9 +108,28 @@ private fun SuccessContent(ui: ToolSheetUi.Success, onDone: () -> Unit, onExtra:
         modifier = Modifier.size(72.dp).graphicsLayer { scaleX = scale.value; scaleY = scale.value },
     )
     StatusText(ui.title, ui.detail)
+    ui.secret?.let { SecretRow(it, onCopy) }
     Button(onClick = onDone, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.tools_sheet_done)) }
     if (ui.extraLabel != null) {
         OutlinedButton(onClick = onExtra, modifier = Modifier.fillMaxWidth()) { Text(ui.extraLabel) }
+    }
+}
+
+@Composable
+private fun SecretRow(secret: SheetSecret, onCopy: (String) -> Unit) {
+    var visible by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(secret.label, style = MaterialTheme.typography.labelMedium)
+        Text(
+            if (visible) secret.value else secret.value.map { if (it == ' ') ' ' else '•' }.joinToString(""),
+            style = MaterialTheme.typography.titleMedium.copy(fontFamily = FontFamily.Monospace),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(onClick = { visible = !visible }) {
+                Text(stringResource(if (visible) R.string.security_form_hide else R.string.security_form_show))
+            }
+            TextButton(onClick = { onCopy(secret.value) }) { Text(stringResource(R.string.security_form_copy)) }
+        }
     }
 }
 

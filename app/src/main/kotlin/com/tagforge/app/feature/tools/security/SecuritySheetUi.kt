@@ -3,6 +3,7 @@ package com.tagforge.app.feature.tools.security
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.tagforge.app.R
+import com.tagforge.app.feature.tools.SheetSecret
 import com.tagforge.app.feature.tools.ToolSheetUi
 import com.tagforge.app.ui.text.TagErrorText
 import com.tagforge.app.ui.text.messageText
@@ -28,6 +29,7 @@ fun SecuritySheet.toUi(): ToolSheetUi = when (this) {
             else -> stringResource(R.string.security_sheet_done_detail)
         },
         extraLabel = if (remembered) stringResource(R.string.security_forget_password) else null,
+        secret = newPack?.let { SheetSecret(stringResource(R.string.security_sheet_pack_label), it.toHex(" ")) },
     )
     is SecuritySheet.Failure -> {
         val text = TagErrorText.of(error)

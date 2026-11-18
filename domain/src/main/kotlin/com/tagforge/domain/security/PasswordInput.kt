@@ -41,7 +41,6 @@ object PasswordInput {
 
     /** Without look-alikes (0 O 1 l I): a generated password is read from a screen and typed back. */
     private const val GENERATED_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"
-    private const val DEFAULT_PACK_TEXT = "TF"
 
     fun capacity(mode: PasswordMode, kind: SecretKind): Int =
         if (mode == PasswordMode.TEXT) kind.byteCount else kind.byteCount * 2
@@ -101,9 +100,14 @@ object PasswordInput {
         PasswordMode.HEX -> Password.randomPack(random).toHex()
     }
 
-    /** "TF" (Tag Forge): a readable PACK, so the user never has to think about it. */
-    fun defaultPack(mode: PasswordMode): String =
-        if (mode == PasswordMode.TEXT) DEFAULT_PACK_TEXT else Bytes.copyOf(DEFAULT_PACK_TEXT.toByteArray(Charsets.US_ASCII)).toHex()
+    /**
+     * The PACK to write. A blank field means "choose for me": two random bytes from [random] (injectable so tests stay
+     * deterministic; production passes a `SecureRandom`). A fixed PACK shared by every tag is public knowledge and proves
+     * nothing about a tag's authenticity, so there is NO constant default. A typed PACK is parsed as usual and, when it is
+     * wrong, refused: it is never silently replaced by a random one.
+     */
+    fun packOrRandom(mode: PasswordMode, input: String, random: Random): Outcome<Bytes, PasswordInputError> =
+        if (input.isBlank()) Outcome.Ok(Password.randomPack(random)) else parse(mode, SecretKind.PACK, input)
 
     /** "12 34 56 78": hex digits grouped by byte, for display. */
     fun groupHex(digits: String): String = digits.chunked(2).joinToString(" ")

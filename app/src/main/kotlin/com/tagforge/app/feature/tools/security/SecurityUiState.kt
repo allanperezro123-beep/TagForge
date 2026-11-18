@@ -6,8 +6,8 @@ import com.tagforge.domain.ntag.NtagModel
 import com.tagforge.domain.scan.OperationPhase
 import com.tagforge.domain.security.AuthLimitInfo
 import com.tagforge.domain.security.LockScope
-import com.tagforge.domain.security.PasswordInput
 import com.tagforge.domain.security.PasswordMode
+import com.tagforge.domain.security.PasswordStrength
 import com.tagforge.domain.security.SecurityFailure
 import com.tagforge.domain.security.SecurityPlan
 import com.tagforge.domain.security.UidConfirmation
@@ -22,7 +22,7 @@ enum class SecurityStep { CHOOSE, FORM, DRY_RUN }
 enum class SecurityStage { READ, EXECUTE }
 
 /** What is wrong with the form, found BEFORE any tag is touched. */
-enum class FormProblem { PASSWORD_INVALID, PACK_INVALID, STORED_NOT_ACKNOWLEDGED, CURRENT_PASSWORD_INVALID, NOTHING_SELECTED }
+enum class FormProblem { PASSWORD_INVALID, PASSPHRASE_INVALID, PACK_INVALID, STORED_NOT_ACKNOWLEDGED, CURRENT_PASSWORD_INVALID, NOTHING_SELECTED }
 
 /**
  * Everything the user types. Secrets live only here, in memory: they are wiped after a run and never reach the history.
@@ -31,8 +31,8 @@ data class SecurityForm(
     /** How the secrets below are typed: ordinary text by default, hexadecimal as the advanced alternative. */
     val mode: PasswordMode = PasswordMode.TEXT,
     val password: String = "",
-    /** The PACK the tag will answer after a correct password; "TF" unless the user changes it under the advanced options. */
-    val pack: String = PasswordInput.defaultPack(PasswordMode.TEXT),
+    /** The PACK the tag will answer after a correct password. Blank = two random bytes for each tag (shown after writing). */
+    val pack: String = "",
     /** First protected page; defaults to the first user page. */
     val auth0: Int = 4,
     /** PROT: reads need the password too. */
@@ -47,10 +47,14 @@ data class SecurityForm(
     val lockConfig: Boolean = false,
     val authLimit: Int = 0,
     val lockScope: LockScope = LockScope.NDEF_READ_ONLY,
+    /** Set password and Unlock: the password is derived from [passphrase] and the tapped tag's UID (WU4). */
+    val derive: Boolean = false,
+    /** The master passphrase. Memory only, wiped with the rest of the form; never remembered across the process. */
+    val passphrase: String = "",
 ) {
     /** The typed secrets never reach a log or a crash report (S7). */
     override fun toString(): String =
-        "SecurityForm(auth0=$auth0, protectReads=$protectReads, storedAck=$storedAck, rememberForSession=$rememberForSession, lockConfig=$lockConfig, authLimit=$authLimit, lockScope=$lockScope, secrets=****)"
+        "SecurityForm(auth0=$auth0, protectReads=$protectReads, storedAck=$storedAck, rememberForSession=$rememberForSession, lockConfig=$lockConfig, authLimit=$authLimit, lockScope=$lockScope, derive=$derive, secrets=****)"
 }
 
 sealed interface SecuritySheet {
@@ -63,6 +67,8 @@ sealed interface SecuritySheet {
         val pack: Bytes? = null,
         val packMatches: Boolean? = null,
         val remembered: Boolean = false,
+        /** Set password only: the PACK that was written, so the user can note it. */
+        val newPack: Bytes? = null,
     ) : SecuritySheet
 
     data class Failure(val error: TagError, val canRetry: Boolean) : SecuritySheet
@@ -103,6 +109,10 @@ data class SecurityUiState(
         get() = model?.auth0Range ?: ANY_CHIP_AUTH0_RANGE
 
     val canStart: Boolean get() = availability == NfcAvailability.ENABLED
+
+    /** Strength of the password being typed for Set password; null in derive mode or while it is not a valid password. */
+    val passwordStrength: PasswordStrength?
+        get() = if (action != SecurityAction.SET_PASSWORD || form.derive) null else SecurityPlans.password(form)?.let { PasswordStrength.evaluate(form.mode, it.bytes) }
 
     /** The warning that must be acknowledged on top of the typed UID: anything that cannot be undone. */
     val needsUnderstood: Boolean get() = plan?.effects?.isNotEmpty() == true

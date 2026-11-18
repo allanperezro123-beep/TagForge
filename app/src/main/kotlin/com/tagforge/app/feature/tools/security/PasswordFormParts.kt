@@ -17,6 +17,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.tagforge.app.R
+import com.tagforge.domain.security.PasswordStrength
 import com.tagforge.domain.security.SecretKind
 
 @Composable
@@ -54,6 +55,7 @@ fun PasswordFields(
     onGenerate: () -> Unit,
     onCopy: (String) -> Unit,
     onShare: (String) -> Unit,
+    strength: PasswordStrength? = null,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         SecretField(
@@ -61,6 +63,7 @@ fun PasswordFields(
             R.string.security_form_password, form.mode, SecretKind.PASSWORD,
             isError = problem == FormProblem.PASSWORD_INVALID,
         )
+        PasswordStrengthSection(strength)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = onGenerate, modifier = Modifier.weight(1f)) { ButtonLabel(R.string.security_form_generate) }
             OutlinedButton(onClick = { onCopy(form.password) }, enabled = form.password.isNotEmpty(), modifier = Modifier.weight(1f)) {
