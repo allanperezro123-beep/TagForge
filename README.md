@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/allanperezro123-beep/TagForge/releases"><img src="https://img.shields.io/badge/Release-v1.0.0-blue.svg?style=flat-square" alt="Release"></a>
+  <a href="https://github.com/allanperezro123-beep/TagForge/releases"><img src="https://img.shields.io/badge/Release-v1.2.0-blue.svg?style=flat-square" alt="Release"></a>
   <a href="https://developer.android.com/about/versions/14"><img src="https://img.shields.io/badge/Android-8.0%2B%20(API%2026--35)-green.svg?style=flat-square" alt="Android Version"></a>
   <a href="https://kotlinlang.org"><img src="https://img.shields.io/badge/Kotlin-2.0-purple.svg?style=flat-square" alt="Kotlin"></a>
   <a href="https://developer.android.com/jetpack/compose"><img src="https://img.shields.io/badge/UI-Jetpack%20Compose%20%2F%20Material%203-blueviolet.svg?style=flat-square" alt="Compose"></a>
@@ -60,6 +60,13 @@ Se integra armónicamente como la aplicación compañera en campo para la plataf
   - Los archivos temporales de exportación viven en la caché privada y se borran al compartir de nuevo y al iniciar la app.
   - Marcado de portapapeles como contenido sensible para evitar fugas en teclados de terceros (Android 13+).
   - Redacción estricta de bytes secretos en registros y trazas de depuración.
+
+#### Elegir una contraseña NTAG21x: fortaleza, intentos, PACK y frase maestra
+La contraseña de un NTAG21x tiene **32 bits y viaja en claro por el aire**: frena la reescritura casual, no a un atacante decidido con un lector. Ninguna elección supera ese techo.
+- **Contraseña:** la pantalla estima su fortaleza (débil, media o la mejor posible) y explica por qué. Cuatro caracteres escritos cubren menos combinaciones que cuatro bytes aleatorios (solo dígitos ≈ 13 bits, minúsculas ≈ 19, mezcla imprimible ≈ 26); valores como `00000000`, `FFFFFFFF`, `12345678` o bytes consecutivos se marcan como débiles. Lo máximo (32 bits) se logra generando la contraseña en hexadecimal (*Opciones avanzadas*). Es solo un aviso: no se impide usar una contraseña débil.
+- **Límite de intentos (AUTHLIM):** `0` deja el límite como está (sin límite en una etiqueta de fábrica, de modo que un programa podría probar las 2³² contraseñas con tiempo suficiente); `1` a `7` es el número máximo de intentos erróneos **seguidos** (cuenta lineal, no 2ⁿ), tras los cuales la contraseña queda bloqueada para siempre, incluso la correcta; una contraseña correcta reinicia la cuenta. Es irreversible y opcional. Recomendado: **5**, porque cualquier valor de 1 a 7 hace inútil adivinar, y un valor medio deja margen a errores al teclear sin que un curioso con un lector pueda bloquear la etiqueta con dos fallos.
+- **PACK por etiqueta:** si dejas el PACK en blanco, Tag Forge escribe 2 bytes aleatorios (`SecureRandom`) distintos para cada etiqueta y te los muestra al terminar (ocultos, con botón para mostrar y copiar) para que los anotes. Un PACK constante sería público y no probaría nada; con uno propio de cada etiqueta, un PACK distinto al anotado delata una posible copia. Puedes escribir el tuyo.
+- **Frase maestra (modo opcional para flotas):** el interruptor *Derivar de una frase maestra* sustituye el campo de 4 bytes por una frase (mínimo 12 caracteres; se rechazan las evidentemente débiles). Para la etiqueta que acercas se calcula `HMAC-SHA256(clave = frase en UTF-8 normalizada NFC, mensaje = "TagForge-NTAG-PWD-v1" ‖ UID)`: `PWD` son los bytes 0 a 3 y `PACK` los bytes 4 y 5 (si `PWD` saliera `FFFFFFFF`, se repite el cálculo añadiendo un byte contador al mensaje). Cada etiqueta recibe así una contraseña y un PACK distintos; la frase nunca se guarda ni se escribe en la etiqueta, y solo se recuerda (en memoria, como siempre) la contraseña derivada de ese UID. **Si pierdes la frase, pierdes el acceso a todas las etiquetas protegidas con ella.** En *Desbloquear*, el PACK derivado se compara con el que responde la etiqueta para detectar copias.
 
 ### 5. ⚡ Motor de Automatización: Task Format v1
 Tag Forge implementa su propia especificación de tareas compactas (`application/x-tf`) para desencadenar automatizaciones físicas sin requerir conexión continua a internet ni servicios pesados en segundo plano:
